@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build and render outputs
+dist/
+**/dist/
+out/
+**/out/
+.cache/
+**/.cache/
+.remotion/
+**/.remotion/
+assets/remotion-template/qa/
+assets/component-gallery/_work/
+assets/component-gallery/renders/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Python cache
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

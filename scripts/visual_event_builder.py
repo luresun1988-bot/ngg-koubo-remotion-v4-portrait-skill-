@@ -1,0 +1,1000 @@
+#!/usr/bin/env python3
+"""Build V4 visualEvents from semanticBeats."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from pathlib import Path
+from typing import Any
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR))
+from v4_utf8 import configure_utf8  # noqa: E402
+
+configure_utf8()
+
+MIN_MAIN_HUD_FRAMES = 95
+PREFERRED_MAIN_HUD_FRAMES = 125
+LANE_BUFFER_FRAMES = 10
+DEFAULT_FPS = 25
+SFX_SUGGESTIONS: dict[str, dict[str, Any]] = {
+    "title_impact": {
+        "sfxId": "title_impact_whoosh_01",
+        "path": "input/audio/sfx/title_impact_whoosh_01.wav",
+        "volumeDb": -24,
+        "durationFrames": 50,
+        "preRollFrames": 4,
+    },
+    "confirm": {
+        "sfxId": "confirm_ding_01",
+        "path": "input/audio/sfx/confirm_ding_01.wav",
+        "volumeDb": -25,
+        "durationFrames": 50,
+        "preRollFrames": 0,
+    },
+    "negative_warning": {
+        "sfxId": "negative_warning_01",
+        "path": "input/audio/sfx/negative_warning_01.wav",
+        "volumeDb": -28,
+        "durationFrames": 25,
+        "preRollFrames": 0,
+    },
+    "automation_handoff": {
+        "sfxId": "automation_handoff_01",
+        "path": "input/audio/sfx/automation_handoff_01.wav",
+        "volumeDb": -25,
+        "durationFrames": 50,
+        "preRollFrames": 0,
+    },
+    "data_count": {
+        "sfxId": "data_count_01",
+        "path": "input/audio/sfx/data_count_01.wav",
+        "volumeDb": -26,
+        "durationFrames": 25,
+        "preRollFrames": 0,
+    },
+    "proof_reveal": {
+        "sfxId": "proof_reveal_01",
+        "path": "input/audio/sfx/proof_reveal_01.wav",
+        "volumeDb": -30,
+        "durationFrames": 25,
+        "preRollFrames": 0,
+    },
+}
+PUNCTUATION = " ，。？！、；;：:.!?"
+
+NEGATIVE_TERMS = ["手动", "不是", "麻烦", "低效", "重复", "卡住", "风险", "不值得", "太慢", "人工成本"]
+POSITIVE_TERMS = ["自动化", "自动", "完成", "搞定", "跑完", "输出完成", "Codex", "一键", "接管"]
+
+
+def load_json(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8-sig"))
+
+
+def save_json(path: Path, data: dict[str, Any]) -> None:
+    path.write_text(json.dumps(data, ensure_ascii=True, indent=2), encoding="utf-8")
+
+
+def normalize_hud_source(text: str) -> str:
+    clean = re.sub(r"\s+", "", text).strip(PUNCTUATION)
+    for filler in ["但是", "其实", "然后", "那么", "首先", "这件事真正重要的是", "真正重要的是"]:
+        clean = clean.replace(filler, "")
+    for old, new in [
+        ("这一步，应该", "应该"),
+        ("这一步应该", "应该"),
+        ("这一步，", ""),
+        ("而是你把", "把"),
+        ("而是把", "把"),
+        ("而是", ""),
+        ("不是你要", "不是"),
+        ("不是要", "不是"),
+        ("一个", ""),
+        ("生成了", "生成"),
+        ("做出来了", "做出"),
+        ("自动完成了", "自动完成"),
+    ]:
+        clean = clean.replace(old, new)
+    return clean.strip(PUNCTUATION)
+
+
+def normalize_for_match(text: str) -> str:
+    return re.sub(r"[\s，。？！、；;：:.!?\-_/|]+", "", text)
+
+
+def caption_cues_by_id(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {
+        str(cue.get("id") or ""): cue
+        for cue in data.get("captionCues", [])
+        if isinstance(cue, dict)
+    }
+
+
+def cue_anchor_for_event(event: dict[str, Any], beat: dict[str, Any], data: dict[str, Any]) -> tuple[int, str] | None:
+    source_ids = [str(item) for item in beat.get("sourceCueIds", []) if str(item)]
+    if not source_ids:
+        return None
+    cue_map = caption_cues_by_id(data)
+    cues = [cue_map[cue_id] for cue_id in source_ids if cue_id in cue_map]
+    if not cues:
+        return None
+
+    phrases: list[str] = []
+    for key in ("text", "subtext", "title", "status"):
+        value = str(event.get(key) or "")
+        if value:
+            phrases.append(value)
+    phrases.extend(str(item) for item in event.get("emphasisWords", []) if str(item))
+    phrases.extend(str(item) for item in beat.get("keywords", []) if str(item))
+    phrases = sorted({normalize_for_match(phrase) for phrase in phrases if len(normalize_for_match(phrase)) >= 2}, key=len, reverse=True)
+
+    for phrase in phrases:
+        for cue in cues:
+            cue_text = normalize_for_match(str(cue.get("text") or ""))
+            if phrase and phrase in cue_text:
+                return max(0, int(cue.get("startFrame", 0) or 0) - 3), str(cue.get("id") or "")
+
+    if len(cues) == 1:
+        cue = cues[0]
+        return max(0, int(cue.get("startFrame", 0) or 0)), str(cue.get("id") or "")
+    return None
+
+
+def anchor_event_to_caption_cue(event: dict[str, Any], beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]:
+    anchor = cue_anchor_for_event(event, beat, data)
+    if not anchor:
+        return event
+    start, cue_id = anchor
+    current_start = int(event.get("startFrame", 0) or 0)
+    current_end = int(event.get("endFrame", current_start + MIN_MAIN_HUD_FRAMES) or current_start + MIN_MAIN_HUD_FRAMES)
+    if abs(start - current_start) < 2:
+        return event
+    return {
+        **event,
+        "startFrame": start,
+        "endFrame": start + max(MIN_MAIN_HUD_FRAMES, current_end - current_start),
+        "timingAnchor": "captionCueKeyword",
+        "anchorCueId": cue_id,
+    }
+
+
+def split_negative_positive(text: str) -> tuple[str, str]:
+    for pivot in ["而是", "这一步", "交给", "丢给", "变成", "应该自动", "可以直接", "不用自己"]:
+        if pivot in text:
+            index = text.find(pivot)
+            left = text[:index].strip(PUNCTUATION)
+            right = text[index:].strip(PUNCTUATION)
+            if left and right:
+                return left, right
+    return text.strip(), ""
+
+
+def shorten_hud_copy(text: str, max_chars: int = 18) -> str:
+    clean = normalize_hud_source(text)
+    if len(clean) <= max_chars:
+        return clean
+    for marker in ["不是", "手动", "自动化", "Codex", "重复", "字段", "主图", "评论区", "反直觉", "还没有开始"]:
+        if marker in clean:
+            start = max(0, clean.find(marker) - 2)
+            return clean[start : start + max_chars]
+    return clean[:max_chars]
+
+
+def key_message(text: str, max_chars: int = 16, preferred_terms: list[str] | None = None) -> str:
+    clean = normalize_hud_source(text)
+    if "账号未转正" in clean:
+        return "账号未转正"
+    if "不可能手动" in clean:
+        return "不可能手动做"
+    if "AI" in clean and "还没有开始" in clean:
+        return "AI 真正的大爆发"
+    if "手动" in clean and "主图" in clean:
+        return "手动做主图"
+    if "Codex" in clean and "主图" in clean:
+        return "Codex 生成主图"
+    if "字段" in clean or ("标题" in clean and "标签" in clean):
+        return "重复填写字段"
+    if "评论区" in clean:
+        return "评论区告诉我"
+    if "小于" in clean and "分钟" in clean:
+        return "< 1 分钟"
+    if "52" in clean and "道题" in clean:
+        return "52 道题"
+    for term in preferred_terms or []:
+        if term and term in clean:
+            start = max(0, clean.find(term) - 2)
+            return clean[start : start + max_chars]
+    return shorten_hud_copy(clean, max_chars)
+
+
+def focus_words(text: str, terms: list[str], limit: int = 2) -> list[str]:
+    hits = [term for term in terms if term and term in text]
+    if hits:
+        return hits[:limit]
+    clean = normalize_hud_source(text)
+    if len(clean) <= 4:
+        return [clean] if clean else []
+    return [clean[-min(4, len(clean)):]]
+
+
+def compact_negative_positive(text: str) -> tuple[str, str, list[str]]:
+    negative, positive = split_negative_positive(text)
+    negative_short = key_message(negative, 16, NEGATIVE_TERMS)
+    positive_short = key_message(positive, 16, POSITIVE_TERMS) if positive else ""
+    if not any(term in negative_short for term in NEGATIVE_TERMS):
+        negative_short = "还在手动" if "手动" in text else negative_short
+    emphasis = focus_words(negative_short, NEGATIVE_TERMS, 1)
+    if positive_short:
+        emphasis += focus_words(positive_short, POSITIVE_TERMS, 1)
+    return negative_short, positive_short, emphasis[:2]
+
+
+def result_title_copy(text: str) -> tuple[str, list[str], bool]:
+    clean = normalize_hud_source(text)
+    is_contrarian = any(term in clean for term in ["反直觉", "还没有开始", "真正的大爆发"])
+    if is_contrarian and "还没有开始" in clean:
+        return "AI 真正的大爆发\n其实还没有开始", ["还没有开始"], True
+    copy = key_message(text, 18, ["自动", "主图", "分发", "发布", "工作流", "Codex", "一键", "爆发"])
+    return copy or "结果已经明确", focus_words(copy, POSITIVE_TERMS + ["一键", "多平台", "主图", "爆发"], 1), is_contrarian
+
+
+def confirm_copy(text: str) -> tuple[str, str, list[str]]:
+    copy = key_message(text, 16, POSITIVE_TERMS)
+    return "自动化交接", copy or "交给 Codex 自动执行", focus_words(copy, POSITIVE_TERMS, 1)
+
+
+def cta_copy(text: str) -> tuple[str, str, str, list[str]]:
+    clean = normalize_hud_source(text)
+    if "离谱" in clean and "有用" in clean:
+        return "离谱但有用", "不是炫技，是把麻烦流程跑通", "关键词：Codex 用法", ["有用"]
+    if "评论区" in clean:
+        return "评论区告诉我", "你想让 Codex 接管哪一步？", "关键词：Codex 用法", ["告诉我"]
+    return "评论区告诉我", key_message(text, 18, ["自提", "分发", "主图", "Codex"]) or "你想自动化哪一步？", "关键词：Codex 用法", ["评论区"]
+
+
+def numeric_fields(text: str) -> dict[str, Any]:
+    match = re.search(r"([+\-]?)(\d+(?:\.\d+)?)\s*(%|倍|万|亿|人|道|题|个|条|分钟|秒)?", text)
+    if not match:
+        return {"numericValue": 30, "numericPrefix": "+", "numericSuffix": "%"}
+    value = float(match.group(2))
+    if value.is_integer():
+        value = int(value)
+    return {
+        "numericValue": value,
+        "numericPrefix": "+" if match.group(1) == "+" else "",
+        "numericSuffix": match.group(3) or "",
+    }
+
+
+def chapter_label_for_scene(scene: dict[str, Any]) -> tuple[str, str]:
+    role = str(scene.get("semanticRole") or "")
+    scene_type = str(scene.get("type") or "")
+    if scene_type == "Hook":
+        return "COLD OPEN", "反直觉开场"
+    if scene_type == "CTA" or role == "cta-resolve":
+        return "CTA", "行动引导"
+    if role in {"semantic-problem-map", "negative-friction"}:
+        return "PAIN POINT", "负面判断"
+    if role == "platform-fanout":
+        return "DISTRIBUTION", "平台分发"
+    if role == "automation-handoff":
+        return "AUTO HANDOFF", "自动化交接"
+    if role in {"proof-material", "proof-focus"}:
+        return "PROOF", "素材证明"
+    return "PROCESS", "流程推进"
+
+
+def corner_label(scene: dict[str, Any]) -> dict[str, Any]:
+    text, subtext = chapter_label_for_scene(scene)
+    scene_id = str(scene["id"])
+    return {
+        "id": f"ve-{scene_id}-corner-label",
+        "sceneId": scene_id,
+        "type": "cornerChapterLabel",
+        "startFrame": int(scene["startFrame"]),
+        "endFrame": int(scene["endFrame"]),
+        "text": text,
+        "subtext": subtext,
+        "semanticRole": "chapter-label",
+        "motionType": "corner-slide-fade",
+        "style": "top-left-corner-label",
+        "safeArea": "top-left-no-shade",
+    }
+
+
+def semantic_role_for_beat(beat: dict[str, Any]) -> str:
+    intent = str(beat.get("semanticIntent") or "")
+    return {
+        "negative-to-positive": "semantic-problem-map",
+        "negative-friction": "semantic-problem-map",
+        "result-promise": "result-promise",
+        "positive-confirm": "automation-handoff",
+        "automation-handoff": "automation-handoff",
+        "numeric-metric": "metric-growth",
+        "enumeration": "workflow-step",
+        "workflow-fields": "workflow-step",
+        "manual-field": "manual-field",
+        "asset-variants": "workflow-step",
+        "platform-fanout": "platform-fanout",
+        "proof-material": "proof-material",
+        "capability-share": "capability-share",
+        "scene-lock": "scene-lock",
+        "transformation-stack": "transformation-stack",
+        "cta-resolve": "cta-resolve",
+    }.get(intent, "workflow-step")
+
+
+def lane_for_event(event: dict[str, Any]) -> str | None:
+    event_type = str(event.get("type") or "")
+    role = str(event.get("semanticRole") or "")
+    safe_area = str(event.get("safeArea") or "").lower()
+    if event_type == "cornerChapterLabel":
+        return None
+    if event_type in {"ctaTitle", "ctaRecommend"}:
+        return "left"
+    if event_type == "materialMain":
+        return "proof"
+    if event_type in {"dataPunch", "metricSpotlight"}:
+        return "right" if "right" in safe_area else "left"
+    if event_type in {"flowPath", "statusStack", "transitionPushZoom"} or role in {"platform-fanout", "workflow-step", "manual-field"}:
+        return "right"
+    return "left"
+
+
+def composition_fps(data: dict[str, Any]) -> int:
+    composition = data.get("composition", {}) if isinstance(data.get("composition"), dict) else {}
+    return int(composition.get("fps") or DEFAULT_FPS)
+
+
+def scene_density_mode(scene: dict[str, Any], data: dict[str, Any]) -> str:
+    source_video_mode = str(data.get("sourceVideoMode") or "")
+    packaging_density = str(data.get("packagingDensity") or "")
+    scene_type = str(scene.get("type") or "")
+    presenter_layout = str(scene.get("presenterLayout") or "")
+    material_layout = str(scene.get("materialLayout") or "")
+    semantic_role = str(scene.get("semanticRole") or "")
+    if material_layout in {"main", "clean"} or presenter_layout == "pip" or semantic_role in {"proof-material", "proof-focus"}:
+        return "proof-focus"
+    if source_video_mode == "precomposed-video" or packaging_density == "light":
+        return "light"
+    if scene_type in {"Hook", "CTA", "Contrast"}:
+        return "dense-strong"
+    return "dense"
+
+
+def annotate_density(event: dict[str, Any], scene: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]:
+    mode = scene_density_mode(scene, data)
+    event = {**event, "densityMode": mode}
+    if mode == "proof-focus":
+        event["densityReason"] = "material-readable"
+    elif mode == "light":
+        event["densityReason"] = "precomposed-or-light-packaging"
+    elif mode == "dense-strong":
+        event["densityReason"] = "hook-cta-contrast"
+    else:
+        event["densityReason"] = "default-dense"
+    return event
+
+
+def desired_duration_for_event(event: dict[str, Any], scene: dict[str, Any] | None = None, data: dict[str, Any] | None = None) -> int:
+    event_type = str(event.get("type") or "")
+    density_mode = str(event.get("densityMode") or "")
+    scene_type = str((scene or {}).get("type") or "")
+    base = PREFERRED_MAIN_HUD_FRAMES
+    if event_type in {"highlightBox", "captionHighlight", "flowPath", "statusStack", "capabilityShare", "sceneLockGrid", "transformationStack"}:
+        base = 135
+    if event_type in {"kineticTitle", "ctaTitle"}:
+        base = 120
+    if density_mode == "dense-strong" and scene_type in {"Hook", "CTA", "Contrast"}:
+        base = max(base, 140)
+    if density_mode == "light" and event_type not in {"materialMain", "ctaTitle", "kineticTitle"}:
+        base = min(base, 115)
+    if density_mode == "proof-focus" and event_type not in {"materialMain", "statusSticker"}:
+        base = min(base, 90)
+    if event_type == "materialMain":
+        base = max(PREFERRED_MAIN_HUD_FRAMES, int(event.get("endFrame", 0) or 0) - int(event.get("startFrame", 0) or 0))
+    steps = event.get("internalSteps")
+    if isinstance(steps, list) and steps:
+        base = max(base, 58 + len(steps) * 22)
+    current = int(event.get("endFrame", 0) or 0) - int(event.get("startFrame", 0) or 0)
+    return max(base, current, MIN_MAIN_HUD_FRAMES)
+
+
+def proof_asset_from_media(data: dict[str, Any]) -> str | None:
+    media_items = data.get("media", []) if isinstance(data.get("media"), list) else []
+    for item in media_items:
+        if not isinstance(item, dict):
+            continue
+        path = str(item.get("path") or "")
+        media_type = str(item.get("type") or "")
+        role = str(item.get("role") or "")
+        if path and (role in {"proof-material", "screen-recording", "recording"} or media_type in {"recording", "screenshot"}):
+            return path
+    return None
+
+
+def poster_steps(text: str) -> list[dict[str, str]]:
+    return [
+        {"id": "ratio-16x9", "label": "横屏 16:9", "iconName": "PanelsTopLeft"},
+        {"id": "ratio-3x4", "label": "竖屏 3:4", "iconName": "Image"},
+        {"id": "ratio-4x3", "label": "方图 4:3", "iconName": "Images"},
+    ]
+
+
+def field_steps(text: str) -> list[dict[str, str]]:
+    candidates = [
+        ("上传", "UploadCloud"),
+        ("标题", "FileText"),
+        ("简介", "AlignLeft"),
+        ("标签", "Tags"),
+        ("封面", "Image"),
+        ("字段", "ClipboardList"),
+        ("输出", "SendHorizontal"),
+    ]
+    steps = [
+        {"id": f"field-{idx + 1:02d}", "label": label, "iconName": icon}
+        for idx, (label, icon) in enumerate(candidates)
+        if label in text
+    ]
+    if len(steps) >= 2:
+        return steps[:5]
+    return [
+        {"id": "step-01", "label": "定义规则", "iconName": "ListChecks"},
+        {"id": "step-02", "label": "自动执行", "iconName": "Bot"},
+        {"id": "step-03", "label": "输出结果", "iconName": "SendHorizontal"},
+    ]
+
+
+def capability_steps(text: str) -> list[dict[str, str]]:
+    return [
+        {"id": "cap-01", "label": "OpenAI", "iconName": "Bot", "status": "领先"},
+        {"id": "cap-02", "label": "Google", "iconName": "Network", "status": "追赶"},
+        {"id": "cap-03", "label": "Anthropic", "iconName": "BrainCircuit", "status": "对比"},
+    ]
+
+
+def scene_steps(text: str) -> list[dict[str, str]]:
+    candidates = [
+        ("支付", "CreditCard"),
+        ("教育", "GraduationCap"),
+        ("政务", "Landmark"),
+        ("行业", "BriefcaseBusiness"),
+        ("下沉市场", "MapPinned"),
+        ("本地生活", "Store"),
+    ]
+    steps = [
+        {"id": f"scene-{idx + 1:02d}", "label": label, "iconName": icon}
+        for idx, (label, icon) in enumerate(candidates)
+        if label in text
+    ]
+    return steps[:4] or [
+        {"id": "scene-01", "label": "场景", "iconName": "MapPinned"},
+        {"id": "scene-02", "label": "行业", "iconName": "BriefcaseBusiness"},
+        {"id": "scene-03", "label": "落地", "iconName": "BadgeCheck"},
+    ]
+
+
+def transformation_steps(text: str) -> list[dict[str, str]]:
+    return [
+        {"id": "state-01", "label": "一个人", "iconName": "User"},
+        {"id": "state-02", "label": "一个团队", "iconName": "Users"},
+        {"id": "driver-01", "label": "第二大脑", "iconName": "BrainCircuit", "status": "DRIVER"},
+        {"id": "driver-02", "label": "护城河", "iconName": "ShieldCheck", "status": "MOAT"},
+        {"id": "result-01", "label": "能力放大", "iconName": "TrendingUp", "status": "RESULT"},
+    ]
+
+
+def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any] | None:
+    beat_id = str(beat.get("id") or "beat")
+    text = str(beat.get("text") or "")
+    intent = str(beat.get("semanticIntent") or "")
+    scene_id = str(beat.get("sceneId") or "")
+    start = int(beat.get("startFrame", 0) or 0)
+    end = int(beat.get("endFrame", start + MIN_MAIN_HUD_FRAMES) or start + MIN_MAIN_HUD_FRAMES)
+    base = {
+        "id": f"ve-{beat_id}",
+        "sceneId": scene_id,
+        "startFrame": start,
+        "endFrame": end,
+        "semanticRole": semantic_role_for_beat(beat),
+        "beatGroupId": f"{scene_id}-{beat_id}",
+        "style": "dark-fullscreen-semantic-hud",
+        "safeArea": "avoid-face-caption",
+        "sourceBeatId": beat_id,
+    }
+    if end - start < MIN_MAIN_HUD_FRAMES:
+        base["timingClass"] = "short-lightweight"
+
+    scene = scene_by_id(data).get(scene_id, {})
+    material_layout = str(scene.get("materialLayout") or "")
+    presenter_layout = str(scene.get("presenterLayout") or "")
+    if material_layout in {"main", "clean"} or presenter_layout == "pip":
+        asset_path = proof_asset_from_media(data)
+        if asset_path:
+            return {
+                **base,
+                "type": "materialMain",
+                "semanticRole": "proof-material",
+                "text": "素材证明",
+                "subtext": "真实录屏 / 页面结果",
+                "assetPath": asset_path,
+                "style": "recording-proof" if Path(asset_path).suffix.lower() in {".mp4", ".mov", ".m4v", ".webm"} else "single-proof",
+                "motionType": "screen-recording-proof",
+            }
+
+    if intent in {"negative-to-positive", "negative-friction"}:
+        negative, positive, emphasis_words = compact_negative_positive(text)
+        event = {
+            **base,
+            "type": "highlightBox",
+            "text": negative or "还在手动",
+            "status": "MANUAL BOTTLENECK",
+            "emphasisWords": emphasis_words or ["手动"],
+            "iconName": "AlertTriangle",
+            "motionType": "red-warning-pop-strike",
+        }
+        if positive:
+            event["subtext"] = positive
+        return event
+
+    if intent == "result-promise":
+        title_copy, emphasis_words, is_contrarian = result_title_copy(text)
+        return {
+            **base,
+            "type": "kineticTitle",
+            "semanticRole": "contrarian-hook" if is_contrarian else "result-promise",
+            "text": title_copy,
+            "status": "反直觉" if is_contrarian else "RESULT",
+            "emphasisWords": emphasis_words,
+            "style": "dark-fullscreen-semantic-hud contrarian-hook" if is_contrarian else "dark-fullscreen-semantic-hud",
+            "motionType": "crash-rebound-keyword-pop",
+        }
+
+    if intent == "positive-confirm":
+        title_copy, subtext_copy, emphasis_words = confirm_copy(text)
+        return {
+            **base,
+            "type": "captionHighlight",
+            "text": title_copy,
+            "subtext": subtext_copy,
+            "status": "CONFIRMED",
+            "emphasisWords": emphasis_words,
+            "iconName": "BadgeCheck",
+            "motionType": "field-collapse-to-action",
+        }
+
+    if intent == "automation-handoff":
+        title_copy, subtext_copy, emphasis_words = confirm_copy(text)
+        return {
+            **base,
+            "type": "captionHighlight",
+            "text": title_copy or "Codex 接管",
+            "subtext": subtext_copy or "把流程交给系统执行",
+            "status": "AUTO HANDOFF",
+            "emphasisWords": emphasis_words or ["Codex"],
+            "iconName": "Bot",
+            "motionType": "field-collapse-to-action",
+        }
+
+    if intent == "manual-field":
+        return {
+            **base,
+            "type": "infoCard",
+            "semanticRole": "manual-field",
+            "text": "重复字段",
+            "title": "自动填字段",
+            "subtext": "标题 / 简介 / 标签 / 封面",
+            "status": "FIELDS",
+            "iconName": "ClipboardList",
+            "internalSteps": field_steps(text),
+            "motionType": "manual-field-task-stack",
+        }
+
+    if intent == "numeric-metric":
+        metric_copy = key_message(text, 16, ["提升", "增长", "比例", "指标", "%", "倍", "万", "亿", "分钟", "秒"])
+        return {
+            **base,
+            "type": "dataPunch",
+            "text": metric_copy or "数字指标",
+            "subtext": "从 0 增长到目标值",
+            "status": "METRIC",
+            "iconName": "TrendingUp",
+            "motionType": "count-up-chart",
+            **numeric_fields(text),
+        }
+
+    if intent in {"workflow-fields", "enumeration"}:
+        title_copy = key_message(text, 14, ["流程", "步骤", "指标", "规则", "发布", "主图", "字段"])
+        return {
+            **base,
+            "type": "flowPath" if intent == "workflow-fields" else "statusStack",
+            "text": "流程推进",
+            "title": title_copy or "步骤列表",
+            "status": "STEP BY STEP",
+            "internalSteps": field_steps(text),
+            "motionType": "flow-list-stagger",
+        }
+
+    if intent == "asset-variants":
+        return {
+            **base,
+            "type": "flowPath",
+            "text": "多尺寸主图",
+            "title": "横屏 / 竖屏 / 方图",
+            "status": "ASSET VARIANTS",
+            "internalSteps": poster_steps(text),
+            "motionType": "flow-list-stagger",
+        }
+
+    if intent == "platform-fanout":
+        return {
+            **base,
+            "type": "transitionPushZoom",
+            "text": "一份素材包",
+            "subtext": "分发到多个平台",
+            "iconName": "Network",
+            "motionType": "hub-to-platform-flow",
+        }
+
+    if intent == "capability-share":
+        return {
+            **base,
+            "type": "capabilityShare",
+            "text": "能力 / 份额 / 排名",
+            "title": key_message(text, 16, ["份额", "排名", "领先", "对比", "大模型"]),
+            "status": "CAPABILITY SHARE",
+            "internalSteps": capability_steps(text),
+            "motionType": "layered-capability-share",
+        }
+
+    if intent == "scene-lock":
+        return {
+            **base,
+            "type": "sceneLockGrid",
+            "text": "场景落地",
+            "title": key_message(text, 16, ["支付", "教育", "政务", "行业", "场景", "下沉市场"]),
+            "status": "SCENE LOCK",
+            "internalSteps": scene_steps(text),
+            "motionType": "scene-grid-stagger",
+        }
+
+    if intent == "transformation-stack":
+        return {
+            **base,
+            "type": "transformationStack",
+            "text": "从个人到团队",
+            "subtext": "AI 变成能力杠杆",
+            "status": "TRANSFORM",
+            "internalSteps": transformation_steps(text),
+            "motionType": "state-driver-result-build",
+        }
+
+    if intent == "proof-material":
+        asset_path = proof_asset_from_media(data)
+        if asset_path:
+            return {
+                **base,
+                "type": "materialMain",
+                "text": "素材证明",
+                "subtext": "真实录屏 / 页面结果",
+                "assetPath": asset_path,
+                "style": "recording-proof" if Path(asset_path).suffix.lower() in {".mp4", ".mov", ".m4v", ".webm"} else "single-proof",
+                "motionType": "screen-recording-proof",
+            }
+        return {
+            **base,
+            "type": "statusSticker",
+            "text": "素材证明",
+            "subtext": key_message(text, 16, ["素材", "证明", "录屏", "页面", "输出"]),
+            "status": "PROOF NEEDED",
+            "iconName": "ShieldCheck",
+            "motionType": "hud-slide-fade",
+        }
+
+    if intent == "cta-resolve":
+        title_copy, subtext_copy, status_copy, emphasis_words = cta_copy(text)
+        return {
+            **base,
+            "type": "ctaTitle",
+            "text": title_copy,
+            "subtext": subtext_copy,
+            "status": status_copy,
+            "emphasisWords": emphasis_words,
+            "motionType": "cta-result-keyword",
+        }
+
+    title_copy = key_message(text, 14, ["流程", "步骤", "规则", "自动", "发布", "主图"])
+    return {
+        **base,
+        "type": "flowPath",
+        "text": "流程推进",
+        "title": title_copy or "语义步骤",
+        "status": "PROCESS",
+        "internalSteps": field_steps(text),
+        "motionType": "flow-list-stagger",
+    }
+
+
+def scene_by_id(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {
+        str(scene.get("id") or ""): scene
+        for scene in data.get("scenes", [])
+        if isinstance(scene, dict)
+    }
+
+
+def schedule_events(events: list[dict[str, Any]], data: dict[str, Any]) -> list[dict[str, Any]]:
+    composition = data.get("composition", {}) if isinstance(data.get("composition"), dict) else {}
+    composition_end = int(composition.get("durationFrames", 0) or 0)
+    scenes = scene_by_id(data)
+    lane_end: dict[str, int] = {}
+    scheduled: list[dict[str, Any]] = []
+    for event in sorted(events, key=lambda item: (int(item.get("startFrame", 0) or 0), str(item.get("sceneId") or ""))):
+        lane = lane_for_event(event)
+        if not lane:
+            scheduled.append(event)
+            continue
+        scene_id = str(event.get("sceneId") or "")
+        scene = scenes.get(scene_id, {})
+        scene_start = int(scene.get("startFrame", 0) or 0)
+        scene_end = int(scene.get("endFrame", composition_end) or composition_end or 0)
+        if str(event.get("type") or "") in {"dataPunch", "metricSpotlight"} and scene_end:
+            scene_end = min(composition_end or scene_end + 60, scene_end + 60)
+        start = max(scene_start, int(event.get("startFrame", 0) or 0))
+        annotated = annotate_density(event, scene, data)
+        duration = desired_duration_for_event(annotated, scene, data)
+        previous_end = lane_end.get(lane)
+        if previous_end is not None and start < previous_end + LANE_BUFFER_FRAMES:
+            start = previous_end + LANE_BUFFER_FRAMES
+        end = start + duration
+        if scene_end and end > scene_end:
+            end = scene_end
+        if composition_end and end > composition_end:
+            overflow = end - composition_end
+            start = max(0, start - overflow)
+            if previous_end is not None and start < previous_end + LANE_BUFFER_FRAMES:
+                start = previous_end + LANE_BUFFER_FRAMES
+            end = min(composition_end, start + duration)
+        if end - start < 24:
+            continue
+        event = {**annotated, "startFrame": start, "endFrame": end}
+        lane_end[lane] = end
+        scheduled.append(event)
+    return scheduled
+
+
+def is_visual_density_change(event: dict[str, Any]) -> bool:
+    event_type = str(event.get("type") or "")
+    if event_type in {"cornerChapterLabel", "presenterReposition"}:
+        return False
+    return True
+
+
+def density_refresh_copy(scene: dict[str, Any], index: int) -> tuple[str, str]:
+    scene_type = str(scene.get("type") or "")
+    if scene_type == "Hook":
+        return "关键判断", "继续推进"
+    if scene_type == "CTA":
+        return "行动提示", "评论区领取"
+    if scene_type == "Process":
+        return "流程推进", f"节点 {index:02d}"
+    if scene_type == "Contrast":
+        return "对比推进", f"阶段 {index:02d}"
+    return "语义推进", f"更新 {index:02d}"
+
+
+def density_refresh_icon(index: int) -> str:
+    icons = ["Activity", "CircleDot", "Radio", "Sparkles"]
+    return icons[(index - 1) % len(icons)]
+
+
+def build_density_refresh_event(scene: dict[str, Any], frame: int, index: int, data: dict[str, Any]) -> dict[str, Any]:
+    scene_id = str(scene.get("id") or "")
+    text, status = density_refresh_copy(scene, index)
+    duration = max(round(composition_fps(data) * 1.4), 34)
+    scene_end = int(scene.get("endFrame", frame + duration) or frame + duration)
+    end = min(scene_end, frame + duration)
+    return {
+        "id": f"ve-{scene_id}-density-refresh-{index:02d}",
+        "sceneId": scene_id,
+        "type": "statusSticker",
+        "startFrame": frame,
+        "endFrame": max(frame + 24, end),
+        "text": text,
+        "status": status,
+        "semanticRole": "density-refresh",
+        "motionType": "hud-slide-fade",
+        "style": "dark-fullscreen-semantic-hud density-refresh",
+        "safeArea": "top-left-no-shade",
+        "iconName": density_refresh_icon(index),
+        "densityMode": scene_density_mode(scene, data),
+        "densityReason": "long-scene-visual-change",
+    }
+
+
+def apply_density_refreshes(events: list[dict[str, Any]], data: dict[str, Any]) -> list[dict[str, Any]]:
+    fps = composition_fps(data)
+    warn_gap = round(fps * 4.0)
+    target_gap = round(fps * 2.8)
+    scenes = [scene for scene in data.get("scenes", []) if isinstance(scene, dict)]
+    events_by_scene: dict[str, list[dict[str, Any]]] = {}
+    for event in events:
+        events_by_scene.setdefault(str(event.get("sceneId") or ""), []).append(event)
+
+    refreshes: list[dict[str, Any]] = []
+    for scene in scenes:
+        mode = scene_density_mode(scene, data)
+        if mode in {"proof-focus", "light"}:
+            continue
+        scene_id = str(scene.get("id") or "")
+        scene_start = int(scene.get("startFrame", 0) or 0)
+        scene_end = int(scene.get("endFrame", scene_start) or scene_start)
+        if scene_end - scene_start <= round(fps * 7.0):
+            continue
+        scene_events = sorted(
+            [event for event in events_by_scene.get(scene_id, []) if is_visual_density_change(event)],
+            key=lambda item: int(item.get("startFrame", 0) or 0),
+        )
+        cursor = scene_start
+        refresh_index = 1
+        for event in scene_events:
+            event_start = int(event.get("startFrame", cursor) or cursor)
+            event_end = int(event.get("endFrame", event_start) or event_start)
+            while event_start - cursor > warn_gap:
+                frame = min(event_start - 26, cursor + target_gap)
+                if frame > cursor + 18:
+                    refreshes.append(build_density_refresh_event(scene, frame, refresh_index, data))
+                    refresh_index += 1
+                    cursor = frame + round(fps * 1.4)
+                else:
+                    break
+            cursor = max(cursor, event_end)
+        while scene_end - cursor > warn_gap:
+            frame = min(scene_end - 34, cursor + target_gap)
+            if frame <= cursor + 18:
+                break
+            refreshes.append(build_density_refresh_event(scene, frame, refresh_index, data))
+            refresh_index += 1
+            cursor = frame + round(fps * 1.4)
+
+    return sorted(events + refreshes, key=lambda item: (int(item.get("startFrame", 0) or 0), str(item.get("id") or "")))
+
+
+def build_visual_events(data: dict[str, Any]) -> list[dict[str, Any]]:
+    scenes = [scene for scene in data.get("scenes", []) if isinstance(scene, dict)]
+    beats = [beat for beat in data.get("semanticBeats", []) if isinstance(beat, dict)]
+    events: list[dict[str, Any]] = [corner_label(scene) for scene in scenes]
+    for beat in beats:
+        event = event_for_beat(beat, data)
+        if event:
+            events.append(anchor_event_to_caption_cue(event, beat, data))
+    return apply_density_refreshes(schedule_events(events, data), data)
+
+
+def sfx_intent_for_event(beat: dict[str, Any], event: dict[str, Any]) -> str | None:
+    semantic_intent = str(beat.get("semanticIntent") or "")
+    event_type = str(event.get("type") or "")
+    semantic_role = str(event.get("semanticRole") or "")
+    if semantic_intent == "result-promise" and event_type in {"kineticTitle", "bigJudgement"}:
+        return "title_impact"
+    if semantic_intent in {"negative-friction", "negative-to-positive"}:
+        return "negative_warning"
+    if semantic_intent == "positive-confirm":
+        return "confirm"
+    if semantic_intent == "automation-handoff":
+        return "automation_handoff"
+    if semantic_intent == "numeric-metric" or event_type in {"dataPunch", "metricSpotlight"}:
+        return "data_count"
+    if semantic_intent == "proof-material" or semantic_role in {"proof-material", "proof-focus", "material-main"}:
+        return "proof_reveal"
+    return None
+
+
+def build_sfx_suggestions(data: dict[str, Any]) -> list[dict[str, Any]]:
+    beats_by_id = {
+        str(beat.get("id") or ""): beat
+        for beat in data.get("semanticBeats", [])
+        if isinstance(beat, dict)
+    }
+    suggestions: list[dict[str, Any]] = []
+    for event in data.get("visualEvents", []):
+        if not isinstance(event, dict):
+            continue
+        beat_id = str(event.get("sourceBeatId") or "")
+        if not beat_id:
+            continue
+        beat = beats_by_id.get(beat_id)
+        if not beat:
+            continue
+        sfx_intent = sfx_intent_for_event(beat, event)
+        if not sfx_intent:
+            continue
+        sfx = SFX_SUGGESTIONS[sfx_intent]
+        start = max(0, int(event.get("startFrame", 0) or 0) - int(sfx.get("preRollFrames", 0) or 0))
+        duration = int(sfx["durationFrames"])
+        suggestions.append(
+            {
+                "id": f"aud-sfx-{beat_id}-{sfx_intent}",
+                "type": "sfx",
+                "startFrame": start,
+                "durationFrames": duration,
+                "sfxIntent": sfx_intent,
+                "sfxId": sfx["sfxId"],
+                "path": sfx["path"],
+                "volumeDb": sfx["volumeDb"],
+                "duckUnderVoice": True,
+                "fadeInFrames": 1 if duration > 25 else 0,
+                "fadeOutFrames": 4 if duration > 25 else 2,
+                "status": "suggested",
+                "confidence": round(float(beat.get("confidence", 0.75) or 0.75), 2),
+                "sourceBeatId": beat_id,
+                "sourceEventId": str(event.get("id") or ""),
+                "suggestedBy": "semantic-sfx-router",
+                "notes": "Suggested only; confirm before changing status to active.",
+            }
+        )
+    return suggestions
+
+
+def merge_sfx_suggestions(existing_cues: list[Any], suggestions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    retained: list[dict[str, Any]] = []
+    claimed: set[tuple[str, str]] = set()
+    for cue in existing_cues:
+        if not isinstance(cue, dict):
+            continue
+        if cue.get("suggestedBy") == "semantic-sfx-router" and cue.get("status") == "suggested":
+            continue
+        retained.append(cue)
+        if cue.get("type") == "sfx":
+            claimed.add((str(cue.get("sourceBeatId") or ""), str(cue.get("sfxIntent") or "")))
+    for cue in suggestions:
+        key = (str(cue.get("sourceBeatId") or ""), str(cue.get("sfxIntent") or ""))
+        if key not in claimed:
+            retained.append(cue)
+            claimed.add(key)
+    return retained
+
+
+def apply_visual_events(data: dict[str, Any]) -> dict[str, Any]:
+    data["visualEvents"] = build_visual_events(data)
+    data["audioCues"] = merge_sfx_suggestions(data.get("audioCues", []), build_sfx_suggestions(data))
+    qa_frames = [frame for frame in data.get("qaFrames", []) if isinstance(frame, dict)]
+    existing = {int(frame.get("frame", -1) or -1) for frame in qa_frames}
+    for event in data["visualEvents"]:
+        if event.get("type") == "cornerChapterLabel":
+            continue
+        frame = int(event["startFrame"]) + max(1, (int(event["endFrame"]) - int(event["startFrame"])) // 2)
+        if frame not in existing:
+            qa_frames.append(
+                {
+                    "frame": frame,
+                    "reason": f"Semantic routed event: {event.get('semanticRole')} / {event.get('type')}",
+                    "checks": ["semantic-intent-fulfilled", "caption-safe", "face-safe"],
+                }
+            )
+            existing.add(frame)
+    data["qaFrames"] = qa_frames
+    return data
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--visual-script", required=True, type=Path)
+    parser.add_argument("--out", type=Path)
+    args = parser.parse_args()
+
+    data = load_json(args.visual_script)
+    if not data.get("semanticBeats"):
+        raise SystemExit("visual_script.json has no semanticBeats; run semantic_router.py first")
+    apply_visual_events(data)
+    out = args.out or args.visual_script
+    save_json(out, data)
+    print(f"visual events: {len(data.get('visualEvents', []))}")
+    print(f"wrote {out}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,4 @@
+interface:
+  display_name: "NGG Koubo Remotion V4 Portrait"
+  short_description: "Full-process 9:16 vertical talking-head Remotion edits"
+  default_prompt: "Use $ngg-koubo-remotion-v4-portrait to cut a 9:16 Chinese vertical talking-head video with semantic research, visual script, Remotion implementation, audio planning, render, and QA."

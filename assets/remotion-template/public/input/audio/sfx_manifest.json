@@ -1,0 +1,142 @@
+{
+  "version": 1,
+  "schema": "ngg-koubo-remotion-v4-portrait-sfx-manifest",
+  "sampleRate": 48000,
+  "license": "user-provided AI-generated audio; approved by user for V4 library use",
+  "defaultPolicy": {
+    "voiceFirst": true,
+    "defaultVolumeDb": -23,
+    "prominentMaxVolumeDb": -14,
+    "renderOnlyWhenReferencedByAudioCue": true
+  },
+  "items": [
+    {
+      "sfxId": "title_impact_whoosh_01",
+      "intent": "title_impact",
+      "semanticRoles": [
+        "result-promise",
+        "pain-question",
+        "big-judgement"
+      ],
+      "motionTypes": [
+        "crash-rebound-keyword-pop",
+        "word-pop"
+      ],
+      "path": "input/audio/sfx/title_impact_whoosh_01.wav",
+      "durationFrames": 50,
+      "durationSec": 2.0,
+      "defaultVolumeDb": -24,
+      "duckUnderVoice": true,
+      "source": "user-confirmed AI-generated SFX",
+      "sourceFileName": "Short_clean_airy_who_#4-1783399157005.wav",
+      "notes": "Opening big-opinion airy whoosh for major title or keyword scale-up. Trigger slightly before the keyword landing; use sparingly because it is a longer whoosh."
+    },
+    {
+      "sfxId": "confirm_ding_01",
+      "intent": "confirm",
+      "semanticRoles": [
+        "positive-confirm",
+        "workflow-step",
+        "cta-resolve"
+      ],
+      "motionTypes": [
+        "confirm-pop",
+        "flow-list-stagger",
+        "state-driver-result-build"
+      ],
+      "path": "input/audio/sfx/confirm_ding_01.wav",
+      "durationFrames": 50,
+      "durationSec": 2.0,
+      "defaultVolumeDb": -25,
+      "duckUnderVoice": true,
+      "source": "user-confirmed AI-generated SFX",
+      "sourceFileName": "user-provided-complete.wav",
+      "notes": "Positive completion ding for success, correct result, green check, workflow completed, or recommendation confirmed. Do not use for title impact or generic UI ticks."
+    },
+    {
+      "sfxId": "negative_warning_01",
+      "intent": "negative_warning",
+      "semanticRoles": [
+        "negative-friction",
+        "pain-question",
+        "semantic-problem-map"
+      ],
+      "motionTypes": [
+        "red-warning-pop-strike",
+        "contrast-swap-scan"
+      ],
+      "path": "input/audio/sfx/negative_warning_01.wav",
+      "durationFrames": 25,
+      "durationSec": 1.0,
+      "defaultVolumeDb": -28,
+      "duckUnderVoice": true,
+      "source": "user-confirmed AI-generated SFX",
+      "sourceFileName": "user-provided-error.wav",
+      "notes": "Negative warning/error sound for red warning cards, failed status, account problems, risks, wrong path, or blocked workflows. Use sparingly because the source is loud."
+    },
+    {
+      "sfxId": "automation_handoff_01",
+      "intent": "automation_handoff",
+      "semanticRoles": [
+        "automation-handoff",
+        "transformation-stack",
+        "workflow-step"
+      ],
+      "motionTypes": [
+        "field-collapse-to-action",
+        "state-driver-result-build",
+        "hud-slide-fade"
+      ],
+      "path": "input/audio/sfx/automation_handoff_01.wav",
+      "durationFrames": 50,
+      "durationSec": 2.0,
+      "defaultVolumeDb": -25,
+      "duckUnderVoice": true,
+      "source": "user-confirmed AI-generated SFX",
+      "sourceFileName": "user-provided-handoff.wav",
+      "notes": "Soft automation handoff sound for manual task handed to Codex/AI/system, workflow takeover, or automation start. Do not use for final completion, title impact, or generic transition sweeps."
+    },
+    {
+      "sfxId": "data_count_01",
+      "intent": "data_count",
+      "semanticRoles": [
+        "numeric-metric",
+        "metric-growth"
+      ],
+      "motionTypes": [
+        "count-up-chart",
+        "data-punch"
+      ],
+      "path": "input/audio/sfx/data_count_01.wav",
+      "defaultVolumeDb": -26,
+      "sourceFileName": "user-provided-data.wav",
+      "notes": "Light numeric tick for count-up, percentages, growth metrics, 5x, question count, or data punch HUD. Do not use as generic UI tick.",
+      "durationFrames": 25,
+      "durationSec": 1.0,
+      "duckUnderVoice": true,
+      "source": "user-confirmed AI-generated SFX"
+    },
+    {
+      "sfxId": "proof_reveal_01",
+      "intent": "proof_reveal",
+      "semanticRoles": [
+        "proof-material",
+        "proof-focus",
+        "material-main"
+      ],
+      "motionTypes": [
+        "material-push-in",
+        "material-zoom-highlight",
+        "screen-recording-proof"
+      ],
+      "path": "input/audio/sfx/proof_reveal_01.wav",
+      "defaultVolumeDb": -30,
+      "sourceFileName": "user-provided-proof.wav",
+      "notes": "Proof material reveal for screenshot, recording, evidence window, result board, or Before/Now comparison. Source is loud, keep default volume low.",
+      "durationFrames": 25,
+      "durationSec": 1.0,
+      "duckUnderVoice": true,
+      "source": "user-confirmed AI-generated SFX"
+    }
+  ]
+}

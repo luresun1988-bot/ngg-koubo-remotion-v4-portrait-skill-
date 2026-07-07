@@ -1,0 +1,37 @@
+node_modules/
+out/
+dist/
+.cache/
+.remotion/
+*.log
+__pycache__/
+*.pyc
+
+# Generated project/render artifacts
+preview/
+qa/
+renders/
+component-gallery/_work/
+component-gallery/renders/*
+!component-gallery/renders/.gitkeep
+!component-gallery/renders/keyframes/
+component-gallery/renders/keyframes/*
+!component-gallery/renders/keyframes/.gitkeep
+
+# Large local media should be managed per project, not committed to the template
+public/input/*
+!public/input/.gitkeep
+!public/input/audio/
+!public/input/audio/bgm/
+!public/input/audio/bgm/default_bgm.mp3
+public/materials/*
+!public/materials/.gitkeep
+public/sfx/*
+!public/sfx/.gitkeep
+public/logos/*
+!public/logos/.gitkeep
+
+# Local env/secrets
+.env
+.env.*
+!.env.example

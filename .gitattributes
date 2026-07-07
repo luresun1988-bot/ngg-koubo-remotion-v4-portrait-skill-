@@ -1,0 +1,10 @@
+* text=auto eol=lf
+
+*.otf binary
+*.ttf binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.mp4 binary
+*.mov binary
+*.webm binary

@@ -1,0 +1,20 @@
+{
+  "projectRoot": "",
+  "sourceMedia": {
+    "talkingHead": "",
+    "script": "",
+    "transcript": "",
+    "captions": "",
+    "screenshots": [],
+    "recordings": [],
+    "logos": []
+  },
+  "outputFormat": "9:16",
+  "template": "ngg-koubo-remotion-v4-portrait",
+  "style": "dark-fullscreen-semantic-hud",
+  "semanticSearch": true,
+  "sfxEnabled": true,
+  "bgmEnabled": true,
+  "sfxManifestPath": "input/audio/sfx_manifest.json",
+  "bgmPath": "input/audio/bgm/default_bgm.mp3"
+}

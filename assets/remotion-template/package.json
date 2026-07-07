@@ -1,0 +1,32 @@
+{
+  "name": "ngg-koubo-remotion-v4-portrait-template",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts NGGKouboV4Portrait out/final.mp4 --gl=angle",
+    "still": "remotion still src/index.ts NGGKouboV4Portrait out/still.png --frame=90 --gl=angle",
+    "typecheck": "tsc --noEmit",
+    "demo:assets": "powershell -ExecutionPolicy Bypass -File scripts/create_demo_assets.ps1",
+    "data:example": "python scripts/write_generated_visual_script.py --visual-script config/visual_script.example.json --out src/generatedVisualScript.ts",
+    "validate": "python scripts/validate_visual_script.py config/visual_script.example.json",
+    "regression:sfx": "python scripts/sfx_semantic_routing_regression.py",
+    "qa:example": "python scripts/qa_lint_visual_script.py --visual-script config/visual_script.example.json --remotion-root .",
+    "gallery": "powershell -ExecutionPolicy Bypass -File component-gallery/render_gallery.ps1 -SkipVideo",
+    "gallery:video": "powershell -ExecutionPolicy Bypass -File component-gallery/render_gallery.ps1"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.477",
+    "@remotion/transitions": "4.0.477",
+    "lucide-react": "^0.475.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.477"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,1127 @@
+{
+  "schemaVersion": "ngg-koubo-remotion-v4-portrait",
+  "projectConfigPath": "component-gallery",
+  "metadata": {
+    "purpose": "V4 component style gallery",
+    "version": 1
+  },
+  "composition": {
+    "format": "9:16",
+    "width": 1080,
+    "height": 1920,
+    "fps": 25,
+    "durationFrames": 1800
+  },
+  "captionTimeline": {
+    "sourceType": "provided",
+    "sourcePath": "component-gallery",
+    "method": "fixed-gallery-cue-timecodes",
+    "generatedBy": "component-gallery",
+    "notes": "Gallery captions use fixed review cue times and are not produced from scene-proportional splitting."
+  },
+  "researchNotes": [
+    {
+      "id": "gallery-note",
+      "topic": "component gallery",
+      "summary": "Fixed semantic component samples for style review.",
+      "visualUse": "Use keyframes and short MP4 to review component style before real project tests."
+    }
+  ],
+  "media": [
+    {
+      "id": "gallery-presenter",
+      "type": "video",
+      "path": "input/gallery_presenter.mp4",
+      "role": "presenter",
+      "hasAudio": true
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene-01-hook",
+      "type": "Hook",
+      "segmentId": "gallery-01",
+      "startFrame": 0,
+      "endFrame": 150,
+      "semanticRole": "result-promise",
+      "presenterLayout": "fullscreen",
+      "materialLayout": "none",
+      "intent": "Component gallery sample for kineticTitle.",
+      "sourceVideo": "input/gallery_presenter.mp4",
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u522b\u518d\u624b\u52a8\u505a\u4e3b\u56fe\uff0cCodex \u751f\u6210\u4e09\u5957\u6d77\u62a5"
+    },
+    {
+      "id": "scene-02-negative",
+      "type": "Contrast",
+      "segmentId": "gallery-02",
+      "startFrame": 150,
+      "endFrame": 300,
+      "semanticRole": "semantic-problem-map",
+      "presenterLayout": "fullscreen",
+      "materialLayout": "none",
+      "intent": "Component gallery sample for highlightBox.",
+      "sourceVideo": "input/gallery_presenter.mp4",
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u5c31\u8fd9\u70b9\u4eba\uff0c\u7b97\u529b\u5df2\u7ecf\u4e0d\u591f\u5206\u4e86\uff0c\u8fd9\u4e00\u6b65\u8be5\u81ea\u52a8\u5316\u4e86"
+    },
+    {
+      "id": "scene-03-data",
+      "type": "Process",
+      "segmentId": "gallery-03",
+      "startFrame": 300,
+      "endFrame": 450,
+      "semanticRole": "metric-growth",
+      "presenterLayout": "fullscreen",
+      "materialLayout": "none",
+      "intent": "Component gallery sample for dataPunch.",
+      "sourceVideo": "input/gallery_presenter.mp4",
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u63d0\u5347\u6548\u7387\uff0c\u4ece 0 \u6da8\u5230 30%"
+    },
+    {
+      "id": "scene-04-flow",
+      "type": "Process",
+      "segmentId": "gallery-04",
+      "startFrame": 450,
+      "endFrame": 600,
+      "semanticRole": "workflow-step",
+      "presenterLayout": "fullscreen",
+      "materialLayout": "none",
+      "intent": "Component gallery sample for flowPath.",
+      "sourceVideo": "input/gallery_presenter.mp4",
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u4e09\u4e2a\u6b65\u9aa4\uff0c\u5224\u65ad\u80fd\u4e0d\u80fd\u7a33\u5b9a\u6295\u653e"
+    },
+    {
+      "id": "scene-05-card",
+      "type": "Process",
+      "segmentId": "gallery-05",
+      "startFrame": 600,
+      "endFrame": 750,
+      "semanticRole": "manual-field",
+      "presenterLayout": "fullscreen",
+      "materialLayout": "none",
+      "intent": "Component gallery sample for infoCard.",
+      "sourceVideo": "input/gallery_presenter.mp4",
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u6807\u9898 / \u7b80\u4ecb / \u6807\u7b7e\uff0c\u6bcf\u4e2a\u5e73\u53f0\u91cd\u590d\u586b\u5199"
+    },
+    {
+      "id": "scene-06-capability",
+      "type": "Process",
+      "segmentId": "gallery-06",
+      "startFrame": 750,
+      "endFrame": 900,
+      "semanticRole": "capability-share",
+      "presenterLayout": "fullscreen",
+      "materialLayout": "none",
+      "intent": "Component gallery sample for capabilityShare.",
+      "sourceVideo": "input/gallery_presenter.mp4",
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u80fd\u529b\u4efd\u989d\uff0c\u8c01\u5728\u771f\u6b63\u9886\u5148"
+    },
+    {
+      "id": "scene-07-scene",
+      "type": "Process",
+      "segmentId": "gallery-07",
+      "startFrame": 900,
+      "endFrame": 1050,
+      "semanticRole": "scene-lock",
+      "presenterLayout": "fullscreen",
+      "materialLayout": "none",
+      "intent": "Component gallery sample for sceneLockGrid.",
+      "sourceVideo": "input/gallery_presenter.mp4",
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u573a\u666f\u7ed1\u5b9a\uff0c\u628a\u80fd\u529b\u843d\u5230\u5177\u4f53\u573a\u666f"
+    },
+    {
+      "id": "scene-08-transform",
+      "type": "Process",
+      "segmentId": "gallery-08",
+      "startFrame": 1050,
+      "endFrame": 1200,
+      "semanticRole": "transformation-stack",
+      "presenterLayout": "fullscreen",
+      "materialLayout": "none",
+      "intent": "Component gallery sample for transformationStack.",
+      "sourceVideo": "input/gallery_presenter.mp4",
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u80fd\u529b\u8f6c\u5316\uff0c\u4ece\u4e00\u4e2a\u4eba\u5230\u4e00\u4e2a\u56e2\u961f"
+    },
+    {
+      "id": "scene-09-platform",
+      "type": "Process",
+      "segmentId": "gallery-09",
+      "startFrame": 1200,
+      "endFrame": 1350,
+      "semanticRole": "platform-fanout",
+      "presenterLayout": "fullscreen",
+      "materialLayout": "none",
+      "intent": "Component gallery sample for transitionPushZoom.",
+      "sourceVideo": "input/gallery_presenter.mp4",
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u4e00\u4efd\u7d20\u6750\u5305\uff0c\u5206\u53d1\u591a\u5e73\u53f0"
+    },
+    {
+      "id": "scene-10-automation",
+      "type": "Process",
+      "segmentId": "gallery-10",
+      "startFrame": 1350,
+      "endFrame": 1500,
+      "semanticRole": "automation-handoff",
+      "presenterLayout": "fullscreen",
+      "materialLayout": "none",
+      "intent": "Component gallery sample for captionHighlight.",
+      "sourceVideo": "input/gallery_presenter.mp4",
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u91cd\u590d\u586b\u5199\uff0c\u4ea4\u7ed9 Codex \u6267\u884c"
+    },
+    {
+      "id": "scene-11-proof",
+      "type": "Proof",
+      "segmentId": "gallery-11",
+      "startFrame": 1500,
+      "endFrame": 1650,
+      "semanticRole": "proof-material",
+      "presenterLayout": "pip",
+      "materialLayout": "main",
+      "intent": "Component gallery sample for materialMain.",
+      "sourceVideo": "input/gallery_presenter.mp4",
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u5f55\u5c4f\u8bc1\u660e\uff0c\u7d20\u6750\u4e3b\u5c4f + \u4eba\u7269 PiP"
+    },
+    {
+      "id": "scene-12-cta",
+      "type": "CTA",
+      "segmentId": "gallery-12",
+      "startFrame": 1650,
+      "endFrame": 1800,
+      "semanticRole": "cta-resolve",
+      "presenterLayout": "fullscreen",
+      "materialLayout": "none",
+      "intent": "Component gallery sample for ctaTitle.",
+      "sourceVideo": "input/gallery_presenter.mp4",
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u60f3\u8981\u8fd9\u5957\u65b9\u6cd5\uff0c\u8bc4\u8bba\u533a\u6263\uff1a\u4e3b\u56fe Skill"
+    }
+  ],
+  "captionCues": [
+    {
+      "id": "cap-01",
+      "sceneId": "scene-01-hook",
+      "startFrame": 10,
+      "endFrame": 140,
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u522b\u518d\u624b\u52a8\u505a\u4e3b\u56fe\uff0cCodex \u751f\u6210\u4e09\u5957\u6d77\u62a5",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-02",
+      "sceneId": "scene-02-negative",
+      "startFrame": 160,
+      "endFrame": 290,
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u5c31\u8fd9\u70b9\u4eba\uff0c\u7b97\u529b\u5df2\u7ecf\u4e0d\u591f\u5206\u4e86\uff0c\u8fd9\u4e00\u6b65\u8be5\u81ea\u52a8\u5316\u4e86",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-03",
+      "sceneId": "scene-03-data",
+      "startFrame": 310,
+      "endFrame": 440,
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u63d0\u5347\u6548\u7387\uff0c\u4ece 0 \u6da8\u5230 30%",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-04",
+      "sceneId": "scene-04-flow",
+      "startFrame": 460,
+      "endFrame": 590,
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u4e09\u4e2a\u6b65\u9aa4\uff0c\u5224\u65ad\u80fd\u4e0d\u80fd\u7a33\u5b9a\u6295\u653e",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-05",
+      "sceneId": "scene-05-card",
+      "startFrame": 610,
+      "endFrame": 740,
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u6807\u9898 / \u7b80\u4ecb / \u6807\u7b7e\uff0c\u6bcf\u4e2a\u5e73\u53f0\u91cd\u590d\u586b\u5199",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-06",
+      "sceneId": "scene-06-capability",
+      "startFrame": 760,
+      "endFrame": 890,
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u80fd\u529b\u4efd\u989d\uff0c\u8c01\u5728\u771f\u6b63\u9886\u5148",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-07",
+      "sceneId": "scene-07-scene",
+      "startFrame": 910,
+      "endFrame": 1040,
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u573a\u666f\u7ed1\u5b9a\uff0c\u628a\u80fd\u529b\u843d\u5230\u5177\u4f53\u573a\u666f",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-08",
+      "sceneId": "scene-08-transform",
+      "startFrame": 1060,
+      "endFrame": 1190,
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u80fd\u529b\u8f6c\u5316\uff0c\u4ece\u4e00\u4e2a\u4eba\u5230\u4e00\u4e2a\u56e2\u961f",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-09",
+      "sceneId": "scene-09-platform",
+      "startFrame": 1210,
+      "endFrame": 1340,
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u4e00\u4efd\u7d20\u6750\u5305\uff0c\u5206\u53d1\u591a\u5e73\u53f0",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-10",
+      "sceneId": "scene-10-automation",
+      "startFrame": 1360,
+      "endFrame": 1490,
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u91cd\u590d\u586b\u5199\uff0c\u4ea4\u7ed9 Codex \u6267\u884c",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-11",
+      "sceneId": "scene-11-proof",
+      "startFrame": 1510,
+      "endFrame": 1640,
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u5f55\u5c4f\u8bc1\u660e\uff0c\u7d20\u6750\u4e3b\u5c4f + \u4eba\u7269 PiP",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-12",
+      "sceneId": "scene-12-cta",
+      "startFrame": 1660,
+      "endFrame": 1790,
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u60f3\u8981\u8fd9\u5957\u65b9\u6cd5\uff0c\u8bc4\u8bba\u533a\u6263\uff1a\u4e3b\u56fe Skill",
+      "highlightWords": []
+    }
+  ],
+  "visualEvents": [
+    {
+      "id": "ve-01-corner",
+      "sceneId": "scene-01-hook",
+      "type": "cornerChapterLabel",
+      "startFrame": 0,
+      "endFrame": 150,
+      "text": "COLD OPEN",
+      "subtext": "\u53cd\u76f4\u89c9\u5f00\u573a",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-01-hook",
+      "sceneId": "scene-01-hook",
+      "type": "kineticTitle",
+      "startFrame": 12,
+      "endFrame": 142,
+      "text": "AI\u771f\u6b63\u7684\u5927\u7206\u53d1\n\u5176\u5b9e\u8fd8\u6ca1\u6709\u5f00\u59cb",
+      "semanticRole": "contrarian-hook",
+      "motionType": "crash-rebound-keyword-pop",
+      "style": "dark-fullscreen-semantic-hud contrarian-hook",
+      "safeArea": "avoid-face-caption",
+      "status": "\u53cd\u76f4\u89c9",
+      "emphasisWords": [
+        "\u8fd8\u6ca1\u6709\u5f00\u59cb"
+      ],
+      "sourceBeatId": "gallery-beat-01",
+      "beatGroupId": "scene-01-hook-gallery-beat-01"
+    },
+    {
+      "id": "ve-02-corner",
+      "sceneId": "scene-02-negative",
+      "type": "cornerChapterLabel",
+      "startFrame": 150,
+      "endFrame": 300,
+      "text": "PAIN POINT",
+      "subtext": "\u8d1f\u9762\u5224\u65ad",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-02-negative",
+      "sceneId": "scene-02-negative",
+      "type": "highlightBox",
+      "startFrame": 162,
+      "endFrame": 292,
+      "text": "\u5c31\u8fd9\u70b9\u4eba\uff0c\u7b97\u529b\u5df2\u7ecf\u4e0d\u591f\u5206\u4e86",
+      "subtext": "\u8fd9\u4e00\u6b65\uff0c\u8be5\u81ea\u52a8\u5316\u4e86",
+      "semanticRole": "semantic-problem-map",
+      "motionType": "red-warning-pop-strike",
+      "style": "negative-warning-card",
+      "safeArea": "avoid-face-caption",
+      "status": "COMPUTE ALREADY SHORT",
+      "emphasisWords": [
+        "\u4e0d\u591f\u5206",
+        "\u81ea\u52a8\u5316"
+      ],
+      "iconName": "Cpu",
+      "sourceBeatId": "gallery-beat-02",
+      "beatGroupId": "scene-02-negative-gallery-beat-02"
+    },
+    {
+      "id": "ve-03-corner",
+      "sceneId": "scene-03-data",
+      "type": "cornerChapterLabel",
+      "startFrame": 300,
+      "endFrame": 450,
+      "text": "DATA",
+      "subtext": "\u6570\u5b57\u589e\u957f",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-03-data",
+      "sceneId": "scene-03-data",
+      "type": "dataPunch",
+      "startFrame": 312,
+      "endFrame": 442,
+      "text": "\u63d0\u5347\u6548\u7387",
+      "subtext": "\u4ece 0 \u6da8\u5230 30%",
+      "semanticRole": "metric-growth",
+      "motionType": "count-up-chart",
+      "style": "dark-fullscreen-semantic-hud",
+      "safeArea": "avoid-face-caption",
+      "numericValue": 30,
+      "numericPrefix": "+",
+      "numericSuffix": "%",
+      "iconName": "TrendingUp",
+      "status": "\u6548\u7387\u63d0\u5347",
+      "sourceBeatId": "gallery-beat-03",
+      "beatGroupId": "scene-03-data-gallery-beat-03"
+    },
+    {
+      "id": "ve-04-corner",
+      "sceneId": "scene-04-flow",
+      "type": "cornerChapterLabel",
+      "startFrame": 450,
+      "endFrame": 600,
+      "text": "FLOW",
+      "subtext": "\u6d41\u7a0b\u679a\u4e3e",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-04-flow",
+      "sceneId": "scene-04-flow",
+      "type": "flowPath",
+      "startFrame": 462,
+      "endFrame": 592,
+      "text": "\u4e09\u4e2a\u6b65\u9aa4",
+      "subtext": "\u5224\u65ad\u80fd\u4e0d\u80fd\u7a33\u5b9a\u6295\u653e",
+      "semanticRole": "workflow-step",
+      "motionType": "flow-list-stagger",
+      "style": "dark-fullscreen-semantic-hud",
+      "safeArea": "avoid-face-caption",
+      "title": "\u7a33\u5b9a\u6295\u653e\u6307\u6807",
+      "status": "\u6d41\u7a0b\u5217\u8868",
+      "internalSteps": [
+        {
+          "id": "flow-01",
+          "label": "\u53e3\u64ad\u8282\u594f",
+          "iconName": "ListChecks"
+        },
+        {
+          "id": "flow-02",
+          "label": "\u5b57\u5e55\u8bfb\u5b8c",
+          "iconName": "AlignLeft"
+        },
+        {
+          "id": "flow-03",
+          "label": "\u7d20\u6750\u5207\u6362",
+          "iconName": "Video"
+        }
+      ],
+      "sourceBeatId": "gallery-beat-04",
+      "beatGroupId": "scene-04-flow-gallery-beat-04"
+    },
+    {
+      "id": "ve-05-corner",
+      "sceneId": "scene-05-card",
+      "type": "cornerChapterLabel",
+      "startFrame": 600,
+      "endFrame": 750,
+      "text": "FIELDS",
+      "subtext": "\u5b57\u6bb5\u5361\u7247",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-05-card",
+      "sceneId": "scene-05-card",
+      "type": "infoCard",
+      "startFrame": 612,
+      "endFrame": 742,
+      "title": "\u81ea\u52a8\u586b\u5b57\u6bb5",
+      "text": "\u6807\u9898 / \u7b80\u4ecb / \u6807\u7b7e",
+      "subtext": "\u6bcf\u4e2a\u5e73\u53f0\u91cd\u590d\u586b\u5199",
+      "semanticRole": "manual-field",
+      "motionType": "card-stagger-stack",
+      "style": "dark-fullscreen-semantic-hud",
+      "safeArea": "avoid-face-caption",
+      "iconName": "FileText",
+      "status": "\u63a5\u7ba1",
+      "internalSteps": [
+        {
+          "label": "01",
+          "text": "\u751f\u6210\u6807\u9898",
+          "status": "\u5b8c\u6210",
+          "iconName": "FileText"
+        },
+        {
+          "label": "02",
+          "text": "\u538b\u7f29\u7b80\u4ecb",
+          "status": "\u5b8c\u6210",
+          "iconName": "AlignLeft"
+        },
+        {
+          "label": "03",
+          "text": "\u8865\u9f50\u6807\u7b7e",
+          "status": "\u6267\u884c\u4e2d",
+          "iconName": "Tags"
+        }
+      ],
+      "beatGroupId": "gallery-field-card",
+      "sourceBeatId": "gallery-beat-05"
+    },
+    {
+      "id": "ve-06-corner",
+      "sceneId": "scene-06-capability",
+      "type": "cornerChapterLabel",
+      "startFrame": 750,
+      "endFrame": 900,
+      "text": "CAPABILITY",
+      "subtext": "\u80fd\u529b\u4efd\u989d",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-06-capability",
+      "sceneId": "scene-06-capability",
+      "type": "capabilityShare",
+      "startFrame": 762,
+      "endFrame": 892,
+      "text": "\u80fd\u529b\u4efd\u989d",
+      "subtext": "\u8c01\u5728\u771f\u6b63\u9886\u5148",
+      "semanticRole": "capability-share",
+      "motionType": "layered-capability-share",
+      "style": "dark-fullscreen-semantic-hud",
+      "safeArea": "avoid-face-caption",
+      "status": "\u4efd\u989d / \u6392\u540d",
+      "internalSteps": [
+        {
+          "id": "cap-01",
+          "label": "Anthropic",
+          "iconName": "BrainCircuit",
+          "status": "42%"
+        },
+        {
+          "id": "cap-02",
+          "label": "OpenAI",
+          "iconName": "Bot",
+          "status": "21%"
+        },
+        {
+          "id": "cap-03",
+          "label": "Google",
+          "iconName": "Network",
+          "status": "10%"
+        }
+      ],
+      "sourceBeatId": "gallery-beat-06",
+      "beatGroupId": "scene-06-capability-gallery-beat-06"
+    },
+    {
+      "id": "ve-07-corner",
+      "sceneId": "scene-07-scene",
+      "type": "cornerChapterLabel",
+      "startFrame": 900,
+      "endFrame": 1050,
+      "text": "SCENE LOCK",
+      "subtext": "\u573a\u666f\u7ed1\u5b9a",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-07-scene",
+      "sceneId": "scene-07-scene",
+      "type": "sceneLockGrid",
+      "startFrame": 912,
+      "endFrame": 1042,
+      "text": "\u573a\u666f\u7ed1\u5b9a",
+      "subtext": "\u628a\u80fd\u529b\u843d\u5230\u5177\u4f53\u573a\u666f",
+      "semanticRole": "scene-lock",
+      "motionType": "scene-grid-stagger",
+      "style": "dark-fullscreen-semantic-hud",
+      "safeArea": "avoid-face-caption",
+      "status": "\u5e94\u7528\u573a\u666f",
+      "internalSteps": [
+        {
+          "id": "scene-01",
+          "label": "\u652f\u4ed8",
+          "iconName": "CreditCard",
+          "status": "\u9ad8\u9891\u4ea4\u6613"
+        },
+        {
+          "id": "scene-02",
+          "label": "\u6559\u80b2",
+          "iconName": "GraduationCap",
+          "status": "\u5b66\u4e60\u573a\u666f"
+        },
+        {
+          "id": "scene-03",
+          "label": "\u653f\u52a1",
+          "iconName": "Landmark",
+          "status": "\u516c\u5171\u670d\u52a1"
+        }
+      ],
+      "sourceBeatId": "gallery-beat-07",
+      "beatGroupId": "scene-07-scene-gallery-beat-07"
+    },
+    {
+      "id": "ve-08-corner",
+      "sceneId": "scene-08-transform",
+      "type": "cornerChapterLabel",
+      "startFrame": 1050,
+      "endFrame": 1200,
+      "text": "TRANSFORM",
+      "subtext": "\u8f6c\u5316\u6808",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-08-transform",
+      "sceneId": "scene-08-transform",
+      "type": "transformationStack",
+      "startFrame": 1062,
+      "endFrame": 1192,
+      "text": "\u80fd\u529b\u8f6c\u5316",
+      "subtext": "\u4ece\u4e00\u4e2a\u4eba\u5230\u4e00\u4e2a\u56e2\u961f",
+      "semanticRole": "transformation-stack",
+      "motionType": "state-driver-result-build",
+      "style": "dark-fullscreen-semantic-hud",
+      "safeArea": "avoid-face-caption",
+      "status": "LEVERAGE",
+      "internalSteps": [
+        {
+          "id": "source",
+          "label": "\u4e00\u4e2a\u4eba",
+          "iconName": "User",
+          "status": "\u8d77\u70b9"
+        },
+        {
+          "id": "target",
+          "label": "\u4e00\u4e2a\u56e2\u961f",
+          "iconName": "Users",
+          "status": "\u76ee\u6807"
+        },
+        {
+          "id": "driver-01",
+          "label": "\u62a4\u57ce\u6cb3",
+          "iconName": "ShieldCheck",
+          "status": "MOAT"
+        },
+        {
+          "id": "driver-02",
+          "label": "\u6760\u6746",
+          "iconName": "TrendingUp",
+          "status": "AI"
+        },
+        {
+          "id": "result",
+          "label": "55%-81%",
+          "iconName": "FlaskConical",
+          "status": "FASTER"
+        }
+      ],
+      "sourceBeatId": "gallery-beat-08",
+      "beatGroupId": "scene-08-transform-gallery-beat-08"
+    },
+    {
+      "id": "ve-09-corner",
+      "sceneId": "scene-09-platform",
+      "type": "cornerChapterLabel",
+      "startFrame": 1200,
+      "endFrame": 1350,
+      "text": "DISTRIBUTION",
+      "subtext": "\u5e73\u53f0\u5206\u53d1",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-09-platform",
+      "sceneId": "scene-09-platform",
+      "type": "transitionPushZoom",
+      "startFrame": 1212,
+      "endFrame": 1342,
+      "text": "\u4e00\u4efd\u7d20\u6750\u5305",
+      "subtext": "\u5206\u53d1\u591a\u5e73\u53f0",
+      "semanticRole": "platform-fanout",
+      "motionType": "hub-to-platform-flow",
+      "style": "dark-fullscreen-semantic-hud",
+      "safeArea": "avoid-face-caption",
+      "status": "PACKAGE",
+      "sourceBeatId": "gallery-beat-09",
+      "beatGroupId": "scene-09-platform-gallery-beat-09"
+    },
+    {
+      "id": "ve-10-corner",
+      "sceneId": "scene-10-automation",
+      "type": "cornerChapterLabel",
+      "startFrame": 1350,
+      "endFrame": 1500,
+      "text": "AUTO HANDOFF",
+      "subtext": "\u81ea\u52a8\u4ea4\u63a5",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-10-automation",
+      "sceneId": "scene-10-automation",
+      "type": "captionHighlight",
+      "startFrame": 1362,
+      "endFrame": 1492,
+      "text": "\u91cd\u590d\u586b\u5199",
+      "subtext": "\u4ea4\u7ed9 Codex \u6267\u884c",
+      "semanticRole": "automation-handoff",
+      "motionType": "field-collapse-to-action",
+      "style": "dark-fullscreen-semantic-hud",
+      "safeArea": "avoid-face-caption",
+      "status": "Codex EXEC",
+      "emphasisWords": [
+        "Codex"
+      ],
+      "sourceBeatId": "gallery-beat-10",
+      "beatGroupId": "scene-10-automation-gallery-beat-10"
+    },
+    {
+      "id": "ve-11-corner",
+      "sceneId": "scene-11-proof",
+      "type": "cornerChapterLabel",
+      "startFrame": 1500,
+      "endFrame": 1650,
+      "text": "PROOF",
+      "subtext": "\u771f\u5b9e\u7d20\u6750",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-11-proof",
+      "sceneId": "scene-11-proof",
+      "type": "materialMain",
+      "startFrame": 1512,
+      "endFrame": 1642,
+      "text": "\u5f55\u5c4f\u8bc1\u660e",
+      "subtext": "\u7d20\u6750\u4e3b\u5c4f + \u4eba\u7269 PiP",
+      "semanticRole": "proof-material",
+      "motionType": "screen-recording-proof",
+      "style": "recording-proof",
+      "safeArea": "proof-focus",
+      "assetPath": "materials/gallery_proof.mp4",
+      "sourceBeatId": "gallery-beat-11",
+      "beatGroupId": "scene-11-proof-gallery-beat-11"
+    },
+    {
+      "id": "ve-12-corner",
+      "sceneId": "scene-12-cta",
+      "type": "cornerChapterLabel",
+      "startFrame": 1650,
+      "endFrame": 1800,
+      "text": "CTA",
+      "subtext": "\u884c\u52a8\u5f15\u5bfc",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-12-cta",
+      "sceneId": "scene-12-cta",
+      "type": "ctaTitle",
+      "startFrame": 1662,
+      "endFrame": 1792,
+      "text": "\u6293\u4f4fAI\u7ea2\u5229\u4e09\u65b9\u5411",
+      "subtext": "\u4e0d\u662f\u8f6c\u884c\uff0c\u662f\u628a\u73b0\u6709\u80fd\u529b\u653e\u5927",
+      "status": "\u884c\u52a8\u603b\u7ed3",
+      "semanticRole": "cta-resolve",
+      "motionType": "crash-rebound",
+      "style": "dark-fullscreen-semantic-hud cta-summary",
+      "safeArea": "avoid-face-caption",
+      "emphasisWords": [
+        "AI"
+      ],
+      "internalSteps": [
+        {
+          "label": "01",
+          "text": "\u5df2\u4f1a\u624b\u827a",
+          "status": "5x",
+          "iconName": "Zap"
+        },
+        {
+          "label": "02",
+          "text": "\u4e0b\u6c89\u5e02\u573a",
+          "status": "\u8ba4\u77e5\u5dee",
+          "iconName": "Package"
+        },
+        {
+          "label": "03",
+          "text": "\u77e5\u8bc6\u5e93",
+          "status": "\u7b2c\u4e8c\u5927\u8111",
+          "iconName": "BrainCircuit"
+        }
+      ],
+      "sourceBeatId": "gallery-beat-12",
+      "beatGroupId": "scene-12-cta-gallery-beat-12"
+    }
+  ],
+  "audioCues": [],
+  "qaFrames": [
+    {
+      "frame": 75,
+      "reason": "Hook sample: gallery kinetic title hold frame.",
+      "checks": [
+        "hook-readable",
+        "title-safe",
+        "caption-safe"
+      ]
+    },
+    {
+      "frame": 75,
+      "reason": "Presenter sample: fullscreen presenter placeholder with HUD safety.",
+      "checks": [
+        "presenter-safe",
+        "face-safe",
+        "caption-safe"
+      ]
+    },
+    {
+      "frame": 75,
+      "reason": "Gallery hold frame for kineticTitle",
+      "checks": [
+        "component-style",
+        "caption-safe",
+        "motion-readable"
+      ]
+    },
+    {
+      "frame": 225,
+      "reason": "Gallery hold frame for highlightBox",
+      "checks": [
+        "component-style",
+        "caption-safe",
+        "motion-readable"
+      ]
+    },
+    {
+      "frame": 375,
+      "reason": "Gallery hold frame for dataPunch",
+      "checks": [
+        "component-style",
+        "caption-safe",
+        "motion-readable"
+      ]
+    },
+    {
+      "frame": 525,
+      "reason": "Gallery hold frame for flowPath",
+      "checks": [
+        "component-style",
+        "caption-safe",
+        "motion-readable"
+      ]
+    },
+    {
+      "frame": 675,
+      "reason": "Gallery hold frame for infoCard",
+      "checks": [
+        "component-style",
+        "caption-safe",
+        "motion-readable"
+      ]
+    },
+    {
+      "frame": 860,
+      "reason": "Gallery hold frame for capabilityShare",
+      "checks": [
+        "component-style",
+        "caption-safe",
+        "motion-readable"
+      ]
+    },
+    {
+      "frame": 975,
+      "reason": "Gallery hold frame for sceneLockGrid",
+      "checks": [
+        "component-style",
+        "caption-safe",
+        "motion-readable"
+      ]
+    },
+    {
+      "frame": 1160,
+      "reason": "Gallery hold frame for transformationStack",
+      "checks": [
+        "component-style",
+        "caption-safe",
+        "motion-readable"
+      ]
+    },
+    {
+      "frame": 1315,
+      "reason": "Gallery hold frame for transitionPushZoom",
+      "checks": [
+        "component-style",
+        "caption-safe",
+        "motion-readable"
+      ]
+    },
+    {
+      "frame": 1460,
+      "reason": "Gallery hold frame for captionHighlight",
+      "checks": [
+        "component-style",
+        "caption-safe",
+        "motion-readable"
+      ]
+    },
+    {
+      "frame": 1575,
+      "reason": "Gallery hold frame for materialMain",
+      "checks": [
+        "component-style",
+        "caption-safe",
+        "motion-readable"
+      ]
+    },
+    {
+      "frame": 1725,
+      "reason": "Gallery hold frame for ctaTitle",
+      "checks": [
+        "component-style",
+        "caption-safe",
+        "motion-readable"
+      ]
+    }
+  ],
+  "semanticBeats": [
+    {
+      "id": "gallery-beat-01",
+      "sceneId": "scene-01-hook",
+      "startFrame": 12,
+      "endFrame": 142,
+      "beatGroupId": "scene-01-hook-gallery-beat-01",
+      "text": "\u522b\u518d\u624b\u52a8\u505a\u4e3b\u56fe",
+      "semanticIntent": "result-promise",
+      "visualForm": "bigJudgement",
+      "confidence": 1.0,
+      "keywords": [
+        "\u81ea\u52a8\u751f\u6210"
+      ],
+      "requiredChecks": [
+        "no-generic-card-fallback"
+      ],
+      "sourceCueIds": []
+    },
+    {
+      "id": "gallery-beat-02",
+      "sceneId": "scene-02-negative",
+      "startFrame": 162,
+      "endFrame": 292,
+      "beatGroupId": "scene-02-negative-gallery-beat-02",
+      "text": "\u5c31\u8fd9\u70b9\u4eba\uff0c\u7b97\u529b\u5df2\u7ecf\u4e0d\u591f\u5206\u4e86",
+      "semanticIntent": "negative-to-positive",
+      "visualForm": "redWarningCard",
+      "confidence": 1.0,
+      "keywords": [
+        "\u4e0d\u591f\u5206",
+        "\u81ea\u52a8\u5316"
+      ],
+      "requiredChecks": [
+        "negative-red-treatment",
+        "positive-confirm-treatment"
+      ],
+      "sourceCueIds": []
+    },
+    {
+      "id": "gallery-beat-03",
+      "sceneId": "scene-03-data",
+      "startFrame": 312,
+      "endFrame": 442,
+      "beatGroupId": "scene-03-data-gallery-beat-03",
+      "text": "\u63d0\u5347\u6548\u7387",
+      "semanticIntent": "numeric-metric",
+      "visualForm": "dataPunch",
+      "confidence": 1.0,
+      "keywords": [],
+      "requiredChecks": [
+        "numeric-countup-required"
+      ],
+      "sourceCueIds": []
+    },
+    {
+      "id": "gallery-beat-04",
+      "sceneId": "scene-04-flow",
+      "startFrame": 462,
+      "endFrame": 592,
+      "beatGroupId": "scene-04-flow-gallery-beat-04",
+      "text": "\u4e09\u4e2a\u6b65\u9aa4",
+      "semanticIntent": "workflow-fields",
+      "visualForm": "flowPath",
+      "confidence": 1.0,
+      "keywords": [],
+      "requiredChecks": [
+        "workflow-not-generic-card",
+        "small-card-has-icon"
+      ],
+      "sourceCueIds": []
+    },
+    {
+      "id": "gallery-beat-05",
+      "sceneId": "scene-05-card",
+      "startFrame": 612,
+      "endFrame": 742,
+      "beatGroupId": "scene-05-card-gallery-beat-05",
+      "text": "\u6807\u9898 / \u7b80\u4ecb / \u6807\u7b7e",
+      "semanticIntent": "manual-field",
+      "visualForm": "infoCard",
+      "confidence": 1.0,
+      "keywords": [],
+      "requiredChecks": [
+        "small-card-has-icon"
+      ],
+      "sourceCueIds": []
+    },
+    {
+      "id": "gallery-beat-06",
+      "sceneId": "scene-06-capability",
+      "startFrame": 762,
+      "endFrame": 892,
+      "beatGroupId": "scene-06-capability-gallery-beat-06",
+      "text": "\u80fd\u529b\u4efd\u989d",
+      "semanticIntent": "capability-share",
+      "visualForm": "capabilityShare",
+      "confidence": 1.0,
+      "keywords": [],
+      "requiredChecks": [
+        "layered-hud-internal-steps"
+      ],
+      "sourceCueIds": []
+    },
+    {
+      "id": "gallery-beat-07",
+      "sceneId": "scene-07-scene",
+      "startFrame": 912,
+      "endFrame": 1042,
+      "beatGroupId": "scene-07-scene-gallery-beat-07",
+      "text": "\u573a\u666f\u7ed1\u5b9a",
+      "semanticIntent": "scene-lock",
+      "visualForm": "sceneLockGrid",
+      "confidence": 1.0,
+      "keywords": [],
+      "requiredChecks": [
+        "layered-hud-internal-steps"
+      ],
+      "sourceCueIds": []
+    },
+    {
+      "id": "gallery-beat-08",
+      "sceneId": "scene-08-transform",
+      "startFrame": 1062,
+      "endFrame": 1192,
+      "beatGroupId": "scene-08-transform-gallery-beat-08",
+      "text": "\u80fd\u529b\u8f6c\u5316",
+      "semanticIntent": "transformation-stack",
+      "visualForm": "transformationStack",
+      "confidence": 1.0,
+      "keywords": [],
+      "requiredChecks": [
+        "layered-hud-internal-steps"
+      ],
+      "sourceCueIds": []
+    },
+    {
+      "id": "gallery-beat-09",
+      "sceneId": "scene-09-platform",
+      "startFrame": 1212,
+      "endFrame": 1342,
+      "beatGroupId": "scene-09-platform-gallery-beat-09",
+      "text": "\u4e00\u4efd\u7d20\u6750\u5305",
+      "semanticIntent": "platform-fanout",
+      "visualForm": "platformFanout",
+      "confidence": 1.0,
+      "keywords": [],
+      "requiredChecks": [
+        "platform-fanout-treatment"
+      ],
+      "sourceCueIds": []
+    },
+    {
+      "id": "gallery-beat-10",
+      "sceneId": "scene-10-automation",
+      "startFrame": 1362,
+      "endFrame": 1492,
+      "beatGroupId": "scene-10-automation-gallery-beat-10",
+      "text": "\u91cd\u590d\u586b\u5199",
+      "semanticIntent": "positive-confirm",
+      "visualForm": "greenConfirmCard",
+      "confidence": 1.0,
+      "keywords": [],
+      "requiredChecks": [
+        "positive-confirm-treatment"
+      ],
+      "sourceCueIds": []
+    },
+    {
+      "id": "gallery-beat-11",
+      "sceneId": "scene-11-proof",
+      "startFrame": 1512,
+      "endFrame": 1642,
+      "beatGroupId": "scene-11-proof-gallery-beat-11",
+      "text": "\u5f55\u5c4f\u8bc1\u660e",
+      "semanticIntent": "proof-material",
+      "visualForm": "materialMain",
+      "confidence": 1.0,
+      "keywords": [],
+      "requiredChecks": [
+        "proof-video-must-play",
+        "material-main-or-proof"
+      ],
+      "sourceCueIds": []
+    },
+    {
+      "id": "gallery-beat-12",
+      "sceneId": "scene-12-cta",
+      "startFrame": 1662,
+      "endFrame": 1792,
+      "beatGroupId": "scene-12-cta-gallery-beat-12",
+      "text": "\u60f3\u8981\u8fd9\u5957\u65b9\u6cd5",
+      "semanticIntent": "cta-resolve",
+      "visualForm": "ctaTitle",
+      "confidence": 1.0,
+      "keywords": [
+        "\u4e3b\u56fe Skill"
+      ],
+      "requiredChecks": [
+        "cta-visual-treatment"
+      ],
+      "sourceCueIds": []
+    }
+  ]
+}

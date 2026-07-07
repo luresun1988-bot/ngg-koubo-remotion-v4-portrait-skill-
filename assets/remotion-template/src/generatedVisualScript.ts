@@ -1,0 +1,586 @@
+import type {VisualScript} from './v4Types';
+
+export const visualScript = {
+  "schemaVersion": "ngg-koubo-remotion-v4-portrait",
+  "projectConfigPath": "../project_config.json",
+  "composition": {
+    "format": "9:16",
+    "width": 1080,
+    "height": 1920,
+    "fps": 25,
+    "durationFrames": 750
+  },
+  "captionTimeline": {
+    "sourceType": "srt",
+    "sourcePath": "05_timing/captions.srt",
+    "method": "sentence-timecodes",
+    "generatedBy": "provided",
+    "notes": "Example captions use real sentence-level timecodes."
+  },
+  "researchNotes": [
+    {
+      "id": "research-001",
+      "topic": "publishing workflow bottleneck",
+      "source": "local brief",
+      "summary": "The viewer cares whether repeated publishing fields can be automated.",
+      "visualUse": "Use contrast, platform fan-out, automation handoff, and proof focus scenes."
+    }
+  ],
+  "media": [
+    {
+      "id": "talking-head-main",
+      "type": "video",
+      "path": "input/main.mp4",
+      "role": "presenter",
+      "durationSec": 30,
+      "hasAudio": true
+    },
+    {
+      "id": "proof-material-001",
+      "type": "screenshot",
+      "path": "input/proof.png",
+      "role": "proof-material",
+      "durationSec": 0,
+      "hasAudio": false
+    }
+  ],
+  "scenes": [
+    {
+      "id": "scene-001",
+      "type": "Hook",
+      "segmentId": "001",
+      "startFrame": 0,
+      "endFrame": 150,
+      "semanticRole": "result-promise",
+      "presenterLayout": "large",
+      "materialLayout": "none",
+      "intent": "Open with a result promise while keeping the presenter fullscreen.",
+      "sourceVideo": "input/main.mp4",
+      "narrationText": "A single skill can turn one video package into multiple platform publishing tasks."
+    },
+    {
+      "id": "scene-002",
+      "type": "Contrast",
+      "segmentId": "002",
+      "startFrame": 150,
+      "endFrame": 430,
+      "semanticRole": "semantic-problem-map",
+      "presenterLayout": "large",
+      "materialLayout": "none",
+      "intent": "Show that the bottleneck is repeated publishing work, not editing.",
+      "sourceVideo": "input/main.mp4",
+      "narrationText": "The real bottleneck is repeated uploading, title writing, descriptions, tags, and covers."
+    },
+    {
+      "id": "scene-003",
+      "type": "Proof",
+      "segmentId": "003",
+      "startFrame": 430,
+      "endFrame": 620,
+      "semanticRole": "proof-material",
+      "presenterLayout": "pip",
+      "materialLayout": "main",
+      "intent": "Proof material becomes the main screen; presenter enters PiP only here.",
+      "sourceVideo": "input/main.mp4",
+      "narrationText": "These repeated fields can be handed to Codex for automated execution."
+    },
+    {
+      "id": "scene-004",
+      "type": "CTA",
+      "segmentId": "004",
+      "startFrame": 620,
+      "endFrame": 750,
+      "semanticRole": "cta-resolve",
+      "presenterLayout": "large",
+      "materialLayout": "none",
+      "intent": "Return to fullscreen presenter and close with a safe CTA.",
+      "sourceVideo": "input/main.mp4",
+      "narrationText": "Comment with the keyword distribution if you want this workflow."
+    }
+  ],
+  "captionCues": [
+    {
+      "id": "cap-001-01",
+      "sceneId": "scene-001",
+      "startFrame": 12,
+      "endFrame": 75,
+      "text": "A single skill can turn one video package",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-001-02",
+      "sceneId": "scene-001",
+      "startFrame": 75,
+      "endFrame": 138,
+      "text": "into multiple platform publishing tasks.",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-002-01",
+      "sceneId": "scene-002",
+      "startFrame": 162,
+      "endFrame": 270,
+      "text": "The real bottleneck is repeated uploading,",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-002-02",
+      "sceneId": "scene-002",
+      "startFrame": 270,
+      "endFrame": 418,
+      "text": "title writing, descriptions, tags, and covers.",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-003-01",
+      "sceneId": "scene-003",
+      "startFrame": 442,
+      "endFrame": 526,
+      "text": "These repeated fields can be handed",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-003-02",
+      "sceneId": "scene-003",
+      "startFrame": 526,
+      "endFrame": 608,
+      "text": "to Codex for automated execution.",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-004-01",
+      "sceneId": "scene-004",
+      "startFrame": 632,
+      "endFrame": 738,
+      "text": "Comment with the keyword distribution if you want this workflow.",
+      "highlightWords": []
+    }
+  ],
+  "visualEvents": [
+    {
+      "id": "ve-scene-001-corner-label",
+      "sceneId": "scene-001",
+      "type": "cornerChapterLabel",
+      "startFrame": 0,
+      "endFrame": 150,
+      "text": "COLD OPEN",
+      "subtext": "\u53cd\u76f4\u89c9\u5f00\u573a",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-beat-001",
+      "sceneId": "scene-001",
+      "startFrame": 12,
+      "endFrame": 150,
+      "semanticRole": "result-promise",
+      "beatGroupId": "scene-001-beat-001",
+      "style": "dark-fullscreen-semantic-hud",
+      "safeArea": "avoid-face-caption",
+      "sourceBeatId": "beat-001",
+      "type": "kineticTitle",
+      "text": "\u4e00\u4e2a\u6280\u80fd\n\u591a\u5e73\u53f0\u5206\u53d1",
+      "subtext": "\u8bed\u4e49\u9a71\u52a8\u5305\u88c5",
+      "emphasisWords": [
+        "cant"
+      ],
+      "motionType": "crash-rebound-keyword-pop"
+    },
+    {
+      "id": "ve-scene-002-corner-label",
+      "sceneId": "scene-002",
+      "type": "cornerChapterLabel",
+      "startFrame": 150,
+      "endFrame": 430,
+      "text": "PAIN POINT",
+      "subtext": "\u8d1f\u9762\u5224\u65ad",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-beat-003",
+      "sceneId": "scene-002",
+      "startFrame": 162,
+      "endFrame": 297,
+      "semanticRole": "workflow-step",
+      "beatGroupId": "scene-002-beat-003",
+      "style": "dark-fullscreen-semantic-hud",
+      "safeArea": "avoid-face-caption",
+      "sourceBeatId": "beat-003",
+      "type": "flowPath",
+      "text": "\u6d41\u7a0b\u63a8\u8fdb",
+      "title": "Therealbottlen",
+      "status": "PROCESS",
+      "internalSteps": [
+        {
+          "id": "step-01",
+          "label": "\u5b9a\u4e49\u89c4\u5219",
+          "iconName": "ListChecks"
+        },
+        {
+          "id": "step-02",
+          "label": "\u81ea\u52a8\u6267\u884c",
+          "iconName": "Bot"
+        },
+        {
+          "id": "step-03",
+          "label": "\u8f93\u51fa\u7ed3\u679c",
+          "iconName": "SendHorizontal"
+        }
+      ],
+      "motionType": "flow-list-stagger"
+    },
+    {
+      "id": "ve-beat-004",
+      "sceneId": "scene-002",
+      "startFrame": 307,
+      "endFrame": 477,
+      "semanticRole": "workflow-step",
+      "beatGroupId": "scene-002-beat-004",
+      "style": "dark-fullscreen-semantic-hud",
+      "safeArea": "avoid-face-caption",
+      "sourceBeatId": "beat-004",
+      "type": "flowPath",
+      "text": "\u6d41\u7a0b\u63a8\u8fdb",
+      "title": "oading,titlewr",
+      "status": "PROCESS",
+      "internalSteps": [
+        {
+          "id": "step-01",
+          "label": "\u5b9a\u4e49\u89c4\u5219",
+          "iconName": "ListChecks"
+        },
+        {
+          "id": "step-02",
+          "label": "\u81ea\u52a8\u6267\u884c",
+          "iconName": "Bot"
+        },
+        {
+          "id": "step-03",
+          "label": "\u8f93\u51fa\u7ed3\u679c",
+          "iconName": "SendHorizontal"
+        }
+      ],
+      "motionType": "flow-list-stagger"
+    },
+    {
+      "id": "ve-scene-003-corner-label",
+      "sceneId": "scene-003",
+      "type": "cornerChapterLabel",
+      "startFrame": 430,
+      "endFrame": 620,
+      "text": "PROOF",
+      "subtext": "\u7d20\u6750\u8bc1\u660e",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-beat-006",
+      "sceneId": "scene-003",
+      "startFrame": 442,
+      "endFrame": 608,
+      "semanticRole": "proof-material",
+      "beatGroupId": "scene-003-beat-006",
+      "style": "single-proof",
+      "safeArea": "avoid-face-caption",
+      "sourceBeatId": "beat-006",
+      "type": "materialMain",
+      "text": "\u7d20\u6750\u8bc1\u660e",
+      "subtext": "\u771f\u5b9e\u5f55\u5c4f / \u9875\u9762\u7ed3\u679c",
+      "assetPath": "input/proof.png",
+      "motionType": "screen-recording-proof"
+    },
+    {
+      "id": "ve-scene-004-corner-label",
+      "sceneId": "scene-004",
+      "type": "cornerChapterLabel",
+      "startFrame": 620,
+      "endFrame": 750,
+      "text": "CTA",
+      "subtext": "\u884c\u52a8\u5f15\u5bfc",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-beat-008",
+      "sceneId": "scene-004",
+      "startFrame": 630,
+      "endFrame": 750,
+      "semanticRole": "cta-resolve",
+      "beatGroupId": "scene-004-beat-008",
+      "style": "dark-fullscreen-semantic-hud",
+      "safeArea": "avoid-face-caption",
+      "sourceBeatId": "beat-008",
+      "type": "ctaTitle",
+      "text": "\u522b\u518d\u624b\u52a8",
+      "subtext": "\u8bc4\u8bba\u533a\u81ea\u63d0",
+      "emphasisWords": [
+        "\u81ea\u63d0"
+      ],
+      "motionType": "crash-rebound"
+    }
+  ],
+  "audioCues": [
+    {
+      "id": "bgm-default",
+      "type": "bgm",
+      "startFrame": 0,
+      "path": "input/audio/bgm/default_bgm.mp3",
+      "volumeDb": -30,
+      "duckUnderVoice": true,
+      "loop": true,
+      "fadeInFrames": 25,
+      "fadeOutFrames": 50,
+      "status": "active",
+      "source": "default V4 BGM library"
+    },
+    {
+      "id": "aud-001",
+      "type": "sfx",
+      "startFrame": 44,
+      "sfxIntent": "keyword_pop",
+      "volumeDb": -23,
+      "duckUnderVoice": true,
+      "status": "pending-selection"
+    }
+  ],
+  "qaFrames": [
+    {
+      "frame": 48,
+      "reason": "Hook result-promise title, face safety, and caption safety.",
+      "checks": [
+        "caption-safe",
+        "face-safe",
+        "title-readable"
+      ]
+    },
+    {
+      "frame": 210,
+      "reason": "Pain contrast and manual-field cards.",
+      "checks": [
+        "semantic-clear",
+        "card-count",
+        "face-safe"
+      ]
+    },
+    {
+      "frame": 340,
+      "reason": "Platform fan-out semantic effect.",
+      "checks": [
+        "platform-flow-readable",
+        "face-safe",
+        "caption-safe"
+      ]
+    },
+    {
+      "frame": 500,
+      "reason": "Material main screen with presenter PiP and focus mode.",
+      "checks": [
+        "material-readable",
+        "presenter-pip-safe",
+        "focus-mode"
+      ]
+    },
+    {
+      "frame": 690,
+      "reason": "CTA final value check.",
+      "checks": [
+        "cta-readable",
+        "caption-safe"
+      ]
+    },
+    {
+      "frame": 74,
+      "reason": "Semantic routed event: workflow-step / flowPath",
+      "checks": [
+        "semantic-intent-fulfilled",
+        "caption-safe",
+        "face-safe"
+      ]
+    },
+    {
+      "frame": 224,
+      "reason": "Semantic routed event: workflow-step / flowPath",
+      "checks": [
+        "semantic-intent-fulfilled",
+        "caption-safe",
+        "face-safe"
+      ]
+    },
+    {
+      "frame": 355,
+      "reason": "Semantic routed event: workflow-step / flowPath",
+      "checks": [
+        "semantic-intent-fulfilled",
+        "caption-safe",
+        "face-safe"
+      ]
+    },
+    {
+      "frame": 504,
+      "reason": "Semantic routed event: workflow-step / flowPath",
+      "checks": [
+        "semantic-intent-fulfilled",
+        "caption-safe",
+        "face-safe"
+      ]
+    },
+    {
+      "frame": 691,
+      "reason": "Semantic routed event: workflow-step / flowPath",
+      "checks": [
+        "semantic-intent-fulfilled",
+        "caption-safe",
+        "face-safe"
+      ]
+    },
+    {
+      "frame": 81,
+      "reason": "Semantic routed event: result-promise / kineticTitle",
+      "checks": [
+        "semantic-intent-fulfilled",
+        "caption-safe",
+        "face-safe"
+      ]
+    },
+    {
+      "frame": 361,
+      "reason": "Semantic routed event: workflow-step / flowPath",
+      "checks": [
+        "semantic-intent-fulfilled",
+        "caption-safe",
+        "face-safe"
+      ]
+    },
+    {
+      "frame": 525,
+      "reason": "Semantic routed event: proof-material / materialMain",
+      "checks": [
+        "semantic-intent-fulfilled",
+        "caption-safe",
+        "face-safe"
+      ]
+    },
+    {
+      "frame": 229,
+      "reason": "Semantic routed event: workflow-step / flowPath",
+      "checks": [
+        "semantic-intent-fulfilled",
+        "caption-safe",
+        "face-safe"
+      ]
+    },
+    {
+      "frame": 392,
+      "reason": "Semantic routed event: workflow-step / flowPath",
+      "checks": [
+        "semantic-intent-fulfilled",
+        "caption-safe",
+        "face-safe"
+      ]
+    }
+  ],
+  "semanticBeats": [
+    {
+      "id": "beat-001",
+      "sceneId": "scene-001",
+      "startFrame": 12,
+      "endFrame": 150,
+      "text": "A single skill can turn one video package into multiple platform publishing tasks.",
+      "semanticIntent": "result-promise",
+      "visualForm": "bigJudgement",
+      "confidence": 0.68,
+      "keywords": [],
+      "requiredChecks": [
+        "no-generic-card-fallback"
+      ],
+      "sourceCueIds": [
+        "cap-001-01",
+        "cap-001-02",
+        "cap-001-03"
+      ]
+    },
+    {
+      "id": "beat-003",
+      "sceneId": "scene-002",
+      "startFrame": 162,
+      "endFrame": 260,
+      "text": "The real bottleneck is repeated upl",
+      "semanticIntent": "workflow-step",
+      "visualForm": "flowPath",
+      "confidence": 0.55,
+      "keywords": [],
+      "requiredChecks": [
+        "workflow-not-generic-card"
+      ],
+      "sourceCueIds": [
+        "cap-002-01"
+      ]
+    },
+    {
+      "id": "beat-004",
+      "sceneId": "scene-002",
+      "startFrame": 260,
+      "endFrame": 430,
+      "text": "oading,title writing,descriptions,tags,and covers.",
+      "semanticIntent": "workflow-step",
+      "visualForm": "flowPath",
+      "confidence": 0.55,
+      "keywords": [],
+      "requiredChecks": [
+        "workflow-not-generic-card"
+      ],
+      "sourceCueIds": [
+        "cap-002-02",
+        "cap-002-03",
+        "cap-002-04"
+      ]
+    },
+    {
+      "id": "beat-006",
+      "sceneId": "scene-003",
+      "startFrame": 442,
+      "endFrame": 608,
+      "text": "These repeated fields can be handedto Codex for automated execution.",
+      "semanticIntent": "proof-material",
+      "visualForm": "materialMain",
+      "confidence": 0.72,
+      "keywords": [],
+      "requiredChecks": [
+        "proof-video-must-play",
+        "material-main-or-proof"
+      ],
+      "sourceCueIds": [
+        "cap-003-01",
+        "cap-003-02"
+      ]
+    },
+    {
+      "id": "beat-008",
+      "sceneId": "scene-004",
+      "startFrame": 632,
+      "endFrame": 738,
+      "text": "Comment with the keyword distribution if you want this workflow.",
+      "semanticIntent": "cta-resolve",
+      "visualForm": "ctaTitle",
+      "confidence": 0.7,
+      "keywords": [],
+      "requiredChecks": [
+        "cta-visual-treatment",
+        "no-generic-card-fallback"
+      ],
+      "sourceCueIds": [
+        "cap-004-01",
+        "cap-004-02"
+      ]
+    }
+  ]
+} satisfies VisualScript;
