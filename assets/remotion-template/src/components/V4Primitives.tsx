@@ -118,6 +118,34 @@ const iconMap = {
 
 type IconName = keyof typeof iconMap;
 
+const PORTRAIT_FACE_SAFE_CENTER = {
+  left: 290,
+  right: 790,
+  top: 360,
+  bottom: 1260,
+};
+
+const PORTRAIT_TOP_SAFE = {
+  top: 96,
+  height: 300,
+};
+
+const PORTRAIT_RIGHT_RAIL = {
+  right: 42,
+  width: 360,
+  top: 420,
+};
+
+const PORTRAIT_BOTTOM_CAPTION_RESERVED = 260;
+
+const isPortraitCanvas = (width: number, height: number): boolean => height > width;
+
+const shouldUsePortraitCompactHud = (event: VisualEvent, width: number, height: number): boolean => {
+  if (!isPortraitCanvas(width, height)) return false;
+  const placement = `${event.safeArea ?? ''} ${event.style ?? ''} ${event.motionType ?? ''}`.toLowerCase();
+  return !placement.includes('full-panel') && !placement.includes('material-main') && !placement.includes('pip');
+};
+
 const semanticIconNameForEvent = (event: VisualEvent): IconName => {
   const role = event.semanticRole;
   const text = `${event.title ?? ''} ${event.text ?? ''} ${event.subtext ?? ''} ${event.status ?? ''}`;
@@ -553,9 +581,9 @@ export const KineticTitle: React.FC<{
       <div
         style={{
           position: 'absolute',
-          left: isPortrait ? 60 : 96,
-          top: isPortrait ? 190 : 126,
-          width: isPortrait ? 900 : 660,
+          left: isPortrait ? width - PORTRAIT_RIGHT_RAIL.right - (PORTRAIT_RIGHT_RAIL.width + 20) : 96,
+          top: isPortrait ? PORTRAIT_TOP_SAFE.top + PORTRAIT_TOP_SAFE.height : 126,
+          width: isPortrait ? PORTRAIT_RIGHT_RAIL.width + 20 : 660,
           opacity,
           transform: `scale(${baseScale})`,
           transformOrigin: 'left center',
@@ -568,7 +596,7 @@ export const KineticTitle: React.FC<{
         <div style={{color: colors.blue, fontSize: 28, fontWeight: 950, lineHeight: 1, letterSpacing: 0}}>
           {event.status ?? 'ACTION SUMMARY'}
         </div>
-        <div style={{marginTop: 18, fontSize: isPortrait ? 56 : 60, fontWeight: 950, lineHeight: 1.02, letterSpacing: 0}}>
+        <div style={{marginTop: 18, fontSize: isPortrait ? 40 : 60, fontWeight: 950, lineHeight: 1.04, letterSpacing: 0}}>
           {event.text}
         </div>
         {event.subtext ? (
@@ -576,7 +604,7 @@ export const KineticTitle: React.FC<{
             style={{
               marginTop: 12,
               color: colors.muted,
-              fontSize: 26,
+              fontSize: isPortrait ? 21 : 26,
               fontWeight: 900,
               lineHeight: 1.15,
               opacity: ctaSublineProgress,
@@ -586,7 +614,7 @@ export const KineticTitle: React.FC<{
             {event.subtext}
           </div>
         ) : null}
-        <div style={{marginTop: 32, width: isPortrait ? 900 : 620, display: 'grid', gap: 12}}>
+        <div style={{marginTop: isPortrait ? 24 : 32, width: isPortrait ? PORTRAIT_RIGHT_RAIL.width + 20 : 620, display: 'grid', gap: 12}}>
           {ctaSummaryRows.map((step, index) => {
             const rowProgress = spring({
               frame: Math.max(0, local - 24 - index * 9),
@@ -603,10 +631,10 @@ export const KineticTitle: React.FC<{
               <div
                 key={`${step.label ?? step.text}-${index}`}
                 style={{
-                  height: 58,
+                  height: isPortrait ? 52 : 58,
                   borderRadius: 12,
                   display: 'grid',
-                  gridTemplateColumns: isPortrait ? '96px minmax(0, 1fr) 116px' : '72px minmax(0, 1fr) 108px',
+                  gridTemplateColumns: isPortrait ? '62px minmax(0, 1fr) 74px' : '72px minmax(0, 1fr) 108px',
                   alignItems: 'center',
                   columnGap: 18,
                   padding: '0 22px',
@@ -616,13 +644,13 @@ export const KineticTitle: React.FC<{
                   transform: `translateY(${interpolate(rowProgress, [0, 1], [14, 0])}px)`,
                 }}
               >
-                <div style={{color: colors.blue, fontSize: 22, fontWeight: 950}}>
+                <div style={{color: colors.blue, fontSize: isPortrait ? 16 : 22, fontWeight: 950}}>
                   {labelText}
                 </div>
-                <div style={{color: colors.white, fontSize: 24, fontWeight: 950, whiteSpace: 'nowrap', overflow: 'hidden'}}>
+                <div style={{color: colors.white, fontSize: isPortrait ? 19 : 24, fontWeight: 950, whiteSpace: 'nowrap', overflow: 'hidden'}}>
                   {step.text ?? step.value ?? ''}
                 </div>
-                <div style={{color: valueColor, fontSize: 22, fontWeight: 950, textAlign: 'right', whiteSpace: 'nowrap'}}>
+                <div style={{color: valueColor, fontSize: isPortrait ? 16 : 22, fontWeight: 950, textAlign: 'right', whiteSpace: 'nowrap'}}>
                   {step.status ?? step.value ?? ''}
                 </div>
               </div>
@@ -1282,6 +1310,7 @@ export const FlowListPanel: React.FC<{event: VisualEvent; side?: 'left' | 'right
   const frame = useCurrentFrame();
   const {fps, width: canvasWidth, height: canvasHeight} = useVideoConfig();
   const isPortrait = canvasHeight > canvasWidth;
+  const compact = shouldUsePortraitCompactHud(event, canvasWidth, canvasHeight);
   const local = frame - event.startFrame;
   const duration = event.endFrame - event.startFrame;
   const enter = spring({frame: local, fps, config: {damping: 22, stiffness: 100}});
@@ -1296,12 +1325,12 @@ export const FlowListPanel: React.FC<{event: VisualEvent; side?: 'left' | 'right
     <div
       style={{
         position: 'absolute',
-        left: side === 'left' ? (isPortrait ? 60 : 82) : undefined,
-        right: side === 'right' ? (isPortrait ? 60 : 82) : undefined,
-        top: isPortrait ? 760 : 136,
-        width: isPortrait ? 900 : 650,
-        padding: '34px 38px',
-        borderRadius: 16,
+        left: compact ? undefined : side === 'left' ? (isPortrait ? 60 : 82) : undefined,
+        right: compact ? PORTRAIT_RIGHT_RAIL.right : side === 'right' ? (isPortrait ? 60 : 82) : undefined,
+        top: compact ? 620 : isPortrait ? 760 : 136,
+        width: compact ? PORTRAIT_RIGHT_RAIL.width : isPortrait ? 900 : 650,
+        padding: compact ? '22px 24px' : '34px 38px',
+        borderRadius: compact ? 14 : 16,
         background: colors.panel,
         boxShadow: hudRingShadow,
         opacity,
@@ -1310,13 +1339,13 @@ export const FlowListPanel: React.FC<{event: VisualEvent; side?: 'left' | 'right
         pointerEvents: 'none',
       }}
     >
-      <div style={{color: colors.blue, fontSize: 19, fontWeight: 950, textShadow: hudTextHighlight}}>
+      <div style={{color: colors.blue, fontSize: compact ? 16 : 19, fontWeight: 950, textShadow: hudTextHighlight}}>
         {event.status ?? '\u6d41\u7a0b\u5217\u8868'}
       </div>
-      <div style={{marginTop: 9, color: colors.white, fontSize: 44, fontWeight: 950, textShadow: hudTextHighlight}}>
+      <div style={{marginTop: compact ? 8 : 9, color: colors.white, fontSize: compact ? 30 : 44, fontWeight: 950, lineHeight: 1.08, textShadow: hudTextHighlight}}>
         {event.title ?? event.text}
       </div>
-      <div style={{marginTop: 26, display: 'grid', gap: 18}}>
+      <div style={{marginTop: compact ? 18 : 26, display: 'grid', gap: compact ? 12 : 18}}>
         {steps.map((step, index) => {
           const Icon = iconMap[(step.iconName as IconName) || 'Workflow'] ?? Workflow;
           const itemProgress = spring({frame: Math.max(0, local - 12 - index * 10), fps, config: {damping: 18, stiffness: 130}});
@@ -1329,25 +1358,25 @@ export const FlowListPanel: React.FC<{event: VisualEvent; side?: 'left' | 'right
               key={`${step.label ?? step.text}-${index}`}
               style={{
                 display: 'grid',
-                gridTemplateColumns: '62px 50px 1fr',
+                gridTemplateColumns: compact ? '42px 38px 1fr' : '62px 50px 1fr',
                 alignItems: 'center',
                 gap: 10,
                 opacity: itemOpacity,
                 transform: `translateY(${interpolate(itemProgress, [0, 1], [12, 0])}px)`,
               }}
             >
-              <div style={{color: colors.blue, fontSize: 34, fontWeight: 950, textShadow: hudTextHighlight}}>
+              <div style={{color: colors.blue, fontSize: compact ? 24 : 34, fontWeight: 950, textShadow: hudTextHighlight}}>
                 {String(index + 1).padStart(2, '0')}
               </div>
-              <div style={{width: 44, height: 44, borderRadius: 11, display: 'grid', placeItems: 'center', background: 'rgba(6,126,246,0.13)', color: colors.blue, boxShadow: '0 12px 22px rgba(0,0,0,0.32)'}}>
-                <Icon size={25} strokeWidth={2.4} />
+              <div style={{width: compact ? 34 : 44, height: compact ? 34 : 44, borderRadius: compact ? 9 : 11, display: 'grid', placeItems: 'center', background: 'rgba(6,126,246,0.13)', color: colors.blue, boxShadow: '0 12px 22px rgba(0,0,0,0.32)'}}>
+                <Icon size={compact ? 20 : 25} strokeWidth={2.4} />
               </div>
               <div>
-                <div style={{color: colors.white, fontSize: 28, fontWeight: 950, lineHeight: 1.1, textShadow: hudTextHighlight}}>
+                <div style={{color: colors.white, fontSize: compact ? 20 : 28, fontWeight: 950, lineHeight: 1.1, textShadow: hudTextHighlight}}>
                   {step.label ?? step.text}
                 </div>
                 {step.status ? (
-                  <div style={{marginTop: 4, color: colors.muted, fontSize: 16, fontWeight: 850, textShadow: hudTextHighlight}}>
+                  <div style={{marginTop: 4, color: colors.muted, fontSize: compact ? 13 : 16, fontWeight: 850, textShadow: hudTextHighlight}}>
                     {step.status}
                   </div>
                 ) : null}
@@ -1538,12 +1567,13 @@ export const SemanticProblemMap: React.FC<{event: VisualEvent}> = ({event}) => {
 
 export const PlatformFanOutPanel: React.FC<{event: VisualEvent}> = ({event}) => {
   const frame = useCurrentFrame();
-  const {fps} = useVideoConfig();
+  const {fps, width, height} = useVideoConfig();
   const local = frame - event.startFrame;
   const duration = event.endFrame - event.startFrame;
   const enter = spring({frame: local, fps, config: {damping: 24, stiffness: 90}});
   const opacity = clampFade(local, duration);
   const scale = interpolate(enter, [0, 1], [0.96, 1]);
+  const compact = shouldUsePortraitCompactHud(event, width, height);
   const platforms = [
     {name: '\u6296\u97f3', icon: Video, color: colors.blue, x: 48, y: 142},
     {name: '\u5c0f\u7ea2\u4e66', icon: Image, color: colors.red, x: 440, y: 142},
@@ -1551,6 +1581,98 @@ export const PlatformFanOutPanel: React.FC<{event: VisualEvent}> = ({event}) => 
     {name: '\u5feb\u624b', icon: SendHorizontal, color: colors.amber, x: 440, y: 344},
     {name: '\u89c6\u9891\u53f7', icon: PanelsTopLeft, color: colors.white, x: 244, y: 374},
   ]
+
+  if (compact) {
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          right: PORTRAIT_RIGHT_RAIL.right,
+          top: 500,
+          width: PORTRAIT_RIGHT_RAIL.width,
+          minHeight: 540,
+          borderRadius: 14,
+          background: colors.panel,
+          boxShadow: hudRingShadow,
+          opacity,
+          transform: `translateX(${interpolate(enter, [0, 1], [30, 0])}px) scale(${scale})`,
+          transformOrigin: 'right top',
+          fontFamily: fontStack,
+          pointerEvents: 'none',
+        }}
+      >
+        <div style={{position: 'absolute', left: 24, top: 24, color: colors.blue, fontSize: 17, fontWeight: 950, textShadow: hudTextHighlight}}>
+          多平台分发
+        </div>
+        <div style={{position: 'absolute', left: 24, right: 24, top: 58, color: colors.white, fontSize: 30, fontWeight: 950, lineHeight: 1.08, textShadow: hudTextHighlight}}>
+          {event.text}
+        </div>
+        <div
+          style={{
+            position: 'absolute',
+            left: 24,
+            top: 126,
+            width: 156,
+            height: 56,
+            borderRadius: 12,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            background: 'rgba(16,163,127,0.16)',
+            color: colors.green,
+            fontSize: 20,
+            fontWeight: 950,
+            boxShadow: '0 16px 34px rgba(0,0,0,0.42)',
+            textShadow: hudTextHighlight,
+          }}
+        >
+          <Package size={22} strokeWidth={2.4} />
+          素材包
+        </div>
+        <div style={{position: 'absolute', left: 46, top: 196, bottom: 52, width: 3, borderRadius: 999, background: 'rgba(6,126,246,0.56)'}} />
+        <div style={{position: 'absolute', left: 78, right: 22, top: 198, display: 'grid', gap: 14}}>
+          {platforms.map((platform, index) => {
+            const PlatformIcon = platform.icon;
+            const row = interpolate(local - index * 8, [0, 20], [0, 1], {
+              extrapolateLeft: 'clamp',
+              extrapolateRight: 'clamp',
+            });
+            return (
+              <div
+                key={platform.name}
+                style={{
+                  height: 50,
+                  borderRadius: 10,
+                  display: 'grid',
+                  gridTemplateColumns: '34px minmax(0, 1fr)',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '0 14px',
+                  color: platform.color,
+                  background: 'rgba(255,255,255,0.06)',
+                  boxShadow: '0 12px 24px rgba(0,0,0,0.30)',
+                  fontSize: 18,
+                  fontWeight: 950,
+                  textShadow: hudTextHighlight,
+                  opacity: row,
+                  transform: `translateY(${interpolate(row, [0, 1], [12, 0])}px)`,
+                }}
+              >
+                <PlatformIcon size={21} strokeWidth={2.4} />
+                <span>{platform.name}</span>
+              </div>
+            );
+          })}
+        </div>
+        {event.subtext ? (
+          <div style={{position: 'absolute', left: 24, right: 24, bottom: 24, color: colors.muted, fontSize: 16, fontWeight: 850, textShadow: hudTextHighlight}}>
+            {event.subtext}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div
@@ -1664,11 +1786,12 @@ export const PlatformFanOutPanel: React.FC<{event: VisualEvent}> = ({event}) => 
 
 export const AutomationHandoffPanel: React.FC<{event: VisualEvent}> = ({event}) => {
   const frame = useCurrentFrame();
-  const {fps} = useVideoConfig();
+  const {fps, width, height} = useVideoConfig();
   const local = frame - event.startFrame;
   const duration = event.endFrame - event.startFrame;
   const enter = spring({frame: local, fps, config: {damping: 24, stiffness: 95}});
   const opacity = clampFade(local, duration);
+  const compact = shouldUsePortraitCompactHud(event, width, height);
   const y = interpolate(enter, [0, 1], [24, 0]);
   const handoffProgress = sectionProgress(local, 72, 18);
   const handoffPop = spring({
@@ -1688,26 +1811,29 @@ export const AutomationHandoffPanel: React.FC<{event: VisualEvent}> = ({event}) 
     <div
       style={{
         position: 'absolute',
-        left: 70,
-        top: 168,
-        width: 660,
-        height: 444,
+        left: compact ? undefined : 70,
+        right: compact ? PORTRAIT_RIGHT_RAIL.right : undefined,
+        top: compact ? 520 : 168,
+        width: compact ? PORTRAIT_RIGHT_RAIL.width : 660,
+        height: compact ? 490 : 444,
         borderRadius: 16,
         background: colors.panel,
         border: 'none',
         opacity,
-        transform: `translateY(${y}px)`,
+        transform: compact
+          ? `translate(${interpolate(enter, [0, 1], [30, 0])}px, ${y}px)`
+          : `translateY(${y}px)`,
         fontFamily: fontStack,
         boxShadow: hudRingShadow,
       }}
     >
-      <div style={{position: 'absolute', left: 32, top: 30, color: colors.blue, fontSize: 19, fontWeight: 950, textShadow: hudTextHighlight}}>
+      <div style={{position: 'absolute', left: compact ? 24 : 32, top: compact ? 24 : 30, color: colors.blue, fontSize: compact ? 17 : 19, fontWeight: 950, textShadow: hudTextHighlight}}>
         自动化交接
       </div>
-      <div style={{position: 'absolute', left: 32, top: 66, color: colors.white, fontSize: 42, fontWeight: 950, textShadow: hudTextHighlight}}>
+      <div style={{position: 'absolute', left: compact ? 24 : 32, right: compact ? 24 : undefined, top: compact ? 56 : 66, color: colors.white, fontSize: compact ? 30 : 42, fontWeight: 950, lineHeight: 1.08, textShadow: hudTextHighlight}}>
         {event.text}
       </div>
-      <div style={{position: 'absolute', left: 32, top: 128, display: 'grid', gap: 12}}>
+      <div style={{position: 'absolute', left: compact ? 24 : 32, top: compact ? 128 : 128, display: 'grid', gap: compact ? 10 : 12}}>
         {fields.map((field, index) => {
           const FieldIcon = field.icon;
           const progress = interpolate(local - index * 11, [0, 36], [0, 1], {
@@ -1720,8 +1846,8 @@ export const AutomationHandoffPanel: React.FC<{event: VisualEvent}> = ({event}) 
             <div
               key={field.label}
               style={{
-                width: interpolate(progress, [0, 1], [220, 332]),
-                height: 46,
+                width: compact ? interpolate(progress, [0, 1], [210, 260]) : interpolate(progress, [0, 1], [220, 332]),
+                height: compact ? 42 : 46,
                 borderRadius: 10,
                 display: 'flex',
                 alignItems: 'center',
@@ -1730,14 +1856,14 @@ export const AutomationHandoffPanel: React.FC<{event: VisualEvent}> = ({event}) 
                 color: colors.white,
                 background: current ? 'rgba(255,255,255,0.14)' : 'rgba(255,255,255,0.08)',
                 border: 'none',
-                fontSize: 21,
+                fontSize: compact ? 18 : 21,
                 fontWeight: 900,
                 textShadow: hudTextHighlight,
               }}
             >
-              <FieldIcon size={22} color={progress > 0.15 ? colors.blue : colors.muted} strokeWidth={2.4} />
+              <FieldIcon size={compact ? 19 : 22} color={progress > 0.15 ? colors.blue : colors.muted} strokeWidth={2.4} />
               <span style={{flex: 1}}>{field.label}</span>
-              <CheckCircle2 size={22} color={progress > 0.85 ? colors.green : colors.muted} />
+              <CheckCircle2 size={compact ? 19 : 22} color={progress > 0.85 ? colors.green : colors.muted} />
             </div>
           );
         })}
@@ -1745,30 +1871,30 @@ export const AutomationHandoffPanel: React.FC<{event: VisualEvent}> = ({event}) 
       <div
         style={{
           position: 'absolute',
-          left: 392,
-          top: 178,
+          left: compact ? 290 : 392,
+          top: compact ? 208 : 178,
           color: colors.green,
           opacity: handoffProgress,
           transform: `translateX(${interpolate(handoffProgress, [0, 1], [-18, 0])}px) scale(${interpolate(handoffPop, [0, 1], [0.82, 1])})`,
           transformOrigin: 'left center',
         }}
       >
-        <SendHorizontal size={74} strokeWidth={2.4} />
+        <SendHorizontal size={compact ? 48 : 74} strokeWidth={2.4} />
       </div>
       <div
         style={{
           position: 'absolute',
-          right: 34,
-          top: 152,
-          width: 176,
-          height: 154,
+          right: compact ? 24 : 34,
+          top: compact ? 260 : 152,
+          width: compact ? 126 : 176,
+          height: compact ? 106 : 154,
           borderRadius: 18,
           display: 'grid',
           placeItems: 'center',
           background: 'rgba(16,163,127,0.16)',
           border: 'none',
           color: colors.green,
-          fontSize: 28,
+          fontSize: compact ? 22 : 28,
           fontWeight: 950,
           textAlign: 'center',
           lineHeight: 1.15,
@@ -1783,7 +1909,7 @@ export const AutomationHandoffPanel: React.FC<{event: VisualEvent}> = ({event}) 
         <br />
         执行
       </div>
-      <div style={{position: 'absolute', left: 32, right: 32, bottom: 28, color: colors.muted, fontSize: 21, fontWeight: 800, textShadow: hudTextHighlight}}>
+      <div style={{position: 'absolute', left: compact ? 24 : 32, right: compact ? 24 : 32, bottom: compact ? 22 : 28, color: colors.muted, fontSize: compact ? 16 : 21, fontWeight: 800, textShadow: hudTextHighlight}}>
         {event.subtext}
       </div>
     </div>
@@ -1870,7 +1996,7 @@ export const CapabilitySharePanel: React.FC<{event: VisualEvent; side?: 'left' |
   side = 'left',
 }) => {
   const frame = useCurrentFrame();
-  const {fps} = useVideoConfig();
+  const {fps, width, height} = useVideoConfig();
   const local = frame - event.startFrame;
   const duration = event.endFrame - event.startFrame;
   const enter = spring({frame: local, fps, config: {damping: 22, stiffness: 105}});
@@ -1879,15 +2005,16 @@ export const CapabilitySharePanel: React.FC<{event: VisualEvent; side?: 'left' |
   const tileSteps = steps.slice(0, 3);
   const panelProgress = sectionProgress(local, 38, 18);
   const Icon = iconForEvent(event, 'BarChart3');
+  const compact = shouldUsePortraitCompactHud(event, width, height);
 
   return (
     <div
       style={{
         position: 'absolute',
-        left: side === 'left' ? 70 : undefined,
-        right: side === 'right' ? 70 : undefined,
-        top: 128,
-        width: 720,
+        left: compact ? undefined : side === 'left' ? 70 : undefined,
+        right: compact ? PORTRAIT_RIGHT_RAIL.right : side === 'right' ? 70 : undefined,
+        top: compact ? 470 : 128,
+        width: compact ? PORTRAIT_RIGHT_RAIL.width : 720,
         fontFamily: fontStack,
         opacity,
         transform: `translateX(${interpolate(enter, [0, 1], [side === 'left' ? -28 : 28, 0])}px)`,
@@ -1898,8 +2025,8 @@ export const CapabilitySharePanel: React.FC<{event: VisualEvent; side?: 'left' |
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '50px 1fr',
-          gap: 16,
+          gridTemplateColumns: compact ? '38px 1fr' : '50px 1fr',
+          gap: compact ? 12 : 16,
           alignItems: 'center',
           opacity: sectionProgress(local, 0, 12),
           transform: `translateY(${interpolate(sectionProgress(local, 0, 12), [0, 1], [10, 0])}px)`,
@@ -1907,8 +2034,8 @@ export const CapabilitySharePanel: React.FC<{event: VisualEvent; side?: 'left' |
       >
         <div
           style={{
-            width: 46,
-            height: 46,
+            width: compact ? 36 : 46,
+            height: compact ? 36 : 46,
             borderRadius: 8,
             display: 'grid',
             placeItems: 'center',
@@ -1917,19 +2044,19 @@ export const CapabilitySharePanel: React.FC<{event: VisualEvent; side?: 'left' |
             boxShadow: '0 12px 24px rgba(0,0,0,0.34)',
           }}
         >
-          <Icon size={27} strokeWidth={2.4} />
+          <Icon size={compact ? 22 : 27} strokeWidth={2.4} />
         </div>
         <div>
-          <div style={{color: colors.blue, fontSize: 17, fontWeight: 950, letterSpacing: 3, textShadow: hudTextHighlight}}>
+          <div style={{color: colors.blue, fontSize: compact ? 14 : 17, fontWeight: 950, letterSpacing: compact ? 2 : 3, textShadow: hudTextHighlight}}>
             {event.status ?? 'GLOBAL · CAPABILITY'}
           </div>
-          <div style={{marginTop: 6, color: colors.white, fontSize: 38, fontWeight: 950, textShadow: hudTextHighlight}}>
+          <div style={{marginTop: 6, color: colors.white, fontSize: compact ? 26 : 38, fontWeight: 950, lineHeight: 1.08, textShadow: hudTextHighlight}}>
             {event.text ?? event.title}
           </div>
         </div>
       </div>
 
-      <div style={{display: 'flex', gap: 18, marginTop: 28}}>
+      <div style={{display: 'flex', gap: compact ? 10 : 18, marginTop: compact ? 20 : 28}}>
         {tileSteps.map((step, index) => {
           const progress = sectionProgress(local, 16 + index * 8, 12);
           const StepIcon = iconMap[(step.iconName as IconName) || 'BrainCircuit'] ?? BrainCircuit;
@@ -1937,9 +2064,9 @@ export const CapabilitySharePanel: React.FC<{event: VisualEvent; side?: 'left' |
             <div
               key={`${step.label ?? step.text}-${index}`}
               style={{
-                width: 132,
-                height: 108,
-                borderRadius: 14,
+                width: compact ? 96 : 132,
+                height: compact ? 78 : 108,
+                borderRadius: compact ? 10 : 14,
                 display: 'grid',
                 placeItems: 'center',
                 gap: 4,
@@ -1951,8 +2078,8 @@ export const CapabilitySharePanel: React.FC<{event: VisualEvent; side?: 'left' |
                 fontWeight: 950,
               }}
             >
-              <StepIcon size={39} strokeWidth={2.2} />
-              <div style={{fontSize: 16, maxWidth: 112, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+              <StepIcon size={compact ? 28 : 39} strokeWidth={2.2} />
+              <div style={{fontSize: compact ? 12 : 16, maxWidth: compact ? 82 : 112, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
                 {step.label ?? step.text}
               </div>
             </div>
@@ -1962,9 +2089,9 @@ export const CapabilitySharePanel: React.FC<{event: VisualEvent; side?: 'left' |
 
       <div
         style={{
-          marginTop: 28,
-          width: 680,
-          padding: '26px 28px 28px',
+          marginTop: compact ? 20 : 28,
+          width: compact ? PORTRAIT_RIGHT_RAIL.width : 680,
+          padding: compact ? '18px 18px 20px' : '26px 28px 28px',
           borderRadius: 14,
           background: colors.panel,
           boxShadow: hudRingShadow,
@@ -1972,10 +2099,10 @@ export const CapabilitySharePanel: React.FC<{event: VisualEvent; side?: 'left' |
           transform: `translateY(${interpolate(panelProgress, [0, 1], [16, 0])}px)`,
         }}
       >
-        <div style={{color: colors.blue, fontSize: 16, fontWeight: 950, letterSpacing: 3, textShadow: hudTextHighlight}}>
+        <div style={{color: colors.blue, fontSize: compact ? 13 : 16, fontWeight: 950, letterSpacing: compact ? 2 : 3, textShadow: hudTextHighlight}}>
           {event.title ?? 'ENTERPRISE LLM SHARE · 2025'}
         </div>
-        <div style={{marginTop: 20, display: 'grid', gap: 16}}>
+          <div style={{marginTop: compact ? 14 : 20, display: 'grid', gap: compact ? 11 : 16}}>
           {steps.slice(0, 4).map((step, index) => {
             const progress = sectionProgress(local, 58 + index * 12, 14);
             const pct = parsePercent(step.status);
@@ -1988,17 +2115,17 @@ export const CapabilitySharePanel: React.FC<{event: VisualEvent; side?: 'left' |
                 key={`${step.label ?? step.text}-bar-${index}`}
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '156px 1fr 66px',
+                  gridTemplateColumns: compact ? '86px 1fr 44px' : '156px 1fr 66px',
                   alignItems: 'center',
                   gap: 18,
                   opacity: progress,
                   transform: `translateX(${interpolate(progress, [0, 1], [-10, 0])}px)`,
                 }}
               >
-                <div style={{color: colors.white, fontSize: 22, fontWeight: 900, textShadow: hudTextHighlight}}>
+                <div style={{color: colors.white, fontSize: compact ? 15 : 22, fontWeight: 900, textShadow: hudTextHighlight}}>
                   {step.label ?? step.text}
                 </div>
-                <div style={{height: 18, borderRadius: 999, background: 'rgba(255,255,255,0.18)', overflow: 'hidden', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12)'}}>
+                <div style={{height: compact ? 12 : 18, borderRadius: 999, background: 'rgba(255,255,255,0.18)', overflow: 'hidden', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12)'}}>
                   <div
                     style={{
                       width: `${bar}%`,
@@ -2009,7 +2136,7 @@ export const CapabilitySharePanel: React.FC<{event: VisualEvent; side?: 'left' |
                     }}
                   />
                 </div>
-                <div style={{color: colors.blue, fontSize: 26, fontWeight: 950, textAlign: 'right', textShadow: hudTextHighlight}}>
+                <div style={{color: colors.blue, fontSize: compact ? 17 : 26, fontWeight: 950, textAlign: 'right', textShadow: hudTextHighlight}}>
                   {Math.round(bar)}%
                 </div>
               </div>
@@ -2031,22 +2158,23 @@ export const SceneLockGridPanel: React.FC<{event: VisualEvent; side?: 'left' | '
   side = 'left',
 }) => {
   const frame = useCurrentFrame();
-  const {fps} = useVideoConfig();
+  const {fps, width, height} = useVideoConfig();
   const local = frame - event.startFrame;
   const duration = event.endFrame - event.startFrame;
   const enter = spring({frame: local, fps, config: {damping: 22, stiffness: 105}});
   const opacity = clampFade(local, duration);
   const steps = (event.internalSteps && event.internalSteps.length > 0 ? event.internalSteps : defaultSceneLockSteps).slice(0, 4);
   const HeaderIcon = iconForEvent(event, 'Link2');
+  const compact = shouldUsePortraitCompactHud(event, width, height);
 
   return (
     <div
       style={{
         position: 'absolute',
-        left: side === 'left' ? 72 : undefined,
-        right: side === 'right' ? 72 : undefined,
-        top: 150,
-        width: 720,
+        left: compact ? undefined : side === 'left' ? 72 : undefined,
+        right: compact ? PORTRAIT_RIGHT_RAIL.right : side === 'right' ? 72 : undefined,
+        top: compact ? 510 : 150,
+        width: compact ? PORTRAIT_RIGHT_RAIL.width : 720,
         fontFamily: fontStack,
         opacity,
         transform: `translateX(${interpolate(enter, [0, 1], [side === 'left' ? -24 : 24, 0])}px)`,
@@ -2057,8 +2185,8 @@ export const SceneLockGridPanel: React.FC<{event: VisualEvent; side?: 'left' | '
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '50px 1fr',
-          gap: 16,
+          gridTemplateColumns: compact ? '38px 1fr' : '50px 1fr',
+          gap: compact ? 12 : 16,
           alignItems: 'center',
           opacity: sectionProgress(local, 0, 12),
           transform: `translateY(${interpolate(sectionProgress(local, 0, 12), [0, 1], [10, 0])}px)`,
@@ -2066,8 +2194,8 @@ export const SceneLockGridPanel: React.FC<{event: VisualEvent; side?: 'left' | '
       >
         <div
           style={{
-            width: 46,
-            height: 46,
+            width: compact ? 36 : 46,
+            height: compact ? 36 : 46,
             borderRadius: 9,
             display: 'grid',
             placeItems: 'center',
@@ -2076,19 +2204,19 @@ export const SceneLockGridPanel: React.FC<{event: VisualEvent; side?: 'left' | '
             boxShadow: '0 12px 24px rgba(0,0,0,0.34)',
           }}
         >
-          <HeaderIcon size={27} strokeWidth={2.5} />
+          <HeaderIcon size={compact ? 22 : 27} strokeWidth={2.5} />
         </div>
         <div>
-          <div style={{color: colors.green, fontSize: 17, fontWeight: 950, letterSpacing: 3, textShadow: hudTextHighlight}}>
+          <div style={{color: colors.green, fontSize: compact ? 14 : 17, fontWeight: 950, letterSpacing: compact ? 2 : 3, textShadow: hudTextHighlight}}>
             {event.status ?? 'CHINA · SCENE-LOCK'}
           </div>
-          <div style={{marginTop: 6, color: colors.white, fontSize: 40, fontWeight: 950, textShadow: hudTextHighlight}}>
+          <div style={{marginTop: 6, color: colors.white, fontSize: compact ? 27 : 40, fontWeight: 950, lineHeight: 1.08, textShadow: hudTextHighlight}}>
             {event.text ?? event.title}
           </div>
         </div>
       </div>
 
-      <div style={{display: 'grid', gridTemplateColumns: `repeat(${Math.min(steps.length, 4)}, 1fr)`, gap: 18, marginTop: 30}}>
+      <div style={{display: 'grid', gridTemplateColumns: compact ? '1fr' : `repeat(${Math.min(steps.length, 4)}, 1fr)`, gap: compact ? 12 : 18, marginTop: compact ? 20 : 30}}>
         {steps.map((step, index) => {
           const progress = sectionProgress(local, 18 + index * 13, 14);
           const StepIcon = iconMap[(step.iconName as IconName) || 'Link2'] ?? Link2;
@@ -2097,12 +2225,14 @@ export const SceneLockGridPanel: React.FC<{event: VisualEvent; side?: 'left' | '
             <div
               key={`${step.label ?? step.text}-${index}`}
               style={{
-                height: 166,
-                borderRadius: 13,
+                height: compact ? 56 : 166,
+                borderRadius: compact ? 10 : 13,
                 display: 'grid',
-                placeItems: 'center',
-                gap: 8,
-                padding: '16px 14px',
+                gridTemplateColumns: compact ? '42px minmax(0, 1fr) 90px' : undefined,
+                placeItems: compact ? undefined : 'center',
+                alignItems: compact ? 'center' : undefined,
+                gap: compact ? 10 : 8,
+                padding: compact ? '0 14px' : '16px 14px',
                 background: colors.panel,
                 color: colors.white,
                 opacity: progress,
@@ -2113,9 +2243,9 @@ export const SceneLockGridPanel: React.FC<{event: VisualEvent; side?: 'left' | '
             >
               <div
                 style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: 10,
+                  width: compact ? 34 : 52,
+                  height: compact ? 34 : 52,
+                  borderRadius: compact ? 8 : 10,
                   display: 'grid',
                   placeItems: 'center',
                   background: `${accent}22`,
@@ -2123,13 +2253,13 @@ export const SceneLockGridPanel: React.FC<{event: VisualEvent; side?: 'left' | '
                   boxShadow: '0 10px 20px rgba(0,0,0,0.34)',
                 }}
               >
-                <StepIcon size={31} strokeWidth={2.4} />
+                <StepIcon size={compact ? 20 : 31} strokeWidth={2.4} />
               </div>
-              <div style={{fontSize: 29, fontWeight: 950, lineHeight: 1.05, textShadow: hudTextHighlight}}>
+              <div style={{fontSize: compact ? 20 : 29, fontWeight: 950, lineHeight: 1.05, textShadow: hudTextHighlight}}>
                 {step.label ?? step.text}
               </div>
               {step.status ? (
-                <div style={{fontSize: 15, lineHeight: 1.15, color: colors.muted, fontWeight: 800, whiteSpace: 'nowrap', textShadow: hudTextHighlight}}>
+                <div style={{fontSize: compact ? 12 : 15, lineHeight: 1.15, color: colors.muted, fontWeight: 800, whiteSpace: 'nowrap', textShadow: hudTextHighlight}}>
                   {step.status}
                 </div>
               ) : null}
@@ -2146,7 +2276,7 @@ export const TransformationStackPanel: React.FC<{event: VisualEvent; side?: 'lef
   side = 'left',
 }) => {
   const frame = useCurrentFrame();
-  const {fps} = useVideoConfig();
+  const {fps, width, height} = useVideoConfig();
   const local = frame - event.startFrame;
   const duration = event.endFrame - event.startFrame;
   const enter = spring({frame: local, fps, config: {damping: 22, stiffness: 105}});
@@ -2176,15 +2306,16 @@ export const TransformationStackPanel: React.FC<{event: VisualEvent; side?: 'lef
   const arrowProgress = sectionProgress(local, 14, 10);
   const targetProgress = sectionProgress(local, 24, 12);
   const resultProgress = sectionProgress(local, 70, 16);
+  const compact = shouldUsePortraitCompactHud(event, width, height);
 
   return (
     <div
       style={{
         position: 'absolute',
-        left: side === 'left' ? 104 : undefined,
-        right: side === 'right' ? 104 : undefined,
-        top: 150,
-        width: 760,
+        left: compact ? undefined : side === 'left' ? 104 : undefined,
+        right: compact ? PORTRAIT_RIGHT_RAIL.right : side === 'right' ? 104 : undefined,
+        top: compact ? 500 : 150,
+        width: compact ? PORTRAIT_RIGHT_RAIL.width : 760,
         fontFamily: fontStack,
         opacity,
         transform: `translateX(${interpolate(enter, [0, 1], [side === 'left' ? -24 : 24, 0])}px)`,
@@ -2192,31 +2323,31 @@ export const TransformationStackPanel: React.FC<{event: VisualEvent; side?: 'lef
         pointerEvents: 'none',
       }}
     >
-      <div style={{display: 'flex', alignItems: 'flex-start', gap: 26}}>
+      <div style={{display: 'flex', alignItems: 'flex-start', gap: compact ? 14 : 26}}>
         <div style={{opacity: sourceProgress, transform: `translateY(${interpolate(sourceProgress, [0, 1], [12, 0])}px)`}}>
-          <div style={{width: 108, height: 104, borderRadius: 16, display: 'grid', placeItems: 'center', color: colors.white, background: colors.panel, boxShadow: hudRingShadow}}>
-            <SourceIcon size={54} strokeWidth={2.3} />
+          <div style={{width: compact ? 82 : 108, height: compact ? 74 : 104, borderRadius: compact ? 12 : 16, display: 'grid', placeItems: 'center', color: colors.white, background: colors.panel, boxShadow: hudRingShadow}}>
+            <SourceIcon size={compact ? 38 : 54} strokeWidth={2.3} />
           </div>
-          <div style={{marginTop: 10, color: colors.white, fontSize: 22, fontWeight: 850, textAlign: 'center', textShadow: hudTextHighlight}}>
+          <div style={{marginTop: 10, color: colors.white, fontSize: compact ? 16 : 22, fontWeight: 850, textAlign: 'center', textShadow: hudTextHighlight}}>
             {source.label ?? source.text}
           </div>
         </div>
 
-        <div style={{paddingTop: 34, opacity: arrowProgress, transform: `translateX(${interpolate(arrowProgress, [0, 1], [-8, 0])}px)`, color: colors.blue}}>
-          <ArrowRight size={44} strokeWidth={2.6} />
+        <div style={{paddingTop: compact ? 24 : 34, opacity: arrowProgress, transform: `translateX(${interpolate(arrowProgress, [0, 1], [-8, 0])}px)`, color: colors.blue}}>
+          <ArrowRight size={compact ? 32 : 44} strokeWidth={2.6} />
         </div>
 
         <div style={{opacity: targetProgress, transform: `translateY(${interpolate(targetProgress, [0, 1], [12, 0])}px)`}}>
-          <div style={{width: 132, height: 104, borderRadius: 16, display: 'grid', placeItems: 'center', color: colors.blue, background: colors.panel, boxShadow: hudRingShadow}}>
-            <TargetIcon size={58} strokeWidth={2.3} />
+          <div style={{width: compact ? 98 : 132, height: compact ? 74 : 104, borderRadius: compact ? 12 : 16, display: 'grid', placeItems: 'center', color: colors.blue, background: colors.panel, boxShadow: hudRingShadow}}>
+            <TargetIcon size={compact ? 42 : 58} strokeWidth={2.3} />
           </div>
-          <div style={{marginTop: 10, color: colors.blue, fontSize: 22, fontWeight: 900, textAlign: 'center', textShadow: hudTextHighlight}}>
+          <div style={{marginTop: 10, color: colors.blue, fontSize: compact ? 16 : 22, fontWeight: 900, textAlign: 'center', textShadow: hudTextHighlight}}>
             {target.label ?? target.text}
           </div>
         </div>
       </div>
 
-      <div style={{display: 'grid', gridTemplateColumns: `repeat(${Math.max(1, drivers.length)}, 1fr)`, gap: 20, marginTop: 34, width: 680}}>
+      <div style={{display: 'grid', gridTemplateColumns: compact ? '1fr' : `repeat(${Math.max(1, drivers.length)}, 1fr)`, gap: compact ? 12 : 20, marginTop: compact ? 26 : 34, width: compact ? PORTRAIT_RIGHT_RAIL.width : 680}}>
         {drivers.map((driver, index) => {
           const progress = sectionProgress(local, 42 + index * 12, 14);
           const DriverIcon = iconMap[(driver.iconName as IconName) || (index === 0 ? 'ShieldCheck' : 'TrendingUp')] ?? ShieldCheck;
@@ -2225,27 +2356,27 @@ export const TransformationStackPanel: React.FC<{event: VisualEvent; side?: 'lef
             <div
               key={`${driver.label ?? driver.text}-${index}`}
               style={{
-                height: 96,
+                height: compact ? 64 : 96,
                 borderRadius: 12,
                 display: 'grid',
                 gridTemplateColumns: '54px 1fr',
                 alignItems: 'center',
                 gap: 12,
-                padding: '0 20px',
+                padding: compact ? '0 16px' : '0 20px',
                 background: colors.panel,
                 boxShadow: hudRingShadow,
                 opacity: progress,
                 transform: `translateY(${interpolate(progress, [0, 1], [14, 0])}px)`,
               }}
             >
-              <div style={{width: 44, height: 44, borderRadius: 10, display: 'grid', placeItems: 'center', color: accent, background: `${accent}1f`, boxShadow: '0 10px 20px rgba(0,0,0,0.32)'}}>
-                <DriverIcon size={26} strokeWidth={2.5} />
+              <div style={{width: compact ? 36 : 44, height: compact ? 36 : 44, borderRadius: 10, display: 'grid', placeItems: 'center', color: accent, background: `${accent}1f`, boxShadow: '0 10px 20px rgba(0,0,0,0.32)'}}>
+                <DriverIcon size={compact ? 21 : 26} strokeWidth={2.5} />
               </div>
               <div>
-                <div style={{color: accent, fontSize: 15, fontWeight: 950, letterSpacing: 2, textShadow: hudTextHighlight}}>
+                <div style={{color: accent, fontSize: compact ? 12 : 15, fontWeight: 950, letterSpacing: 2, textShadow: hudTextHighlight}}>
                   {driver.status ?? (index === 0 ? 'MOAT' : 'LEVERAGE')}
                 </div>
-                <div style={{marginTop: 4, color: colors.white, fontSize: 30, fontWeight: 950, textShadow: hudTextHighlight}}>
+                <div style={{marginTop: 4, color: colors.white, fontSize: compact ? 21 : 30, fontWeight: 950, textShadow: hudTextHighlight}}>
                   {driver.label ?? driver.text}
                 </div>
               </div>
@@ -2256,15 +2387,15 @@ export const TransformationStackPanel: React.FC<{event: VisualEvent; side?: 'lef
 
       <div
         style={{
-          marginTop: 30,
-          width: 700,
-          height: 104,
+          marginTop: compact ? 18 : 30,
+          width: compact ? PORTRAIT_RIGHT_RAIL.width : 700,
+          height: compact ? 76 : 104,
           borderRadius: 12,
           display: 'grid',
-          gridTemplateColumns: '58px auto 1fr',
+          gridTemplateColumns: compact ? '42px auto 1fr' : '58px auto 1fr',
           alignItems: 'center',
           gap: 18,
-          padding: '0 26px',
+          padding: compact ? '0 16px' : '0 26px',
           background: 'rgba(5,7,11,0.68)',
           boxShadow: hudRingShadow,
           opacity: resultProgress,
@@ -2272,12 +2403,12 @@ export const TransformationStackPanel: React.FC<{event: VisualEvent; side?: 'lef
         }}
       >
         <div style={{color: colors.green}}>
-          <FlaskConical size={38} strokeWidth={2.4} />
+          <FlaskConical size={compact ? 28 : 38} strokeWidth={2.4} />
         </div>
-        <div style={{color: colors.green, fontSize: 50, fontWeight: 950, letterSpacing: 0, textShadow: hudTextHighlight}}>
+        <div style={{color: colors.green, fontSize: compact ? 32 : 50, fontWeight: 950, letterSpacing: 0, textShadow: hudTextHighlight}}>
           {value && !resultIsRange ? `${prefix}${formatCount(counted, decimals)}${suffix}` : resultText}
         </div>
-        <div style={{color: colors.muted, fontSize: 20, fontWeight: 900, textShadow: hudTextHighlight}}>
+        <div style={{color: colors.muted, fontSize: compact ? 14 : 20, fontWeight: 900, textShadow: hudTextHighlight}}>
           {result.status ?? event.subtext ?? '\u8bed\u4e49\u7ed3\u679c'}
         </div>
       </div>

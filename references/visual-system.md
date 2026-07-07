@@ -17,11 +17,14 @@ V4 Portrait uses high-energy short-video packaging for 9:16 Chinese vertical tal
 Use this branch for fullscreen presenter edits with semantic HUD packaging.
 
 - Presenter is fullscreen by default.
+- In 9:16 fullscreen presenter scenes, face safety beats component completeness. Do not place large panels, dashboards, network graphs, or wide card groups across the center face band. Use compact HUD rails, top timelines, right-side field lists, and short caption-safe strips instead.
+- Complex full panels are allowed by default only in proof/material-main/PiP scenes where the presenter has already yielded the center screen to readable material.
 - Do not add artificial colored room lights.
 - Do not place a default fullscreen black/dark vignette or mask over presenter footage.
 - Use readable HUD overlays with local support only where the HUD appears.
 - Left/top chapter labels indicate section context. Use `cornerChapterLabel` for the top-left chapter marker style: an electric-blue rail, readable blue primary label, and short white Chinese subtitle. In 1080x1920, keep it compact and farther from the top-left edge than horizontal V4; primary and subtitle labels should usually sit around 22-26 px.
 - Side HUD panels, flow diagrams, cards, and proof boards appear only when they explain the current spoken idea.
+- In portrait fullscreen presenter scenes, `flowPath`, `automationHandoff`, `platformFanout`, `capabilityShare`, `sceneLockGrid`, `transformationStack`, and CTA summaries default to compact forms. Use full-size panels only for proof/material/PiP beats or explicit full-panel review samples.
 - Large proof material, screenshots, screen recordings, or readable assets become the main screen; only then does the presenter become PiP.
 - Avoid decorative dashboards. HUD density must come from semantic need, not empty-space filling.
 

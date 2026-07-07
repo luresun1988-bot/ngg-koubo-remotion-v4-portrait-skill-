@@ -6,7 +6,10 @@ Use this reference before finalizing any V4 visual script, template change, or Q
 
 - Do not squeeze a long Hook title into one top-edge line. Split long Chinese hooks into a designed 2-3 line title block with clear hierarchy.
 - Do not place a main Hook title so high that it feels like a subtitle strip. Hook titles should occupy a deliberate left or center-left title area and stay clear of face, hands, and bottom captions.
-- Do not truncate bottom captions with ellipsis or hide the tail text. Captions must stay complete, single-line, and readable.
+- In 9:16 fullscreen talking-head scenes, do not place large HUD panels, dashboards, workflow boards, network fan-out diagrams, or CTA summary bars over the center face area. Use portrait compact layouts unless the scene is proof/material-main/PiP.
+- Do not use horizontal platform fan-out diagrams in fullscreen portrait presenter scenes; use a vertical distribution chain or another compact rail form.
+- Do not place automation handoff as a large lower-left card in fullscreen portrait presenter scenes; it must become a compact side rail unless the presenter is PiP.
+- Do not truncate bottom captions with ellipsis or hide the tail text. Captions must stay complete, readable, and within the portrait two-line maximum.
 - Do not make every explanatory beat look like the same compact card group. Rotate between title blocks, red warning cards, numbered rows, icon tiles, data panels, poster stacks, material proof, and transformation stacks.
 - Do not use a compact generic card layout for reference-style process or list beats when a vertical numbered list, layered data panel, or source-driver-result layout better matches the meaning.
 
