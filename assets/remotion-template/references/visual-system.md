@@ -26,6 +26,7 @@ Use this branch for fullscreen presenter edits with semantic HUD packaging.
 - Side HUD panels, flow diagrams, cards, and proof boards appear only when they explain the current spoken idea.
 - In portrait fullscreen presenter scenes, `flowPath`, `automationHandoff`, `platformFanout`, `capabilityShare`, `sceneLockGrid`, `transformationStack`, and CTA summaries default to compact forms. Use full-size panels only for proof/material/PiP beats or explicit full-panel review samples.
 - Large proof material, screenshots, screen recordings, or readable assets become the main screen; only then does the presenter become PiP.
+- In portrait projects, presenter PiP is a vertical 9:16 rounded window by default. Do not use a 16:9 landscape speaker PiP unless the source speaker footage is actually landscape and the user explicitly chooses that crop.
 - Avoid decorative dashboards. HUD density must come from semantic need, not empty-space filling.
 
 ## HUB Local Shade Rules
@@ -194,7 +195,7 @@ Semantic fulfillment rules:
 Real user-provided materials are preferred over abstract packaging.
 
 - Clear screenshot or recording: show as main screen.
-- Presenter becomes lower-left rounded-rectangle PiP.
+- Presenter becomes lower-left vertical rounded-rectangle PiP.
 - Large video assets provided as proof or demo material must play as video. Do not treat mp4/mov/webm proof assets as static images or first-frame placeholders.
 - Video proof material uses `recording-proof` and `OffthreadVideo`, muted by default, so the original narration stays primary.
 - After the video proof beat ends, return the presenter to fullscreen unless the next beat is another material-main scene.

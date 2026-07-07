@@ -124,6 +124,7 @@ Check:
 - `hub-shade-side-matches-hud`: if optional edge shade is re-enabled, the edge shade side must match the actual HUD component side. A right-side card or panel must not produce a left-side shade.
 - Materials are readable.
 - Material-main scenes use focus mode: readable material, presenter PiP, bottom caption, and only proof-specific labels/highlights.
+- Presenter PiP is vertical 9:16 by default in portrait projects; a 16:9 landscape speaker PiP is a QA failure unless explicitly requested.
 - If `cover-gallery` appears in the video body, the narration at that beat must explicitly discuss covers, thumbnails, posters, publishing assets, or multi-platform cover outputs. Otherwise keep posters only in the publish package.
 - Presenter PiP does not collide with captions.
 

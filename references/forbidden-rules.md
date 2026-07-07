@@ -25,6 +25,7 @@ Use this reference before finalizing any V4 visual script, template change, or Q
 - Do not render mp4/mov/webm proof assets as still images. Video proof material must play as video through `OffthreadVideo`.
 - Do not keep the presenter in PiP after the video proof or material-main beat ends unless the next beat is also material-main.
 - Do not place large proof video inside a small panel when the user expects it to be read or watched. Large video proof should be full material-main with presenter PiP.
+- Do not render the portrait speaker PiP as a 16:9 landscape window. The default presenter PiP in 9:16 projects is a vertical rounded window.
 - Do not treat poster assets as generic decoration. Poster assets may enter the video only when the narration or project topic is about covers, thumbnails, posters, or publishing assets.
 - For thumbnail/poster-focused videos with 2-3 provided poster exports, do not hide all poster proof until the middle if the opening claim depends on the poster result. Use a right-side staggered poster stack preview when it strengthens the Hook.
 - Do not display poster, cover, or thumbnail exports inside mismatched fixed-size frames. Keep 16:9, 4:3, and 3:4 assets in matching native-ratio surfaces, with no extra border frame unless a framed gallery is explicitly requested.
