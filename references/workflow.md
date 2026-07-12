@@ -133,6 +133,8 @@ Caption timing source rules:
 - Record the timing source in `visual_script.json.captionTimeline` so QA can distinguish real timecodes from estimated captions.
 - Record `captionRenderMode` separately from the timing source. Use `embedded` by default. Use `none` when the user will add captions later; keep the complete authoritative caption timeline for semantic routing even though the Remotion caption layer is disabled.
 - Mount the primary presenter once for the whole composition. Fullscreen, large, side, PiP, and hidden states are layout transitions of that one source. Never remount scene-local copies or restart embedded audio at scene boundaries.
+- Initialize segmented presenters with `--presenter-audio-mode auto`; this resolves to one normalized video-only MP4 plus one 48 kHz WAV. Use `--presenter-sync-offset-frames` only for a measured constant offset.
+- After contact-sheet approval, run `scripts/render_motion_previews.ps1 -RemotionRoot 06_remotion -VisualScript visual_script.json` and inspect every short clip before the final MP4.
 
 For Chinese ASR:
 

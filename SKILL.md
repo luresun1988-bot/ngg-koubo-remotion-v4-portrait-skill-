@@ -22,7 +22,7 @@ V4 is a production workflow and visual system, not only a style note. Always pla
 9. Run `scripts/qa_lint_visual_script.py` before rendering. Stop on hard failures such as mojibake, overlong captions, invalid PiP usage, material focus conflicts, or missing public assets.
 10. Use the unified V4 Portrait Remotion template for new 9:16 projects. Do not migrate old finished projects unless the user explicitly asks.
 11. Implement all motion with Remotion frame-driven APIs such as `useCurrentFrame()`, `interpolate()`, `spring()`, `Sequence`, and `TransitionSeries`.
-12. Render stills or a contact sheet before final MP4. Fix hard QA failures before calling the edit complete.
+12. Render stills/contact sheets, then run `scripts/render_motion_previews.ps1` for presenter punches, depth typography, and fullscreen/PiP boundaries before the final MP4. Fix hard QA failures before calling the edit complete.
 
 ## Reference Routing
 
@@ -48,6 +48,7 @@ V4 is a production workflow and visual system, not only a style note. Always pla
 - Record `sourceVideoMode` as `raw-presenter`, `segmented-presenter`, or `precomposed-video`. For precomposed videos that already contain subtitles, PiP, browser demos, or other overlays, default `packagingDensity` to `light` and avoid re-packaging every line.
 - Default presenter layout is fullscreen digital human. Use PiP only when clear proof material, screenshots, screen recordings, or large content assets become the main screen.
 - Mount one continuous primary presenter source from composition frame 0 through the end. Scene changes may alter layout, PiP geometry, and overlays, but must not remount, restart, seek, or duplicate the presenter's embedded audio. Use one continuous normalized WAV when presenter audio is external.
+- For segmented presenters, normalize every segment to composition FPS and 1080x1920, concatenate one video-only MP4, concatenate one exact 48 kHz stereo PCM WAV, and mount each once. Never stream-copy MP4 containers with independent AAC tracks.
 - Every important visual event must be chosen from its spoken meaning first. `semanticRole` routes the effect; `type` only describes the broad event family.
 - Visual events must come from `semanticBeats` whenever the project is generated or rebuilt. The required pipeline is: real transcript/timecoded `captionCues` -> `semanticBeats` -> `visualEvents`. Do not jump directly from script text to arbitrary cards.
 - Each semantic beat must record `semanticIntent`, `visualForm`, `beatGroupId`, and `requiredChecks`. Each generated visual event must keep `sourceBeatId` so QA can prove the spoken meaning was fulfilled.
@@ -162,7 +163,7 @@ Produce these unless the user asks for a smaller scope:
 - Initialization should discover real timelines in this order: SRT/VTT, alignment/timestamp JSON, ASR JSON/SRT, then segmented source durations. Segmented source durations are allowed only for multiple rendered segment clips, not as a fake timeline for a single finished MP4.
 - Initialize from the project root by default. If `--output-dir` points directly to an existing or intended `06_remotion`, use that directory as the Remotion root and do not silently create `06_remotion/06_remotion`.
 - Initialization should also run dense rhythm scheduling. If a scene is longer than about 7 seconds, add semantic sub-events such as package overview, manual-field progress, platform fan-out, automation handoff, or workflow-step updates so the scene does not rely on one short card at the beginning.
-- Presenter movement: keep the base camera stable. Layout changes use scale/translate easing with no hard jumps; semantic camera punches use the short `presenter-impact-punch` contract only.
+- Presenter movement: keep the base camera stable. Fullscreen/PiP layout changes use one continuous 0.8-second geometry interpolation and pre-exit PiP so the presenter lands at the scene boundary; semantic camera punches use the short `presenter-impact-punch` contract only.
 - Transitions: cuts by default; push/zoom only for chapter, contrast, or proof-material shifts.
 
 ## Forward Testing

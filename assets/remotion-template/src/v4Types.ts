@@ -147,7 +147,10 @@ export type AudioCue = {
 export type PresenterAudio = {
   mode: 'embedded' | 'normalized-wav' | 'none';
   path?: string;
+  sampleRate?: number;
   syncOffsetFrames?: number;
+  syncEvidence?: string;
+  normalizationReportPath?: string;
 };
 
 export type VisualScript = {

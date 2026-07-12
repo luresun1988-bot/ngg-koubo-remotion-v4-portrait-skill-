@@ -11,6 +11,7 @@ import re
 import shutil
 import subprocess
 import sys
+import wave
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +32,8 @@ DENSE_LONG_SCENE_SEC = 7.0
 DEFAULT_BGM_PATH = "input/audio/bgm/default_bgm.mp3"
 DEFAULT_BGM_VOLUME_DB = -30
 DEFAULT_SFX_MANIFEST_PATH = "input/audio/sfx_manifest.json"
+PRESENTER_AUDIO_MODES = {"auto", "embedded", "normalized-wav", "none"}
+PRESENTER_SAMPLE_RATE = 48000
 NUMERIC_UNIT_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|x|X)")
 FLOW_TEXT_RE = re.compile(r"(第一|第二|第三|第1|第2|第3|步骤|流程|结论|行动|最后|01|02|03)")
 ICON_CANDIDATES: dict[str, list[str]] = {
@@ -376,22 +379,300 @@ def copy_template(template_root: Path, remotion_root: Path) -> None:
     shutil.copytree(template_root, remotion_root, ignore=shutil.ignore_patterns("node_modules", "out"))
 
 
-def concat_or_copy_videos(videos: list[Path], public_input: Path) -> tuple[str, list[dict[str, Any]]]:
+def resolved_presenter_audio_mode(requested: str, videos: list[Path], summaries: list[dict[str, Any]]) -> str:
+    if requested not in PRESENTER_AUDIO_MODES:
+        raise SystemExit(f"invalid presenter audio mode: {requested}")
+    if requested == "auto":
+        return "embedded" if len(videos) == 1 else "normalized-wav"
+    if requested == "embedded" and len(videos) > 1:
+        raise SystemExit(
+            "segmented presenter media cannot keep independent embedded AAC tracks; "
+            "use auto, normalized-wav, or none"
+        )
+    if requested == "normalized-wav" and not any(bool(item.get("hasAudio")) for item in summaries):
+        raise SystemExit("normalized-wav requires at least one presenter audio stream")
+    return requested
+
+
+def exact_wav_samples(path: Path, expected_samples: int) -> int:
+    with wave.open(str(path), "rb") as source:
+        channels = source.getnchannels()
+        sample_width = source.getsampwidth()
+        sample_rate = source.getframerate()
+        frames = source.readframes(source.getnframes())
+    if (channels, sample_width, sample_rate) != (2, 2, PRESENTER_SAMPLE_RATE):
+        raise SystemExit(f"normalized presenter WAV has unexpected PCM format: {path}")
+    frame_size = channels * sample_width
+    current_samples = len(frames) // frame_size
+    if current_samples < expected_samples:
+        frames += b"\x00" * ((expected_samples - current_samples) * frame_size)
+    elif current_samples > expected_samples:
+        frames = frames[: expected_samples * frame_size]
+    with wave.open(str(path), "wb") as target:
+        target.setnchannels(channels)
+        target.setsampwidth(sample_width)
+        target.setframerate(sample_rate)
+        target.writeframes(frames)
+    return expected_samples
+
+
+def normalize_presenter_segment(
+    source: Path,
+    video_out: Path,
+    wav_out: Path | None,
+    fps: int,
+    expected_frames: int,
+    has_audio: bool,
+) -> int:
+    duration_seconds = expected_frames / fps
+    video_filter = (
+        f"scale=1080:1920:force_original_aspect_ratio=decrease,"
+        f"pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black,fps={fps}"
+    )
+    run(
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-i",
+            str(source),
+            "-map",
+            "0:v:0",
+            "-vf",
+            video_filter,
+            "-frames:v",
+            str(expected_frames),
+            "-an",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "medium",
+            "-crf",
+            "18",
+            "-pix_fmt",
+            "yuv420p",
+            "-movflags",
+            "+faststart",
+            str(video_out),
+        ]
+    )
+    expected_samples = round(duration_seconds * PRESENTER_SAMPLE_RATE)
+    if wav_out is None:
+        return expected_samples
+    if has_audio:
+        run(
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-i",
+                str(source),
+                "-map",
+                "0:a:0",
+                "-af",
+                f"aresample={PRESENTER_SAMPLE_RATE}:async=1:first_pts=0,apad,atrim=duration={duration_seconds:.9f}",
+                "-ar",
+                str(PRESENTER_SAMPLE_RATE),
+                "-ac",
+                "2",
+                "-c:a",
+                "pcm_s16le",
+                str(wav_out),
+            ]
+        )
+    else:
+        run(
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                f"anullsrc=channel_layout=stereo:sample_rate={PRESENTER_SAMPLE_RATE}",
+                "-t",
+                f"{duration_seconds:.9f}",
+                "-c:a",
+                "pcm_s16le",
+                str(wav_out),
+            ]
+        )
+    return exact_wav_samples(wav_out, expected_samples)
+
+
+def concat_pcm_wavs(paths: list[Path], output: Path) -> int:
+    total_samples = 0
+    with wave.open(str(output), "wb") as target:
+        target.setnchannels(2)
+        target.setsampwidth(2)
+        target.setframerate(PRESENTER_SAMPLE_RATE)
+        for path in paths:
+            with wave.open(str(path), "rb") as source:
+                if (source.getnchannels(), source.getsampwidth(), source.getframerate()) != (
+                    2,
+                    2,
+                    PRESENTER_SAMPLE_RATE,
+                ):
+                    raise SystemExit(f"cannot concatenate unexpected WAV format: {path}")
+                sample_count = source.getnframes()
+                target.writeframes(source.readframes(sample_count))
+                total_samples += sample_count
+    return total_samples
+
+
+def decoded_video_frame_count(path: Path) -> int:
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-count_frames",
+            "-select_streams",
+            "v:0",
+            "-show_entries",
+            "stream=nb_read_frames",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(path),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    return int(result.stdout.strip())
+
+
+def prepare_presenter_media(
+    videos: list[Path],
+    public_input: Path,
+    fps: int,
+    requested_audio_mode: str,
+    sync_offset_frames: int,
+) -> tuple[str, list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
     public_input.mkdir(parents=True, exist_ok=True)
     summaries = [video_summary(video) for video in videos]
-    if len(videos) == 1:
+    audio_mode = resolved_presenter_audio_mode(requested_audio_mode, videos, summaries)
+    if sync_offset_frames and audio_mode != "normalized-wav":
+        raise SystemExit("presenter sync offset is supported only with normalized-wav audio")
+
+    if len(videos) == 1 and audio_mode in {"embedded", "none"}:
         out = public_input / "presenter_source.mp4"
         shutil.copy2(videos[0], out)
-        return "input/presenter_source.mp4", summaries
+        report = {
+            "schemaVersion": "ngg-v4-portrait-presenter-normalization-v1",
+            "resolvedAudioMode": audio_mode,
+            "normalizationApplied": False,
+            "sourceCount": 1,
+            "verification": {"passed": True, "mode": "single-source-pass-through"},
+        }
+        descriptor = {"mode": audio_mode, "syncOffsetFrames": 0}
+        return "input/presenter_source.mp4", summaries, descriptor, report
 
-    concat_list = public_input / "concat_list.txt"
-    concat_list.write_text(
-        "".join(f"file '{video.as_posix()}'\n" for video in videos),
-        encoding="utf-8",
-    )
-    out = public_input / "combined_presenter.mp4"
-    run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat_list), "-c", "copy", str(out)])
-    return "input/combined_presenter.mp4", summaries
+    work_dir = public_input / ".normalized_segments"
+    work_dir.mkdir(parents=True, exist_ok=True)
+    normalized_videos: list[Path] = []
+    normalized_wavs: list[Path] = []
+    segment_frames: list[int] = []
+    segment_samples: list[int] = []
+    try:
+        for index, (source, summary) in enumerate(zip(videos, summaries), start=1):
+            expected_frames = max(1, round(float(summary.get("durationSec") or 0) * fps))
+            video_out = work_dir / f"segment-{index:04d}.mp4"
+            wav_out = work_dir / f"segment-{index:04d}.wav" if audio_mode == "normalized-wav" else None
+            expected_samples = normalize_presenter_segment(
+                source,
+                video_out,
+                wav_out,
+                fps,
+                expected_frames,
+                bool(summary.get("hasAudio")),
+            )
+            normalized_videos.append(video_out)
+            segment_frames.append(expected_frames)
+            if wav_out is not None:
+                normalized_wavs.append(wav_out)
+                segment_samples.append(expected_samples)
+
+        concat_list = work_dir / "concat_list.txt"
+        concat_list.write_text(
+            "".join(f"file '{path.as_posix()}'\n" for path in normalized_videos),
+            encoding="utf-8",
+        )
+        presenter_video = public_input / "combined_presenter_video_only.mp4"
+        run(
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                str(concat_list),
+                "-map",
+                "0:v:0",
+                "-c",
+                "copy",
+                "-an",
+                str(presenter_video),
+            ]
+        )
+        total_frames = sum(segment_frames)
+        decoded_frames = decoded_video_frame_count(presenter_video)
+        if decoded_frames != total_frames:
+            raise SystemExit(
+                f"normalized presenter frame count mismatch: expected {total_frames}, got {decoded_frames}"
+            )
+
+        presenter_audio_path: str | None = None
+        total_samples = 0
+        if audio_mode == "normalized-wav":
+            presenter_wav = public_input / "presenter_narration_48k.wav"
+            total_samples = concat_pcm_wavs(normalized_wavs, presenter_wav)
+            if total_samples != sum(segment_samples):
+                raise SystemExit("normalized presenter WAV sample count mismatch")
+            presenter_audio_path = "input/presenter_narration_48k.wav"
+
+        descriptor: dict[str, Any] = {
+            "mode": audio_mode,
+            "syncOffsetFrames": sync_offset_frames,
+            "normalizationReportPath": "qa/media/presenter_normalization.json",
+        }
+        if sync_offset_frames:
+            descriptor["syncEvidence"] = "user-measured constant offset supplied at initialization"
+        if presenter_audio_path:
+            descriptor.update({"path": presenter_audio_path, "sampleRate": PRESENTER_SAMPLE_RATE})
+        report = {
+            "schemaVersion": "ngg-v4-portrait-presenter-normalization-v1",
+            "resolvedAudioMode": audio_mode,
+            "normalizationApplied": True,
+            "sourceCount": len(videos),
+            "fps": fps,
+            "segmentFrames": segment_frames,
+            "totalFrames": total_frames,
+            "totalSamples": total_samples if audio_mode == "normalized-wav" else None,
+            "verification": {
+                "passed": True,
+                "decodedVideoFrames": decoded_frames,
+                "videoOnly": True,
+                "wavSampleCount": total_samples if audio_mode == "normalized-wav" else None,
+            },
+        }
+        return "input/combined_presenter_video_only.mp4", summaries, descriptor, report
+    finally:
+        if work_dir.exists():
+            shutil.rmtree(work_dir)
 
 
 def infer_source_video_mode(videos: list[Path], timeline_meta: dict[str, str] | None) -> str:
@@ -413,6 +694,7 @@ def project_config(
     source_video_mode: str,
     timeline_meta: dict[str, str] | None,
     caption_render_mode: str,
+    presenter_audio: dict[str, Any],
 ) -> dict[str, Any]:
     return {
         "projectRoot": str(project_root),
@@ -432,6 +714,7 @@ def project_config(
         "sourceVideoMode": source_video_mode,
         "packagingDensity": packaging_density_for_mode(source_video_mode),
         "captionRenderMode": caption_render_mode,
+        "presenterAudio": presenter_audio,
         "captionTimeline": timeline_meta or {},
         "posterTopicKeyword": "",
         "semanticSearch": True,
@@ -1081,6 +1364,7 @@ def starter_visual_script(
     timeline_meta: dict[str, str] | None = None,
     source_video_mode: str = "raw-presenter",
     caption_render_mode: str = "embedded",
+    presenter_audio: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     duration_frames = sum(max(1, int(item["durationFrames"])) for item in summaries)
     if not summaries:
@@ -1161,6 +1445,7 @@ def starter_visual_script(
             "durationFrames": duration_frames,
         },
         "sourceVideoMode": source_video_mode,
+        "presenterAudio": presenter_audio or {"mode": "embedded", "syncOffsetFrames": 0},
         "captionRenderMode": caption_render_mode,
         "packagingDensity": packaging_density_for_mode(source_video_mode),
         "captionTimeline": caption_timeline,
@@ -1227,6 +1512,18 @@ def main() -> int:
         default="embedded",
         help="Render bottom captions or keep the authoritative timeline without rendering captions.",
     )
+    parser.add_argument(
+        "--presenter-audio-mode",
+        choices=tuple(sorted(PRESENTER_AUDIO_MODES)),
+        default="auto",
+        help="auto keeps one source embedded but normalizes segmented presenter audio to one WAV.",
+    )
+    parser.add_argument(
+        "--presenter-sync-offset-frames",
+        type=int,
+        default=0,
+        help="Measured constant render-time offset for normalized presenter WAV audio.",
+    )
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
 
@@ -1266,7 +1563,19 @@ def main() -> int:
 
     output_root.mkdir(parents=True, exist_ok=True)
     copy_template(args.template_root.resolve(), remotion_root)
-    source_video, summaries = concat_or_copy_videos(videos, remotion_root / "public" / "input")
+    source_video, summaries, presenter_audio, normalization_report = prepare_presenter_media(
+        videos,
+        remotion_root / "public" / "input",
+        args.fps,
+        args.presenter_audio_mode,
+        args.presenter_sync_offset_frames,
+    )
+    qa_media_dir = remotion_root / "qa" / "media"
+    qa_media_dir.mkdir(parents=True, exist_ok=True)
+    (qa_media_dir / "presenter_normalization.json").write_text(
+        json.dumps(normalization_report, ensure_ascii=True, indent=2),
+        encoding="utf-8",
+    )
 
     if needs_asr:
         timeline = run_asr_if_available(videos[0], remotion_root, args.fps)
@@ -1283,6 +1592,7 @@ def main() -> int:
         source_video_mode,
         timeline_meta,
         args.caption_render_mode,
+        presenter_audio,
     )
     config["posterTopicKeyword"] = derive_poster_topic_keyword(texts)
     config_path = output_root / "project_config.json"
@@ -1302,6 +1612,7 @@ def main() -> int:
         timeline_meta=timeline_meta,
         source_video_mode=source_video_mode,
         caption_render_mode=args.caption_render_mode,
+        presenter_audio=presenter_audio,
     )
     visual_script, split_count = split_cues(visual_script, max_chars=30, min_frames=12)
     visual_script_path.write_text(json.dumps(visual_script, ensure_ascii=True, indent=2), encoding="utf-8")

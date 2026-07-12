@@ -15,6 +15,15 @@ Audio priority:
 
 If an audio layer competes with voice clarity, reduce it or remove it.
 
+## Presenter continuity
+
+- Keep one continuous presenter playback source for the full composition.
+- For one source video, `presenterAudio.mode=embedded` may keep its original audio.
+- For segmented presenters, normalize every segment to the composition FPS, concatenate one video-only H.264 MP4, create one exact 48 kHz stereo PCM16 WAV, and mount that WAV once with the video muted.
+- Do not stream-copy multiple MP4 containers with independent AAC tracks. AAC encoder delay and padding can accumulate at segment boundaries and cause lip-sync drift.
+- Use a non-zero `syncOffsetFrames` only for a measured constant offset, only with `normalized-wav`, and record `syncEvidence`. Never use it to hide cumulative drift.
+- Require `qa/media/presenter_normalization.json` with exact decoded video-frame and WAV-sample evidence before rendering segmented presenters.
+
 ## SFX
 
 SFX is optional and semantic.
@@ -169,3 +178,5 @@ Check:
 - `audio-bgm-volume`: BGM is not louder than `-20 dB`.
 - `audio-sfx-sync`: active SFX is close to a semantic visual event boundary.
 - `audio-sfx-density`: SFX are not stacked on every small motion beat.
+- `presenter-continuity`: the presenter video is mounted once and remains frame-continuous across scene/layout boundaries.
+- `presenter-normalized-wav`: segmented presenter audio is 48 kHz stereo PCM16 with the reported exact sample count, while the combined presenter MP4 is video-only.

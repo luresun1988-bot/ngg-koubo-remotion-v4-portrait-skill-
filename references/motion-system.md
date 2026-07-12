@@ -188,6 +188,11 @@ Movement style:
 - Scale and translate with easing.
 - Keep the base camera stable. Do not use presenter scale to fill a semantic refresh quota; cards, icons, numbers, and labels provide ordinary refreshes.
 - A slow symmetric `1 -> peak -> 1` zoom lasting longer than one second reads as drift and is forbidden for semantic emphasis.
+- Fullscreen/PiP geometry transitions are not semantic camera punches. Interpolate left/top/width/height/radius for about 0.8 seconds while keeping one video instance mounted. Begin PiP-to-fullscreen return during the final 0.8 seconds of proof so it lands exactly at the next scene boundary.
+
+## Dynamic Motion QA
+
+Run `scripts/render_motion_previews.ps1` after still/contact-sheet approval. It renders short H.264 previews around every `presenter-impact-punch`, behind-presenter depth event/candidate, and presenter-layout boundary. Review these clips for speed, rebound, geometry continuity, lip sync, and accidental camera drift before the full render.
 - No hard jumps.
 - Sample frames before and after repositioning.
 - Segment boundaries must not create face/body jumps.

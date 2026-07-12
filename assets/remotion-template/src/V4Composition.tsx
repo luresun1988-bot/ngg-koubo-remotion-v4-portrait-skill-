@@ -31,42 +31,155 @@ import type {AudioCue, PresenterAudio, Scene, VisualEvent, VisualScript} from '.
 type ShadeSide = 'left' | 'right';
 type HudLane = ShadeSide | 'center' | 'proof';
 
-const ENABLE_HUD_EDGE_SHADE = false;
+type PresenterLayoutState = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  borderRadius: number;
+  opacity: number;
+  windowChrome: number;
+};
 
-const videoStyleFor = (layout: Scene['presenterLayout']): React.CSSProperties => {
+type PresenterMotionState = {
+  layout: PresenterLayoutState;
+  currentLayout: Scene['presenterLayout'];
+  previousLayout?: Scene['presenterLayout'];
+  transitionProgress: number;
+};
+
+const ENABLE_HUD_EDGE_SHADE = false;
+const PRESENTER_LAYOUT_TRANSITION_SECONDS = 0.8;
+
+const presenterLayoutStateFor = (
+  layout: Scene['presenterLayout'],
+  compositionWidth: number,
+  compositionHeight: number,
+): PresenterLayoutState => {
+  const scaleX = compositionWidth / 1080;
+  const scaleY = compositionHeight / 1920;
+  const radiusScale = Math.min(scaleX, scaleY);
   if (layout === 'pip') {
     return {
-      position: 'absolute',
-      left: 46,
-      bottom: 250,
-      width: 228,
-      height: 406,
-      objectFit: 'cover',
-      borderRadius: 24,
-      border: 'none',
-      boxShadow: `${mediaWindowShadow}, 0 20px 48px rgba(0,0,0,0.55)`,
-      overflow: 'hidden',
+      left: 46 * scaleX,
+      top: compositionHeight - (250 + 406) * scaleY,
+      width: 228 * scaleX,
+      height: 406 * scaleY,
+      borderRadius: 24 * radiusScale,
+      opacity: 1,
+      windowChrome: 1,
     };
   }
   if (layout === 'side') {
     return {
-      position: 'absolute',
-      left: 64,
-      bottom: 250,
-      width: 952,
-      height: 536,
-      objectFit: 'cover',
-      borderRadius: 26,
-      border: 'none',
-      boxShadow: `${mediaWindowShadow}, 0 24px 64px rgba(0,0,0,0.48)`,
+      left: 540 * scaleX,
+      top: 430 * scaleY,
+      width: 500 * scaleX,
+      height: 889 * scaleY,
+      borderRadius: 26 * radiusScale,
+      opacity: 1,
+      windowChrome: 1,
     };
   }
   return {
-    position: 'absolute',
-    inset: 0,
-    width: '100%',
-    height: '100%',
-    objectFit: 'cover',
+    left: 0,
+    top: 0,
+    width: compositionWidth,
+    height: compositionHeight,
+    borderRadius: 0,
+    opacity: layout === 'none' ? 0 : 1,
+    windowChrome: 0,
+  };
+};
+
+const mixPresenterLayout = (
+  from: PresenterLayoutState,
+  to: PresenterLayoutState,
+  progress: number,
+): PresenterLayoutState => {
+  const mix = (start: number, end: number): number => start + (end - start) * progress;
+  return {
+    left: mix(from.left, to.left),
+    top: mix(from.top, to.top),
+    width: mix(from.width, to.width),
+    height: mix(from.height, to.height),
+    borderRadius: mix(from.borderRadius, to.borderRadius),
+    opacity: mix(from.opacity, to.opacity),
+    windowChrome: mix(from.windowChrome, to.windowChrome),
+  };
+};
+
+export const presenterMotionStateFor = ({
+  scenes,
+  sceneIndex,
+  frame,
+  fps,
+  compositionWidth,
+  compositionHeight,
+}: {
+  scenes: Scene[];
+  sceneIndex: number;
+  frame: number;
+  fps: number;
+  compositionWidth: number;
+  compositionHeight: number;
+}): PresenterMotionState => {
+  const scene = scenes[sceneIndex];
+  const currentLayout = scene.presenterLayout;
+  const target = presenterLayoutStateFor(currentLayout, compositionWidth, compositionHeight);
+  const previousScene = sceneIndex > 0 ? scenes[sceneIndex - 1] : undefined;
+  const nextScene = sceneIndex + 1 < scenes.length ? scenes[sceneIndex + 1] : undefined;
+  const transitionFrames = Math.max(1, Math.round(fps * PRESENTER_LAYOUT_TRANSITION_SECONDS));
+  const preExitStart = Math.max(scene.startFrame, scene.endFrame - transitionFrames);
+  const shouldPreExitPip =
+    currentLayout === 'pip' &&
+    nextScene &&
+    nextScene.presenterLayout !== 'pip' &&
+    frame >= preExitStart;
+
+  if (shouldPreExitPip && nextScene) {
+    const progress = interpolate(frame, [preExitStart, Math.max(preExitStart + 1, scene.endFrame - 1)], [0, 1], {
+      easing: Easing.bezier(0.22, 1, 0.36, 1),
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+    return {
+      layout: mixPresenterLayout(
+        presenterLayoutStateFor(currentLayout, compositionWidth, compositionHeight),
+        presenterLayoutStateFor(nextScene.presenterLayout, compositionWidth, compositionHeight),
+        progress,
+      ),
+      currentLayout: nextScene.presenterLayout,
+      previousLayout: currentLayout,
+      transitionProgress: progress,
+    };
+  }
+
+  if (!previousScene || previousScene.presenterLayout === currentLayout) {
+    return {layout: target, currentLayout, transitionProgress: 1};
+  }
+  if (previousScene.presenterLayout === 'pip' && currentLayout !== 'pip') {
+    return {
+      layout: target,
+      currentLayout,
+      previousLayout: previousScene.presenterLayout,
+      transitionProgress: 1,
+    };
+  }
+  const progress = interpolate(frame, [scene.startFrame, scene.startFrame + transitionFrames], [0, 1], {
+    easing: Easing.bezier(0.22, 1, 0.36, 1),
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+  return {
+    layout: mixPresenterLayout(
+      presenterLayoutStateFor(previousScene.presenterLayout, compositionWidth, compositionHeight),
+      target,
+      progress,
+    ),
+    currentLayout,
+    previousLayout: previousScene.presenterLayout,
+    transitionProgress: progress,
   };
 };
 
@@ -92,19 +205,29 @@ const presenterImpactScaleFor = (event: VisualEvent | undefined, frame: number):
 
 const ContinuousPresenter: React.FC<{
   sourceVideo?: string;
-  layout: Scene['presenterLayout'];
+  motion: PresenterMotionState;
   muted: boolean;
   impactScale: number;
-}> = ({sourceVideo, layout, muted, impactScale}) => {
-  const targetStyle = videoStyleFor(layout);
-  const {objectFit: _objectFit, ...containerStyle} = targetStyle;
+  aboveMaterial: boolean;
+}> = ({sourceVideo, motion, muted, impactScale, aboveMaterial}) => {
+  const {layout} = motion;
+  const chrome = layout.windowChrome;
   return (
     <div
       style={{
-        ...containerStyle,
-        opacity: layout === 'none' ? 0 : 1,
-        zIndex: layout === 'pip' ? 20 : 0,
+        position: 'absolute',
+        left: layout.left,
+        top: layout.top,
+        width: layout.width,
+        height: layout.height,
+        borderRadius: layout.borderRadius,
+        opacity: layout.opacity,
+        zIndex: aboveMaterial ? 20 : 0,
         overflow: 'hidden',
+        boxShadow:
+          chrome > 0.001
+            ? `${mediaWindowShadow}, 0 ${20 * chrome}px ${48 * chrome}px rgba(0,0,0,${0.55 * chrome})`
+            : 'none',
       }}
     >
       {sourceVideo ? (
@@ -126,7 +249,7 @@ const ContinuousPresenter: React.FC<{
           style={{
             position: 'absolute',
             inset: 0,
-            display: layout === 'none' ? 'none' : 'grid',
+            display: layout.opacity <= 0.001 ? 'none' : 'grid',
             placeItems: 'center',
             background:
               'linear-gradient(135deg, rgba(18,25,38,0.96), rgba(5,7,11,0.96))',
@@ -372,6 +495,15 @@ const HudEdgeShade: React.FC<{
 export const V4Composition: React.FC<{visualScript: VisualScript}> = ({visualScript}) => {
   const frame = useCurrentFrame();
   const currentScene = sceneForFrame(visualScript.scenes, frame);
+  const currentSceneIndex = Math.max(0, visualScript.scenes.findIndex((scene) => scene.id === currentScene.id));
+  const presenterMotion = presenterMotionStateFor({
+    scenes: visualScript.scenes,
+    sceneIndex: currentSceneIndex,
+    frame,
+    fps: visualScript.composition.fps,
+    compositionWidth: visualScript.composition.width,
+    compositionHeight: visualScript.composition.height,
+  });
   const activeCaption = visualScript.captionCues.find(
     (caption) => frame >= caption.startFrame && frame < caption.endFrame,
   );
@@ -382,6 +514,10 @@ export const V4Composition: React.FC<{visualScript: VisualScript}> = ({visualScr
     (event) => event.type === 'presenterReposition' && event.motionType === 'presenter-impact-punch',
   );
   const presenterImpactScale = presenterImpactScaleFor(presenterImpactEvent, frame);
+  const presenterAboveMaterial =
+    currentScene.presenterLayout === 'pip' ||
+    presenterMotion.currentLayout === 'pip' ||
+    (presenterMotion.previousLayout === 'pip' && presenterMotion.transitionProgress < 1);
   const events = visibleHudEvents(rawEvents, currentScene);
   const materialEvent = rawEvents.find((event) => event.type === 'materialMain');
   const materialFocusMode =
@@ -461,9 +597,10 @@ export const V4Composition: React.FC<{visualScript: VisualScript}> = ({visualScr
       </style>
       <ContinuousPresenter
         sourceVideo={presenterSource}
-        layout={currentScene.presenterLayout}
+        motion={presenterMotion}
         muted={presenterAudioMode !== 'embedded'}
         impactScale={presenterImpactScale}
+        aboveMaterial={presenterAboveMaterial}
       />
       <PresenterAudioLayer
         config={visualScript.presenterAudio}

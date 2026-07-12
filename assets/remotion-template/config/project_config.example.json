@@ -13,6 +13,10 @@
   "template": "ngg-koubo-remotion-v4-portrait",
   "style": "dark-fullscreen-semantic-hud",
   "captionRenderMode": "embedded",
+  "presenterAudio": {
+    "mode": "embedded",
+    "syncOffsetFrames": 0
+  },
   "semanticSearch": true,
   "sfxEnabled": true,
   "bgmEnabled": true,

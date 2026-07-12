@@ -47,6 +47,10 @@ def main() -> int:
         raise AssertionError("portrait presenter must not restart or seek at scene boundaries")
     if "visualScript.captionRenderMode !== 'none'" not in source:
         raise AssertionError("portrait template does not gate the rendered caption layer")
+    if "PRESENTER_LAYOUT_TRANSITION_SECONDS = 0.8" not in source:
+        raise AssertionError("portrait template lost the confirmed 0.8-second layout transition")
+    if "preExitStart" not in source or "presenterMotionStateFor" not in source:
+        raise AssertionError("portrait PiP return is not pre-animated to land on the scene boundary")
 
     print("portrait runtime contract regression: PASS")
     return 0

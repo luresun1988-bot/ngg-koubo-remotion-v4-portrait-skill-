@@ -27,6 +27,7 @@ Use this reference before finalizing any V4 visual script, template change, or Q
 - Do not place large proof video inside a small panel when the user expects it to be read or watched. Large video proof should be full material-main with presenter PiP.
 - Do not render the portrait speaker PiP as a 16:9 landscape window. The default presenter PiP in 9:16 projects is a vertical rounded window.
 - Do not remount or restart the primary presenter video/audio at scene boundaries. PiP and fullscreen are layouts of one continuous source, not separate playback instances.
+- Do not stream-copy or concatenate segmented presenter MP4 containers that retain independent AAC tracks. Normalize to one video-only stream plus one 48 kHz PCM WAV and verify exact frame/sample counts.
 - Do not use slow symmetric presenter zooms, continuous scale drift, or repeated breathing camera motion. Do not count presenter zoom as a semantic-density refresh. `presenter-impact-punch` must stay within 18–28 frames at 30 fps, remain about eight seconds from the next punch, and occur at most three times in any rolling minute.
 - Do not force behind-presenter text at frame 0 when the opening is result/proof material or before the presenter states the theme thesis.
 - Do not treat poster assets as generic decoration. Poster assets may enter the video only when the narration or project topic is about covers, thumbnails, posters, or publishing assets.

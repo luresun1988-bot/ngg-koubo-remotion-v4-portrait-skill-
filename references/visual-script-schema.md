@@ -150,6 +150,7 @@ Rules:
 - `captionTimeline` must describe where caption timing came from.
 - `sourceVideoMode` records whether the source is raw presenter footage, segmented presenter clips, or an already precomposed video.
 - `captionRenderMode` is `embedded` or `none`. `none` disables only the rendered caption layer; `captionCues` and `captionTimeline` remain mandatory and authoritative.
+- `presenterAudio.mode` is `embedded`, `normalized-wav`, or `none`. `normalized-wav` requires `path`, `sampleRate=48000`, `normalizationReportPath`, and optional measured `syncOffsetFrames` with `syncEvidence` when non-zero. Segmented presenter output uses a video-only MP4 and mounts the WAV once.
 - A presenter camera punch uses `type=presenterReposition`, `motionType=presenter-impact-punch`, a strong `semanticRole`, `sourceBeatId`, and optional `presenterPeakScale` / `presenterSettleScale`. At 30 fps its half-open range must be 18–28 frames, peak scale 1.06–1.10, settle scale 1.03–1.05, at least about eight seconds from the next punch, and no more than three times in a rolling minute.
 - `packagingDensity=light` is the default for `precomposed-video`, because the source may already contain subtitles, PiP, screen demos, or HUD overlays.
 - Forbidden methods include `proportional-scene-split`, `scene-proportional`, `estimated`, and `character-ratio-scene-fill`.

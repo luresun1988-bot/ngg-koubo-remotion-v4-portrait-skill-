@@ -225,8 +225,38 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
             errors.append("presenterAudio must be an object when provided")
         elif presenter_audio.get("mode") not in {"embedded", "normalized-wav", "none"}:
             errors.append("presenterAudio.mode must be embedded, normalized-wav, or none")
-        elif presenter_audio.get("mode") == "normalized-wav" and not presenter_audio.get("path"):
-            errors.append("presenterAudio.path is required for normalized-wav mode")
+        elif presenter_audio.get("mode") == "normalized-wav":
+            if not presenter_audio.get("path"):
+                errors.append("presenterAudio.path is required for normalized-wav mode")
+            if presenter_audio.get("sampleRate") != 48000:
+                errors.append("presenterAudio.sampleRate must be 48000 for normalized-wav mode")
+            sync_offset = presenter_audio.get("syncOffsetFrames", 0)
+            if not isinstance(sync_offset, int):
+                errors.append("presenterAudio.syncOffsetFrames must be an integer")
+            elif sync_offset and not str(presenter_audio.get("syncEvidence") or "").strip():
+                errors.append("non-zero presenterAudio.syncOffsetFrames requires syncEvidence")
+            report_path = str(presenter_audio.get("normalizationReportPath") or "")
+            if not report_path:
+                errors.append("normalized-wav presenterAudio requires normalizationReportPath")
+            else:
+                remotion_root = path.parent.resolve()
+                report_file = (remotion_root / report_path).resolve()
+                try:
+                    report_file.relative_to(remotion_root)
+                except ValueError:
+                    errors.append("presenterAudio.normalizationReportPath must stay inside Remotion root")
+                else:
+                    if not report_file.is_file():
+                        errors.append(f"presenterAudio normalization report is missing: {report_path}")
+                    else:
+                        try:
+                            report = json.loads(report_file.read_text(encoding="utf-8-sig"))
+                        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+                            errors.append(f"presenterAudio normalization report is invalid: {exc}")
+                        else:
+                            verification = report.get("verification") if isinstance(report, dict) else None
+                            if not isinstance(verification, dict) or verification.get("passed") is not True:
+                                errors.append("presenterAudio normalization report must record verification.passed=true")
 
     scenes = ensure_list(data, "scenes", errors)
     semantic_beats = ensure_list(data, "semanticBeats", errors)

@@ -67,8 +67,10 @@ Check:
 - `captionTimeline` records the timing source. Missing timing metadata is a warning; forbidden methods such as proportional scene split are a failure.
 - `captionRenderMode=none` still requires complete authoritative `captionCues` and `captionTimeline`; inspect the render to confirm that no bottom caption layer appears.
 - Verify the primary presenter source is mounted once and remains continuous across fullscreen/PiP/material transitions. Check lip sync immediately before and after every layout boundary.
+- Verify segmented presenter projects contain `combined_presenter_video_only.mp4`, `presenter_narration_48k.wav`, and a passing `qa/media/presenter_normalization.json`; decoded frames and WAV samples must match the report exactly.
 - Verify every `presenter-impact-punch` is source-bound, 18–28 frames at 30 fps, reaches peak in 4–6 frames, rebounds in another 4–6, returns in 6–10, peaks at 1.06–1.10, stays about eight seconds from the next punch, and occurs no more than three times in a rolling minute.
 - Behind-presenter keywords belong to the first eligible theme thesis, not necessarily frame 0. Opening result/proof material may defer the effect; greetings, filler, ordinary steps, and tool names must not satisfy it.
+- Run the dynamic motion-preview plan and inspect every generated clip. A contact sheet alone cannot approve punch speed, rebound, PiP geometry, or lip sync.
 - Windows Chinese paths and filenames survive initialization, media probing, and JSON generation without mojibake.
 - `sourceVideoMode=precomposed-video` normally uses `packagingDensity=light`; extra HUD should not overload existing subtitles, PiP, or screen demos.
 - For rebuilt captions, inspect at least one frame before and after 15 seconds to catch accumulated subtitle drift.

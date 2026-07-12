@@ -146,6 +146,14 @@ def media_checks(data: dict[str, Any], remotion_root: Path | None) -> tuple[list
             if not candidate.exists():
                 errors.append(f"scenes[{idx}].sourceVideo missing under public/: {source_video}")
 
+    presenter_audio = data.get("presenterAudio")
+    if isinstance(presenter_audio, dict) and presenter_audio.get("mode") == "normalized-wav":
+        audio_path = presenter_audio.get("path")
+        if not isinstance(audio_path, str) or not audio_path:
+            errors.append("presenterAudio normalized-wav mode has no path")
+        elif not resolve_static_file(remotion_root, audio_path).is_file():
+            errors.append(f"presenterAudio.path missing under public/: {audio_path}")
+
     for idx, event in enumerate(data.get("visualEvents", [])):
         if not isinstance(event, dict):
             continue
