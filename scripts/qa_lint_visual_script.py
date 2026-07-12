@@ -394,7 +394,7 @@ def hud_overlap_checks(data: dict[str, Any]) -> tuple[list[str], list[str]]:
 def hud_duration_budget_checks(data: dict[str, Any]) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
-    fps = int(data.get("composition", {}).get("fps") or 30)
+    fps = int(data.get("composition", {}).get("fps") or 25)
     hard_min = round(fps * 3.2)
     preferred_min = round(fps * 4.5)
 

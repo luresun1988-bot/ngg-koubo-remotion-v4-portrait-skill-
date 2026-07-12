@@ -32,6 +32,7 @@ DENSE_LONG_SCENE_SEC = 7.0
 DEFAULT_BGM_PATH = "input/audio/bgm/default_bgm.mp3"
 DEFAULT_BGM_VOLUME_DB = -30
 DEFAULT_SFX_MANIFEST_PATH = "input/audio/sfx_manifest.json"
+DEFAULT_COMPOSITION_FPS = 25
 PRESENTER_AUDIO_MODES = {"auto", "embedded", "normalized-wav", "none"}
 PRESENTER_SAMPLE_RATE = 48000
 NUMERIC_UNIT_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|x|X)")
@@ -109,8 +110,8 @@ def video_summary(path: Path) -> dict[str, Any]:
     video_stream = next((item for item in streams if item.get("codec_type") == "video"), {})
     audio_streams = [item for item in streams if item.get("codec_type") == "audio"]
     duration = float(raw.get("format", {}).get("duration", 0) or 0)
-    fps_text = video_stream.get("avg_frame_rate") or video_stream.get("r_frame_rate") or "25/1"
-    fps = ratio_to_float(fps_text) or 25.0
+    fps_text = video_stream.get("avg_frame_rate") or video_stream.get("r_frame_rate") or ""
+    fps = ratio_to_float(fps_text) or 0.0
     return {
         "path": str(path),
         "durationSec": duration,
@@ -123,6 +124,43 @@ def video_summary(path: Path) -> dict[str, Any]:
         "videoCodec": video_stream.get("codec_name", ""),
         "audioCodecs": [item.get("codec_name", "") for item in audio_streams],
     }
+
+
+def resolve_composition_fps(
+    summaries: list[dict[str, Any]],
+    requested_fps: int | None,
+) -> tuple[int, dict[str, Any]]:
+    """Use an explicit override, otherwise the primary presenter FPS, then the 25 fps fallback."""
+    if requested_fps is not None and requested_fps <= 0:
+        raise SystemExit("--fps must be a positive integer")
+
+    measured = [float(item.get("fps") or 0) for item in summaries]
+    valid_measured = [value for value in measured if value > 0]
+    nominal = [max(1, round(value)) for value in valid_measured]
+
+    if requested_fps is not None:
+        selected = requested_fps
+        source = "explicit-override"
+    elif nominal:
+        selected = nominal[0]
+        source = "primary-presenter-probe"
+    else:
+        selected = DEFAULT_COMPOSITION_FPS
+        source = "default-fallback"
+
+    return selected, {
+        "compositionFps": selected,
+        "selectionSource": source,
+        "defaultFallbackFps": DEFAULT_COMPOSITION_FPS,
+        "sourceFps": measured,
+        "sourceFpsText": [str(item.get("fpsText") or "") for item in summaries],
+        "mixedPresenterFps": len(set(nominal)) > 1,
+    }
+
+
+def duration_frames_at_fps(summary: dict[str, Any], fps: int) -> int:
+    """Quantize source wall-clock duration onto the selected composition timebase."""
+    return max(1, round(float(summary.get("durationSec") or 0) * fps))
 
 
 def ratio_to_float(text: str) -> float | None:
@@ -556,9 +594,10 @@ def prepare_presenter_media(
     fps: int,
     requested_audio_mode: str,
     sync_offset_frames: int,
+    summaries: list[dict[str, Any]] | None = None,
 ) -> tuple[str, list[dict[str, Any]], dict[str, Any], dict[str, Any]]:
     public_input.mkdir(parents=True, exist_ok=True)
-    summaries = [video_summary(video) for video in videos]
+    summaries = summaries if summaries is not None else [video_summary(video) for video in videos]
     audio_mode = resolved_presenter_audio_mode(requested_audio_mode, videos, summaries)
     if sync_offset_frames and audio_mode != "normalized-wav":
         raise SystemExit("presenter sync offset is supported only with normalized-wav audio")
@@ -584,7 +623,7 @@ def prepare_presenter_media(
     segment_samples: list[int] = []
     try:
         for index, (source, summary) in enumerate(zip(videos, summaries), start=1):
-            expected_frames = max(1, round(float(summary.get("durationSec") or 0) * fps))
+            expected_frames = duration_frames_at_fps(summary, fps)
             video_out = work_dir / f"segment-{index:04d}.mp4"
             wav_out = work_dir / f"segment-{index:04d}.wav" if audio_mode == "normalized-wav" else None
             expected_samples = normalize_presenter_segment(
@@ -695,6 +734,7 @@ def project_config(
     timeline_meta: dict[str, str] | None,
     caption_render_mode: str,
     presenter_audio: dict[str, Any],
+    frame_rate: dict[str, Any],
 ) -> dict[str, Any]:
     return {
         "projectRoot": str(project_root),
@@ -715,6 +755,7 @@ def project_config(
         "packagingDensity": packaging_density_for_mode(source_video_mode),
         "captionRenderMode": caption_render_mode,
         "presenterAudio": presenter_audio,
+        "frameRate": frame_rate,
         "captionTimeline": timeline_meta or {},
         "posterTopicKeyword": "",
         "semanticSearch": True,
@@ -1366,7 +1407,7 @@ def starter_visual_script(
     caption_render_mode: str = "embedded",
     presenter_audio: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    duration_frames = sum(max(1, int(item["durationFrames"])) for item in summaries)
+    duration_frames = sum(duration_frames_at_fps(item, fps) for item in summaries)
     if not summaries:
         duration_frames = fps * 10
     if timeline_cues:
@@ -1383,7 +1424,7 @@ def starter_visual_script(
             end = max(start + 1, min(duration_frames, int(cue["endFrame"])))
             text = str(cue.get("text") or "")
         else:
-            frames = max(1, int(summaries[idx]["durationFrames"])) if idx < len(summaries) else duration_frames
+            frames = duration_frames_at_fps(summaries[idx], fps) if idx < len(summaries) else duration_frames
             start = cursor
             end = duration_frames if idx == scene_count - 1 else min(duration_frames, cursor + frames)
             text = texts[idx] if idx < len(texts) else f"Segment {idx + 1}"
@@ -1504,7 +1545,12 @@ def main() -> int:
     parser.add_argument("--project-root", required=True, type=Path)
     parser.add_argument("--output-dir", default="10_v4", type=Path)
     parser.add_argument("--template-root", default=DEFAULT_TEMPLATE, type=Path)
-    parser.add_argument("--fps", type=int, default=25)
+    parser.add_argument(
+        "--fps",
+        type=int,
+        default=None,
+        help="Explicit composition FPS override. By default use the probed primary presenter FPS, then fall back to 25.",
+    )
     parser.add_argument("--source-video", action="append", type=Path)
     parser.add_argument(
         "--caption-render-mode",
@@ -1553,7 +1599,14 @@ def main() -> int:
     if not videos:
         raise SystemExit(f"no source videos found under {project_root}")
 
-    timeline = discover_timeline(project_root, args.fps)
+    source_summaries = [video_summary(video) for video in videos]
+    composition_fps, frame_rate_report = resolve_composition_fps(source_summaries, args.fps)
+    print(
+        f"composition fps: {composition_fps} "
+        f"({frame_rate_report['selectionSource']}; source={frame_rate_report['sourceFpsText']})"
+    )
+
+    timeline = discover_timeline(project_root, composition_fps)
     needs_asr = timeline is None and len(videos) == 1
     if needs_asr and importlib.util.find_spec("faster_whisper") is None:
         raise SystemExit(
@@ -1566,10 +1619,12 @@ def main() -> int:
     source_video, summaries, presenter_audio, normalization_report = prepare_presenter_media(
         videos,
         remotion_root / "public" / "input",
-        args.fps,
+        composition_fps,
         args.presenter_audio_mode,
         args.presenter_sync_offset_frames,
+        source_summaries,
     )
+    normalization_report["frameRate"] = frame_rate_report
     qa_media_dir = remotion_root / "qa" / "media"
     qa_media_dir.mkdir(parents=True, exist_ok=True)
     (qa_media_dir / "presenter_normalization.json").write_text(
@@ -1578,7 +1633,7 @@ def main() -> int:
     )
 
     if needs_asr:
-        timeline = run_asr_if_available(videos[0], remotion_root, args.fps)
+        timeline = run_asr_if_available(videos[0], remotion_root, composition_fps)
     timeline_cues = timeline[0] if timeline else None
     timeline_meta = timeline[1] if timeline else None
     texts = load_text_segments(project_root)
@@ -1593,6 +1648,7 @@ def main() -> int:
         timeline_meta,
         args.caption_render_mode,
         presenter_audio,
+        frame_rate_report,
     )
     config["posterTopicKeyword"] = derive_poster_topic_keyword(texts)
     config_path = output_root / "project_config.json"
@@ -1607,7 +1663,7 @@ def main() -> int:
         source_video,
         summaries,
         texts,
-        args.fps,
+        composition_fps,
         timeline_cues=timeline_cues,
         timeline_meta=timeline_meta,
         source_video_mode=source_video_mode,

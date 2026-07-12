@@ -7,7 +7,13 @@ import tempfile
 import wave
 from pathlib import Path
 
-from init_v4_project import ffprobe_json, prepare_presenter_media, run
+from init_v4_project import (
+    duration_frames_at_fps,
+    ffprobe_json,
+    prepare_presenter_media,
+    resolve_composition_fps,
+    run,
+)
 
 
 def make_segment(path: Path, size: str, duration: float, frequency: int, codec: str) -> None:
@@ -42,6 +48,30 @@ def main() -> int:
         second = root / "segment-02.avi"
         make_segment(first, "720x1280", 1.0, 440, "libx264")
         make_segment(second, "640x480", 0.8, 660, "mpeg4")
+
+        probed_fps, probed_report = resolve_composition_fps(
+            [{"fps": 25.0, "fpsText": "25/1"}],
+            None,
+        )
+        if probed_fps != 25 or probed_report.get("selectionSource") != "primary-presenter-probe":
+            raise AssertionError(probed_report)
+        thirty_fps, _ = resolve_composition_fps(
+            [{"fps": 30.0, "fpsText": "30/1"}],
+            None,
+        )
+        if thirty_fps != 30:
+            raise AssertionError(thirty_fps)
+        fallback_fps, fallback_report = resolve_composition_fps([], None)
+        if fallback_fps != 25 or fallback_report.get("selectionSource") != "default-fallback":
+            raise AssertionError(fallback_report)
+        override_fps, override_report = resolve_composition_fps(
+            [{"fps": 30.0, "fpsText": "30/1"}],
+            25,
+        )
+        if override_fps != 25 or override_report.get("selectionSource") != "explicit-override":
+            raise AssertionError(override_report)
+        if duration_frames_at_fps({"durationSec": 2.0, "durationFrames": 60}, 25) != 50:
+            raise AssertionError("duration must be requantized onto the composition FPS")
 
         source, summaries, descriptor, report = prepare_presenter_media(
             [first, second],

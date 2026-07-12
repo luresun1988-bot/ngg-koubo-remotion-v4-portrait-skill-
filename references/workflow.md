@@ -30,6 +30,14 @@ The project directory is not fixed. The project must contain or receive a `proje
   "outputFormat": "9:16",
   "template": "ngg-koubo-remotion-v4-portrait",
   "style": "high-energy-packaging",
+  "frameRate": {
+    "compositionFps": 25,
+    "selectionSource": "primary-presenter-probe",
+    "defaultFallbackFps": 25,
+    "sourceFps": [25.0],
+    "sourceFpsText": ["25/1"],
+    "mixedPresenterFps": false
+  },
   "posterTopicKeyword": "",
   "semanticSearch": true,
   "sfxEnabled": true,
@@ -161,7 +169,10 @@ Do not use online images, videos, charts, screenshots, logos, or data as final a
 ## Production Sequence
 
 1. Build `project_config.json`.
-2. Probe source media durations, fps, size, and audio streams.
+2. Probe source media durations, average fps, size, and audio streams. Select the primary presenter's nominal measured FPS as the composition FPS; use 25 only when probing is unavailable or use an explicit user override. Record the decision and every presenter source FPS in `project_config.json.frameRate`.
+   - Quantize all second-based SRT/VTT/ASR times with the selected composition FPS.
+   - Recalculate duration frames as `round(durationSec * compositionFps)`; do not inherit frame counts measured at another FPS.
+   - If segmented presenter clips use mixed FPS, keep the primary clip's nominal FPS unless explicitly overridden, normalize every presenter segment to the selected FPS, and record `mixedPresenterFps=true` in QA.
 3. Load or generate transcript/timecodes in this order: SRT/VTT, alignment/timestamp JSON, ASR JSON/SRT, segmented source durations.
    - If generated from ASR, save `asr_segments.json` and optionally `asr_transcript.srt` under `06_remotion/qa/asr/` or the project timing directory.
    - Align scene boundaries to real ASR/SRT semantic breakpoints when a scene cut would split a spoken sentence into unusably short caption fragments.
