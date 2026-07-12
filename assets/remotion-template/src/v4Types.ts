@@ -52,6 +52,11 @@ export type SemanticBeat = {
   keywords?: string[];
   requiredChecks?: string[];
   sourceCueIds?: string[];
+  semanticModifiers?: string[];
+  entities?: string[];
+  themeThesisCandidate?: boolean;
+  suggestedDepthKeyword?: string;
+  requiresApproval?: boolean;
 };
 
 export type VisualEvent = {
@@ -82,7 +87,13 @@ export type VisualEvent = {
     | 'workflowDashboard'
     | 'capabilityShare'
     | 'sceneLockGrid'
-    | 'transformationStack';
+    | 'transformationStack'
+    | 'semanticProblemMap'
+    | 'automationHandoff'
+    | 'topicKeyword'
+    | 'claimStrip'
+    | 'ratioGallery'
+    | 'depthKeyword';
   startFrame: number;
   endFrame: number;
   text?: string;
@@ -115,6 +126,8 @@ export type VisualEvent = {
   }>;
   assetPath?: string;
   assetStack?: string[];
+  foregroundAssetPath?: string;
+  approvalStatus?: 'candidate' | 'approved' | 'rejected';
   semanticRole: string;
   motionType: string;
   style?: string;

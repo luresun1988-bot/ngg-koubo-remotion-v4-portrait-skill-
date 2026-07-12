@@ -89,7 +89,10 @@ try {
     @{Name="009_platform_fanout_hold.png"; Frame=1315},
     @{Name="010_automation_handoff_hold.png"; Frame=1460},
     @{Name="011_material_pip_hold.png"; Frame=1575},
-    @{Name="012_cta_hold.png"; Frame=1725}
+    @{Name="012_cta_hold.png"; Frame=1725},
+    @{Name="013_topic_keyword_hold.png"; Frame=1875},
+    @{Name="014_claim_strip_hold.png"; Frame=2025},
+    @{Name="015_ratio_gallery_hold.png"; Frame=2175}
   )
 
   if (-not $SkipStills) {
@@ -108,7 +111,7 @@ try {
       } |
       Set-Content -LiteralPath $ConcatList -Encoding ascii
 
-    & ffmpeg -hide_banner -loglevel error -y -f concat -safe 0 -i $ConcatList -vf "scale=480:-1,tile=3x4:padding=8:margin=8:color=0x101010" -frames:v 1 -update 1 (Join-Path $RenderRoot "contact_sheet.png") | Out-Null
+    & ffmpeg -hide_banner -loglevel error -y -f concat -safe 0 -i $ConcatList -vf "scale=480:-1,tile=3x5:padding=8:margin=8:color=0x101010" -frames:v 1 -update 1 (Join-Path $RenderRoot "contact_sheet.png") | Out-Null
   }
 
   if (-not $SkipVideo) {

@@ -20,10 +20,20 @@ MIN_BEAT_FRAMES = 80
 TARGET_BEAT_FRAMES = 115
 MAX_BEAT_FRAMES = 165
 
-NUMERIC_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|倍|万|亿|人|道|题|个|条|分钟|秒|份|账号)?")
+NUMERIC_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|倍|万|亿|人|道|题|个|张|条|分钟|秒|份|账号)?")
 ENUMERATION_RE = re.compile(r"(第一|第二|第三|第四|第五|第[一二三四五六七八九十]+|[二三四五六七八九十]\s*(?:个|件|种|步|项|条|点|方向|指标)|一\s*(?:个|件|种|项|条|点|方向|指标)|[0-9]{1,2}\s*(?:个|件|种|步|项|条|点|方向|指标)|[0-9]{2})")
 
 RULES: dict[str, dict[str, Any]] = {
+    "topic-intro": {
+        "visualForm": "topicKeyword",
+        "terms": ["这期", "今天聊", "今天讲", "这次讲", "我们聊", "我们讲", "主题是"],
+        "checks": ["lightweight-topic-treatment", "no-generic-flow-fallback"],
+    },
+    "explanation-claim": {
+        "visualForm": "claimStrip",
+        "terms": [],
+        "checks": ["lightweight-claim-treatment", "no-generic-flow-fallback"],
+    },
     "cta-resolve": {
         "visualForm": "ctaTitle",
         "terms": ["评论区", "扣", "领取", "想要", "自提", "告诉我", "私信", "关注", "点赞", "收藏", "关键词"],
@@ -86,21 +96,6 @@ RULES: dict[str, dict[str, Any]] = {
     },
 }
 
-PRIORITY = [
-    "cta-resolve",
-    "automation-handoff",
-    "positive-confirm",
-    "negative-friction",
-    "manual-field",
-    "platform-fanout",
-    "asset-variants",
-    "proof-material",
-    "capability-share",
-    "scene-lock",
-    "transformation-stack",
-    "result-promise",
-]
-
 ACCOUNT_STATUS_NEGATIVE_TERMS = ["账号未转正", "未转正", "弹出提示", "不可能手动", "手动做"]
 AUTOMATION_HANDOFF_ACTION_TERMS = [
     "打开 Codex",
@@ -114,6 +109,14 @@ AUTOMATION_HANDOFF_ACTION_TERMS = [
 ]
 PROOF_STRONG_TERMS = ["录屏", "截图", "生成结果", "后台演示", "证明", "实测", "看这段", "页面结果"]
 FLOW_TRANSFORMATION_TERMS = ["不是它会写代码", "不是会写代码", "麻烦事交给它", "整套流程跑通", "流程跑通"]
+TOPIC_INTRO_RE = re.compile(r"(?:这期|今天|这次|接下来)(?:视频)?(?:我们)?(?:来)?(?:聊|讲|说|看|拆解|测试|介绍)")
+COMPLETION_TERMS = ["已经完成", "生成好了", "已经生成", "输出完成", "流程跑完", "搞定", "跑通", "完成了"]
+AUTOMATED_TERMS = ["自动化", "自动生成", "自动完成", "一键", "系统执行", "Codex 接管", "交给 Codex"]
+ENTITY_TERMS = [
+    "Codex", "OpenAI", "Google", "Anthropic", "抖音", "小红书", "B站", "快手", "视频号",
+    "数字人", "详情图", "主图", "封面", "海报", "工作流", "大模型", "Topaz Video AI", "Topaz",
+]
+INELIGIBLE_DEPTH_KEYWORDS = {"Codex", "OpenAI", "Google", "Anthropic", "Topaz", "TopazVideoAI", "Topaz Video AI"}
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -200,7 +203,7 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
         return rule_result("scene-lock", matched["scene-lock"], 0.88)
 
     numeric_match = NUMERIC_RE.search(text)
-    if numeric_match and any(term in text for term in ["提升", "增长", "比例", "指标", "数据", "%", "倍", "万", "亿", "道题", "题", "数量", "规模", "分钟", "秒", "小于", "省下", "批量", "处理", "账号", "扩到"]):
+    if numeric_match and any(term in text for term in ["提升", "增长", "比例", "指标", "数据", "%", "倍", "万", "亿", "道题", "题", "张", "数量", "规模", "分钟", "秒", "小于", "省下", "批量", "处理", "账号", "扩到", "生成"]):
         return {
             "semanticIntent": "numeric-metric",
             "visualForm": "dataPunch",
@@ -209,7 +212,8 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
             "confidence": 0.9,
         }
 
-    if "transformation-stack" in matched and any(term in text for term in ["放大你的能力", "放大能力", "放大", "转化成", "变成", "从", "团队", "第二大脑", "杠杆", "护城河"]):
+    has_transformation_relation = bool(re.search(r"从[^，。！？]{1,12}(?:到|变成|转化成)[^，。！？]{1,12}", text))
+    if "transformation-stack" in matched and (has_transformation_relation or any(term in text for term in ["放大你的能力", "放大能力", "转化成", "变成", "团队", "第二大脑", "杠杆", "护城河"])):
         return rule_result("transformation-stack", matched["transformation-stack"], 0.88)
 
     if enumeration_match and any(term in text for term in ["第一", "第二", "第三", "第四", "第五", "三个", "五件", "方向 01", "方向 02"]):
@@ -251,17 +255,89 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
             "confidence": 0.86,
         }
 
-    for intent in PRIORITY:
-        if intent in matched:
-            return rule_result(intent, matched[intent])
+    # Broad single words are not enough to justify a heavy component. Route only
+    # after the sentence satisfies the intent-specific relation below.
+    if "negative-friction" in matched:
+        return rule_result("negative-friction", matched["negative-friction"])
+    if "positive-confirm" in matched and any(term in text for term in ["自动", "完成", "搞定", "跑完", "一键", "补齐", "跑通"]):
+        return rule_result("positive-confirm", matched["positive-confirm"])
+    if "manual-field" in matched and any(term in text for term in ["字段", "表单", "标题", "简介", "标签", "封面"]):
+        return rule_result("manual-field", matched["manual-field"])
+    if "platform-fanout" in matched and any(term in text for term in ["多平台", "全平台", "渠道", "抖音", "小红书", "B站", "快手", "视频号"]):
+        return rule_result("platform-fanout", matched["platform-fanout"])
+    if "capability-share" in matched and any(term in text for term in ["份额", "排名", "领先", "对比", "占比", "差异", "差距", "企业客户", "优势"]):
+        return rule_result("capability-share", matched["capability-share"])
+    if "scene-lock" in matched and any(term in text for term in ["支付", "教育", "政务", "行业", "场景", "落地", "下沉市场", "本地生活"]):
+        return rule_result("scene-lock", matched["scene-lock"])
+    if "transformation-stack" in matched and any(term in text for term in ["变成", "转化成", "从一个", "从个人", "团队", "第二大脑", "杠杆", "护城河", "能力放大", "放大你的能力"]):
+        return rule_result("transformation-stack", matched["transformation-stack"])
+    if "result-promise" in matched and any(term in text for term in ["反直觉", "真正的大爆发", "还没有开始", "真正的机会", "完全不同", "刚开始"]):
+        return rule_result("result-promise", matched["result-promise"])
+    if TOPIC_INTRO_RE.search(text) or any(term in text for term in RULES["topic-intro"]["terms"]):
+        return rule_result("topic-intro", contains_any(text, RULES["topic-intro"]["terms"]), 0.78)
 
     return {
-        "semanticIntent": "workflow-step",
-        "visualForm": "flowPath",
+        "semanticIntent": "explanation-claim",
+        "visualForm": "claimStrip",
         "keywords": [],
-        "requiredChecks": ["workflow-not-generic-card"],
+        "requiredChecks": ["lightweight-claim-treatment", "no-generic-flow-fallback"],
         "confidence": 0.55,
     }
+
+
+def semantic_metadata(text: str) -> dict[str, Any]:
+    modifiers: list[str] = []
+    if NUMERIC_RE.search(text):
+        modifiers.append("numeric")
+    if any(term in text for term in COMPLETION_TERMS):
+        modifiers.append("completed")
+    if any(term in text for term in AUTOMATED_TERMS):
+        modifiers.append("automated")
+    if any(term in text for term in PROOF_STRONG_TERMS):
+        modifiers.append("proof-bound")
+    if any(term in text for term in ["不是", "别再", "风险", "手动", "低效", "麻烦"]):
+        modifiers.append("negative")
+    entities = [term for term in ENTITY_TERMS if term in text]
+    numbers = [match.group(0).strip() for match in NUMERIC_RE.finditer(text)]
+    return {
+        "semanticModifiers": list(dict.fromkeys(modifiers)),
+        "entities": list(dict.fromkeys(entities + numbers))[:8],
+    }
+
+
+def suggested_depth_keyword(text: str, keywords: list[str]) -> str | None:
+    candidates = [
+        *[term for term in ENTITY_TERMS if term in text],
+        *keywords,
+        *[term for term in ["自动化", "工作流", "效率提升", "能力放大", "批量生成"] if term in text],
+    ]
+    for candidate in candidates:
+        clean = re.sub(r"[\s，。？！、；;：:.!?]", "", str(candidate))
+        if clean in INELIGIBLE_DEPTH_KEYWORDS:
+            continue
+        if 2 <= len(clean) <= 6:
+            return clean
+    return None
+
+
+def annotate_theme_thesis(beats: list[dict[str, Any]], scenes: list[dict[str, Any]]) -> None:
+    scene_map = {str(scene.get("id") or ""): scene for scene in scenes}
+    for beat in beats:
+        intent = str(beat.get("semanticIntent") or "")
+        scene = scene_map.get(str(beat.get("sceneId") or ""), {})
+        if intent not in {"result-promise", "negative-to-positive", "negative-friction", "transformation-stack", "explanation-claim"}:
+            continue
+        if str(scene.get("presenterLayout") or "") not in {"fullscreen", "large"}:
+            continue
+        if str(scene.get("materialLayout") or "") in {"main", "clean"}:
+            continue
+        keyword = suggested_depth_keyword(str(beat.get("text") or ""), list(beat.get("keywords") or []))
+        if not keyword:
+            continue
+        beat["themeThesisCandidate"] = True
+        beat["suggestedDepthKeyword"] = keyword
+        beat["requiresApproval"] = True
+        break
 
 
 def scene_fallback_info(scene: dict[str, Any], info: dict[str, Any], start_frame: int | None = None) -> dict[str, Any]:
@@ -400,7 +476,11 @@ def build_semantic_beats(data: dict[str, Any]) -> list[dict[str, Any]]:
             beats.append(beat)
             beat_index += 1
 
-    return merge_short_tail_beats(beats, scenes)
+    merged = merge_short_tail_beats(beats, scenes)
+    for beat in merged:
+        beat.update(semantic_metadata(str(beat.get("text") or "")))
+    annotate_theme_thesis(merged, scenes)
+    return merged
 
 
 def merge_short_tail_beats(beats: list[dict[str, Any]], scenes: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -444,7 +524,12 @@ def merge_short_tail_beats(beats: list[dict[str, Any]], scenes: list[dict[str, A
             previous["text"] = str(previous.get("text") or "") + str(beat.get("text") or "")
             previous["sourceCueIds"] = list(previous.get("sourceCueIds") or []) + list(beat.get("sourceCueIds") or [])
             continue
-        if duration < MIN_BEAT_FRAMES and previous:
+        if (
+            duration < MIN_BEAT_FRAMES
+            and previous
+            and previous_intent == current_intent
+            and current_intent in {"explanation-claim", "workflow-step", "topic-intro"}
+        ):
             previous["endFrame"] = max(int(previous.get("endFrame", 0) or 0), end)
             previous["text"] = str(previous.get("text") or "") + str(beat.get("text") or "")
             previous["sourceCueIds"] = list(previous.get("sourceCueIds") or []) + list(beat.get("sourceCueIds") or [])

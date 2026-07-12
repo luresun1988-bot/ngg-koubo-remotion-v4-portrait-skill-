@@ -16,6 +16,7 @@ SKILL_ROOT = SCRIPT_DIR.parent
 TEMPLATE_ROOT = SKILL_ROOT / "assets" / "remotion-template"
 REGRESSIONS = [
     "semantic_router_regression.py",
+    "semantic_component_contract_regression.py",
     "sfx_semantic_routing_regression.py",
     "visual_density_regression.py",
     "presenter_impact_regression.py",

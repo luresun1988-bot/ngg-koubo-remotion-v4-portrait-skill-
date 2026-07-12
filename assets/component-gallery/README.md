@@ -15,17 +15,20 @@ Use it before changing a real project when a V4 component's look, layout, or mot
 | Segment | Component | Purpose | Status |
 | --- | --- | --- | --- |
 | 01 | `kineticTitle` | Hook / result promise big title | Baseline |
-| 02 | `highlightBox` | Negative / pain contrast | Baseline |
+| 02 | `semanticProblemMap` | Negative / pain contrast | Baseline |
 | 03 | `dataPunch` | Numeric count-up / metric | Baseline |
 | 04 | `flowPath` | Numbered workflow / enumeration | Scale pass |
 | 05 | `infoCard` | Small field card style | Scale pass |
 | 06 | `capabilityShare` | Capability/share/ranking panel | Scale pass |
 | 07 | `sceneLockGrid` | Scenario/category tiles | Scale pass |
 | 08 | `transformationStack` | Source -> target -> drivers -> result | Scale pass |
-| 09 | `transitionPushZoom` | Platform fan-out | Scale pass |
-| 10 | `captionHighlight` | Automation handoff panel | Scale pass |
+| 09 | `platformFanout` | Platform fan-out | Scale pass |
+| 10 | `automationHandoff` | Automation handoff panel | Scale pass |
 | 11 | `materialMain` | Proof video main screen + presenter PiP | Baseline |
 | 12 | `ctaTitle` | CTA close | Baseline |
+| 13 | `topicKeyword` | Lightweight episode/topic introduction | Baseline |
+| 14 | `claimStrip` | Ordinary explanation / low-confidence claim | Baseline |
+| 15 | `ratioGallery` | Source-bound output ratios/orientations | Baseline |
 
 ## Run
 

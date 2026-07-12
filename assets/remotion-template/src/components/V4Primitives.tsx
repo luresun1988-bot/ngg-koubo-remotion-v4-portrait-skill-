@@ -7,6 +7,7 @@ import {
   BarChart3,
   Bot,
   BrainCircuit,
+  BriefcaseBusiness,
   Building2,
   CalendarDays,
   Check,
@@ -20,6 +21,7 @@ import {
   FileText,
   FlaskConical,
   Folder,
+  Globe2,
   GraduationCap,
   Hash,
   Image,
@@ -28,24 +30,29 @@ import {
   Layers,
   Link2,
   ListChecks,
+  MapPinned,
   MonitorUp,
   Network,
   Package,
+  PackageCheck,
   PanelsTopLeft,
   Repeat2,
   Route,
   ScanSearch,
+  Scale,
   SendHorizontal,
   ShieldCheck,
   Tags,
   TextCursorInput,
   TrendingUp,
+  Trophy,
   UploadCloud,
   User,
   Users,
   Video,
   Workflow,
   Zap,
+  Store,
 } from 'lucide-react';
 import {
   Img,
@@ -76,6 +83,7 @@ const iconMap = {
   BarChart3,
   Bot,
   BrainCircuit,
+  BriefcaseBusiness,
   Building2,
   CalendarDays,
   CheckCircle2,
@@ -88,6 +96,7 @@ const iconMap = {
   FileText,
   FlaskConical,
   Folder,
+  Globe2,
   GraduationCap,
   Hash,
   Image,
@@ -96,24 +105,29 @@ const iconMap = {
   Layers,
   Link2,
   ListChecks,
+  MapPinned,
   MonitorUp,
   Network,
   Package,
+  PackageCheck,
   PanelsTopLeft,
   Repeat2,
   Route,
   ScanSearch,
+  Scale,
   SendHorizontal,
   ShieldCheck,
   Tags,
   TextCursorInput,
   TrendingUp,
+  Trophy,
   UploadCloud,
   User,
   Users,
   Video,
   Workflow,
   Zap,
+  Store,
 };
 
 type IconName = keyof typeof iconMap;
@@ -890,12 +904,10 @@ export const InfoCard: React.FC<{
       {label: 'output_dir', text: 'output_dir', status: '执行中', iconName: 'Folder'},
     ];
     const rows = (event.internalSteps && event.internalSteps.length > 0 ? event.internalSteps : defaultRows).slice(0, 3);
-    const statusNodes = [
-      {label: 'voice', state: 'done'},
-      {label: 'video', state: 'active'},
-      {label: 'stitching', state: 'idle'},
-      {label: 'ready', state: 'idle'},
-    ];
+    const statusNodes = rows.slice(0, 4).map((step, nodeIndex) => ({
+      label: compactHudText(step.label ?? step.text ?? `字段 ${nodeIndex + 1}`, 6),
+      state: String(step.status ?? '').includes('执行') || String(step.status ?? '').includes('生成') ? 'active' : 'done',
+    }));
     return (
       <div
         style={{
@@ -914,7 +926,7 @@ export const InfoCard: React.FC<{
       >
         <div style={{position: 'absolute', right: 0, top: 0, width: isPortrait ? 560 : 640}}>
           <div style={{color: colors.blue, fontSize: 29, fontWeight: 950, lineHeight: 1, letterSpacing: 0}}>
-            STATUS POLLING
+            状态进度
           </div>
           <div style={{position: 'relative', marginTop: isPortrait ? 38 : 30, height: 90}}>
             <div
@@ -941,7 +953,7 @@ export const InfoCard: React.FC<{
               }}
             />
             {statusNodes.map((node, nodeIndex) => {
-              const leftPercent = nodeIndex === 0 ? 0 : nodeIndex === 1 ? 31 : nodeIndex === 2 ? 67 : 100;
+              const leftPercent = statusNodes.length <= 1 ? 0 : (nodeIndex / (statusNodes.length - 1)) * 100;
               const isDone = node.state === 'done';
               const isActive = node.state === 'active';
               return (
@@ -998,7 +1010,7 @@ export const InfoCard: React.FC<{
             />
             <div>
               <div style={{color: colors.blue, fontSize: 25, fontWeight: 950, lineHeight: 1, letterSpacing: 0}}>
-                FIELDS
+                字段
               </div>
               <div style={{marginTop: 24, color: colors.white, fontSize: 40, fontWeight: 950, lineHeight: 1}}>
                 {event.title ?? 'request / created'}
@@ -1574,13 +1586,21 @@ export const PlatformFanOutPanel: React.FC<{event: VisualEvent}> = ({event}) => 
   const opacity = clampFade(local, duration);
   const scale = interpolate(enter, [0, 1], [0.96, 1]);
   const compact = shouldUsePortraitCompactHud(event, width, height);
-  const platforms = [
-    {name: '\u6296\u97f3', icon: Video, color: colors.blue, x: 48, y: 142},
-    {name: '\u5c0f\u7ea2\u4e66', icon: Image, color: colors.red, x: 440, y: 142},
-    {name: 'B\u7ad9', icon: MonitorUp, color: colors.green, x: 48, y: 344},
-    {name: '\u5feb\u624b', icon: SendHorizontal, color: colors.amber, x: 440, y: 344},
-    {name: '\u89c6\u9891\u53f7', icon: PanelsTopLeft, color: colors.white, x: 244, y: 374},
-  ]
+  const positions = [
+    {x: 48, y: 142}, {x: 440, y: 142}, {x: 48, y: 344}, {x: 440, y: 344}, {x: 244, y: 374},
+  ];
+  const palette = [colors.blue, colors.red, colors.green, colors.amber, colors.white];
+  const sourceSteps = (event.internalSteps ?? []).slice(0, 5);
+  const platforms = (sourceSteps.length ? sourceSteps : [
+    {label: '渠道适配', iconName: 'Route'},
+    {label: '多端发布', iconName: 'Network'},
+    {label: '统一交付', iconName: 'Package'},
+  ]).map((step, index) => ({
+    name: step.label ?? step.text ?? `渠道 ${index + 1}`,
+    icon: iconMap[(step.iconName as IconName) ?? 'Network'] ?? Network,
+    color: palette[index % palette.length],
+    ...positions[index % positions.length],
+  }));
 
   if (compact) {
     return (
@@ -1750,7 +1770,6 @@ export const PlatformFanOutPanel: React.FC<{event: VisualEvent}> = ({event}) => 
           extrapolateRight: 'clamp',
         });
         const pop = spring({frame: Math.max(0, local - index * 9), fps, config: {damping: 22, stiffness: 100}});
-        const pulse = 1 + Math.sin((local - index * 6) / 18) * 0.015;
         return (
           <div
             key={platform.name}
@@ -1772,7 +1791,7 @@ export const PlatformFanOutPanel: React.FC<{event: VisualEvent}> = ({event}) => 
               fontWeight: 950,
               textShadow: hudTextHighlight,
               opacity: line,
-              transform: `scale(${interpolate(pop, [0, 1], [0.92, 1]) * pulse})`,
+              transform: `scale(${interpolate(pop, [0, 1], [0.92, 1])})`,
             }}
           >
             <PlatformIcon size={22} strokeWidth={2.4} />
@@ -1961,23 +1980,22 @@ const MaterialAsset: React.FC<{src: string; fit?: 'cover' | 'contain'; startFrom
 type InternalStep = NonNullable<VisualEvent['internalSteps']>[number];
 
 const defaultCapabilitySteps: InternalStep[] = [
-  {label: 'Anthropic', iconName: 'BrainCircuit', status: '42%'},
-  {label: 'OpenAI', iconName: 'Bot', status: '21%'},
-  {label: 'Google', iconName: 'Network', status: '10%'},
+  {label: '比较对象', iconName: 'Scale', status: '对象'},
+  {label: '能力指标', iconName: 'BrainCircuit', status: '指标'},
+  {label: '差异结论', iconName: 'BarChart3', status: '结论'},
 ];
 
 const defaultSceneLockSteps: InternalStep[] = [
-  {label: '\u652f\u4ed8', iconName: 'CreditCard', status: '\u9ad8\u9891\u4ea4\u6613'},
-  {label: '\u9ad8\u8003', iconName: 'GraduationCap', status: '\u6559\u80b2\u573a\u666f'},
-  {label: '\u653f\u52a1', iconName: 'Landmark', status: '\u516c\u5171\u670d\u52a1'},
+  {label: '应用场景', iconName: 'Link2', status: '场景'},
+  {label: '目标行业', iconName: 'Building2', status: '行业'},
+  {label: '落地结果', iconName: 'BadgeCheck', status: '结果'},
 ];
 
 const defaultTransformationSteps: InternalStep[] = [
-  {label: '\u4e00\u4e2a\u4eba', iconName: 'User', status: '\u8d77\u70b9'},
-  {label: '\u4e00\u4e2a\u56e2\u961f', iconName: 'Users', status: '\u76ee\u6807'},
-  {label: '\u62a4\u57ce\u6cb3', iconName: 'ShieldCheck', status: '\u539f\u59cb\u58c1\u5792'},
-  {label: '\u6760\u6746', iconName: 'TrendingUp', status: 'AI'},
-  {label: '55%-81%', iconName: 'FlaskConical', status: 'FASTER'},
+  {label: '原状态', iconName: 'Layers', status: '起点'},
+  {label: '目标状态', iconName: 'TrendingUp', status: '目标'},
+  {label: '关键驱动', iconName: 'BrainCircuit', status: '驱动'},
+  {label: '转化结果', iconName: 'BadgeCheck', status: '结果'},
 ];
 
 const parsePercent = (value?: string): number => {
@@ -2106,6 +2124,7 @@ export const CapabilitySharePanel: React.FC<{event: VisualEvent; side?: 'left' |
           {steps.slice(0, 4).map((step, index) => {
             const progress = sectionProgress(local, 58 + index * 12, 14);
             const pct = parsePercent(step.status);
+            const hasPercent = /%/.test(String(step.status ?? ''));
             const bar = interpolate(progress, [0, 1], [0, pct], {
               extrapolateLeft: 'clamp',
               extrapolateRight: 'clamp',
@@ -2128,7 +2147,7 @@ export const CapabilitySharePanel: React.FC<{event: VisualEvent; side?: 'left' |
                 <div style={{height: compact ? 12 : 18, borderRadius: 999, background: 'rgba(255,255,255,0.18)', overflow: 'hidden', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12)'}}>
                   <div
                     style={{
-                      width: `${bar}%`,
+                      width: hasPercent ? `${bar}%` : '0%',
                       height: '100%',
                       borderRadius: 999,
                       background: colors.blue,
@@ -2137,7 +2156,7 @@ export const CapabilitySharePanel: React.FC<{event: VisualEvent; side?: 'left' |
                   />
                 </div>
                 <div style={{color: colors.blue, fontSize: compact ? 17 : 26, fontWeight: 950, textAlign: 'right', textShadow: hudTextHighlight}}>
-                  {Math.round(bar)}%
+                  {hasPercent ? `${Math.round(bar)}%` : (step.status ?? '对比项')}
                 </div>
               </div>
             );
@@ -2412,6 +2431,129 @@ export const TransformationStackPanel: React.FC<{event: VisualEvent; side?: 'lef
           {result.status ?? event.subtext ?? '\u8bed\u4e49\u7ed3\u679c'}
         </div>
       </div>
+    </div>
+  );
+};
+
+export const TopicKeyword: React.FC<{event: VisualEvent}> = ({event}) => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const local = frame - event.startFrame;
+  const enter = spring({frame: local, fps, config: {damping: 17, stiffness: 170}});
+  const opacity = clampFade(local, event.endFrame - event.startFrame);
+  const chars = Array.from((event.text ?? '本期主题').slice(0, 8));
+  return (
+    <div style={{position: 'absolute', left: 54, top: 246, width: 560, opacity, fontFamily: fontStack}}>
+      <div style={{fontSize: 24, color: colors.blue, fontWeight: 950, letterSpacing: 4, textShadow: hudTextHighlight}}>
+        {event.subtext ?? '本期主题'}
+      </div>
+      <div style={{marginTop: 14, display: 'flex', color: colors.white, fontSize: 94, fontWeight: 950, lineHeight: 1, textShadow: hudTextHighlight}}>
+        {chars.map((char, index) => {
+          const reveal = interpolate(local - index * 4, [0, 8], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+          return <span key={`${char}-${index}`} style={{opacity: reveal, transform: `translateX(${(1 - reveal) * -24}px) scale(${0.9 + 0.1 * enter})`}}>{char}</span>;
+        })}
+      </div>
+    </div>
+  );
+};
+
+export const ClaimStrip: React.FC<{event: VisualEvent}> = ({event}) => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const local = frame - event.startFrame;
+  const duration = event.endFrame - event.startFrame;
+  const enter = spring({frame: local, fps, config: {damping: 22, stiffness: 135}});
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        right: 42,
+        top: 420,
+        width: 390,
+        minHeight: 96,
+        padding: '22px 24px 22px 30px',
+        borderRadius: 12,
+        background: 'rgba(5,7,11,0.66)',
+        boxShadow: hudRingShadow,
+        color: colors.white,
+        opacity: clampFade(local, duration),
+        transform: `translateX(${interpolate(enter, [0, 1], [38, 0])}px)`,
+        fontFamily: fontStack,
+      }}
+    >
+      <div style={{position: 'absolute', left: 0, top: 14, bottom: 14, width: 5, borderRadius: 999, background: colors.blue}} />
+      <div style={{fontSize: 20, color: colors.blue, fontWeight: 950, letterSpacing: 3}}>观点</div>
+      <div style={{marginTop: 8, fontSize: 34, fontWeight: 950, lineHeight: 1.18, textShadow: hudTextHighlight}}>
+        {compactHudText(event.text ?? '观点说明', 18)}
+      </div>
+    </div>
+  );
+};
+
+export const RatioGallery: React.FC<{event: VisualEvent}> = ({event}) => {
+  const frame = useCurrentFrame();
+  const {fps} = useVideoConfig();
+  const local = frame - event.startFrame;
+  const duration = event.endFrame - event.startFrame;
+  const steps = (event.internalSteps ?? []).slice(0, 4);
+  const ratios = steps.length ? steps : [
+    {label: '横版', iconName: 'PanelsTopLeft'},
+    {label: '竖版', iconName: 'Image'},
+    {label: '方图', iconName: 'Images'},
+  ];
+  return (
+    <div style={{position: 'absolute', right: 42, top: 350, width: 500, opacity: clampFade(local, duration), fontFamily: fontStack}}>
+      <div style={{color: colors.blue, fontSize: 24, fontWeight: 950, letterSpacing: 3, textShadow: hudTextHighlight}}>尺寸输出</div>
+      <div style={{marginTop: 22, display: 'flex', alignItems: 'flex-end', gap: 14}}>
+        {ratios.map((step, index) => {
+          const progress = spring({frame: Math.max(0, local - index * 7), fps, config: {damping: 18, stiffness: 145}});
+          const label = step.label ?? `规格 ${index + 1}`;
+          const dimensions = label.includes('16:9')
+            ? {width: 162, height: 91}
+            : label.includes('4:3') && !label.includes('3:4')
+              ? {width: 144, height: 108}
+              : label.includes('3:4')
+                ? {width: 112, height: 149}
+                : label.includes('1:1') || label.includes('方')
+                  ? {width: 126, height: 126}
+                  : label.includes('竖')
+                    ? {width: 106, height: 150}
+                    : {width: 150, height: 94};
+          return (
+            <div key={`${label}-${index}`} style={{display: 'grid', gap: 10, justifyItems: 'center', transform: `translateY(${interpolate(progress, [0, 1], [28, 0])}px) scale(${interpolate(progress, [0, 1], [0.9, 1])})`}}>
+              <div style={{width: dimensions.width, height: dimensions.height, borderRadius: 10, background: 'rgba(5,7,11,0.68)', boxShadow: hudRingShadow, display: 'grid', placeItems: 'center', color: index === 0 ? colors.blue : index === 1 ? colors.green : colors.white}}>
+                {React.createElement(iconMap[(step.iconName as IconName) ?? 'Image'] ?? Image, {size: 34, strokeWidth: 2.4})}
+              </div>
+              <div style={{fontSize: 21, color: colors.white, fontWeight: 950, textShadow: hudTextHighlight}}>{label}</div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+export const DepthKeywordLayer: React.FC<{event: VisualEvent}> = ({event}) => {
+  const frame = useCurrentFrame();
+  const local = frame - event.startFrame;
+  const chars = Array.from((event.text ?? '').slice(0, 6));
+  const foreground = event.foregroundAssetPath;
+  const isImage = Boolean(foreground && /\.(png|webp)$/i.test(foreground));
+  return (
+    <div style={{position: 'absolute', inset: 0, pointerEvents: 'none'}}>
+      <div style={{position: 'absolute', left: 48, right: 48, top: 250, display: 'flex', justifyContent: 'center', color: colors.white, fontFamily: fontStack, fontSize: 180, fontWeight: 950, lineHeight: 1, letterSpacing: 2, textShadow: hudTextHighlight}}>
+        {chars.map((char, index) => {
+          const reveal = interpolate(local - index * 4, [0, 7], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
+          return <span key={`${char}-${index}`} style={{opacity: reveal, transform: `translateX(${(1 - reveal) * -34}px)`}}>{char}</span>;
+        })}
+      </div>
+      {foreground ? (
+        isImage ? (
+          <Img src={staticFile(foreground)} style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'}} />
+        ) : (
+          <OffthreadVideo src={staticFile(foreground)} muted style={{position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover'}} />
+        )
+      ) : null}
     </div>
   );
 };

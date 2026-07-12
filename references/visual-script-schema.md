@@ -205,9 +205,12 @@ Required fields:
 - `startFrame` / `endFrame`: real timing inherited from caption cues.
 - `beatGroupId`: group id used for icon uniqueness, card ratio checks, and staged internal motion.
 - `text`: original spoken text or a direct concatenation of caption cue text.
-- `semanticIntent`: the meaning class, such as `result-promise`, `negative-friction`, `negative-to-positive`, `numeric-metric`, `workflow-fields`, `manual-field`, `capability-share`, `scene-lock`, `transformation-stack`, `asset-variants`, `platform-fanout`, `proof-material`, `positive-confirm`, or `cta-resolve`.
+- `semanticIntent`: the primary meaning class, such as `result-promise`, `negative-friction`, `negative-to-positive`, `numeric-metric`, `workflow-fields`, `manual-field`, `capability-share`, `scene-lock`, `transformation-stack`, `asset-variants`, `platform-fanout`, `proof-material`, `positive-confirm`, `topic-intro`, `explanation-claim`, or `cta-resolve`.
 - `visualForm`: the required visual grammar, such as `redWarningCard`, `dataPunch`, `flowPath`, `ratioGallery`, `platformFanout`, or `materialMain`.
 - `requiredChecks`: QA obligations that must be satisfied by the generated visual event.
+- `semanticModifiers`: optional compound meanings such as `numeric`, `completed`, `automated`, `negative`, or `proof-bound`.
+- `entities`: source-bound numbers, products, platforms, brands, assets, or topic nouns used to populate components.
+- `themeThesisCandidate`, `suggestedDepthKeyword`, and `requiresApproval`: optional proposal metadata. These fields never create a behind-presenter effect without approval.
 
 Rules:
 
@@ -260,6 +263,12 @@ Common event types:
 - `capabilityShare`
 - `sceneLockGrid`
 - `transformationStack`
+- `semanticProblemMap`
+- `automationHandoff`
+- `topicKeyword`
+- `claimStrip`
+- `ratioGallery`
+- `depthKeyword`
 
 Each significant event should declare semantic role and motion type.
 
@@ -291,7 +300,7 @@ Process/enumeration fulfillment fields:
 Negative/friction fulfillment fields:
 
 - Use `semanticRole: "negative-friction"` when the visible phrase contains "还在手动", "手动", "麻烦", "别再", "不是", "低效", "重复", "卡住", or "风险" and the beat is framed as a wrong path or objection.
-- Recommended types are `highlightBox` for a red contrast block or `statusSticker` for a compact red warning sticker.
+- Recommended types are `semanticProblemMap` for a red contrast block or `statusSticker` for a compact red warning sticker. `highlightBox` remains a legacy alias only.
 - Recommended `motionType` is `red-warning-pop-strike`.
 - The positive resolution should be a following internal step or subsequent event, not the only visible treatment.
 
@@ -301,6 +310,14 @@ Layered reference-style HUD fields:
 - Use `type: "sceneLockGrid"` when the transcript lists practical scenarios, industries, local adoption categories, or "where this is used". Use `internalSteps` for the scenario tiles; each tile needs a distinct `iconName`.
 - Use `type: "transformationStack"` when the transcript expresses "from A to B", individual-to-team, moat/leverage, driver-to-result, or productivity shifts. Use `internalSteps` in this order: source state, target state, one or two driver chips, result metric.
 - These components are not one-shot panels. Their internal sections must appear in semantic phases: header/title, then top object/scenario tiles, then data rows/bar growth or remaining tiles.
+- `internalSteps` must contain only source-bound content. Do not use gallery defaults as project facts when entities, percentages, platforms, or transformation states were not spoken or provided.
+
+Manual depth typography fields:
+
+- Use `type: "depthKeyword"` only after explicit approval.
+- `text` is one white keyword line of 1-6 characters.
+- Set `approvalStatus: "approved"` and provide `foregroundAssetPath` to a transparent, composition-aligned presenter cutout image/video.
+- If the cutout is missing, use `topicKeyword` or `claimStrip`; do not pretend ordinary foreground text is behind the presenter.
 
 Main HUD lane scheduling:
 
@@ -424,7 +441,7 @@ Semantic routing examples:
 
 ```json
 {
-  "type": "highlightBox",
+  "type": "semanticProblemMap",
   "semanticRole": "semantic-problem-map",
   "motionType": "contrast-swap-scan",
   "text": "Not editing speed",
@@ -434,7 +451,7 @@ Semantic routing examples:
 
 ```json
 {
-  "type": "transitionPushZoom",
+  "type": "platformFanout",
   "semanticRole": "platform-fanout",
   "motionType": "hub-to-platform-flow",
   "text": "One source video",
@@ -444,7 +461,7 @@ Semantic routing examples:
 
 ```json
 {
-  "type": "captionHighlight",
+  "type": "automationHandoff",
   "semanticRole": "automation-handoff",
   "motionType": "field-collapse-to-action",
   "text": "Repeated fields",

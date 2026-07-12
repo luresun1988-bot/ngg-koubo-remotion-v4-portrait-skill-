@@ -30,6 +30,10 @@ Use this reference before finalizing any V4 visual script, template change, or Q
 - Do not stream-copy or concatenate segmented presenter MP4 containers that retain independent AAC tracks. Normalize to one video-only stream plus one 48 kHz PCM WAV and verify exact frame/sample counts.
 - Do not use slow symmetric presenter zooms, continuous scale drift, or repeated breathing camera motion. Do not count presenter zoom as a semantic-density refresh. `presenter-impact-punch` must stay within 18–28 frames at 30 fps, remain about eight seconds from the next punch, and occur at most three times in any rolling minute.
 - Do not force behind-presenter text at frame 0 when the opening is result/proof material or before the presenter states the theme thesis.
+- Do not auto-create `depthKeyword` from a theme-thesis candidate. Require explicit approval and a transparent, composition-aligned foreground cutout asset.
+- Do not map unknown or low-confidence explanation copy to a fabricated workflow diagram. Use `explanation-claim -> claimStrip` or keep the scene intentionally clean.
+- Do not infer a heavy semantic route from one broad token such as `从`, `发布`, `模型`, or `想要` without the required relation and entities.
+- Do not ship component demo defaults as project facts. Never add unspoken platforms, brands, percentages, ratios, fields, transformation states, drivers, or results.
 - Do not treat poster assets as generic decoration. Poster assets may enter the video only when the narration or project topic is about covers, thumbnails, posters, or publishing assets.
 - For thumbnail/poster-focused videos with 2-3 provided poster exports, do not hide all poster proof until the middle if the opening claim depends on the poster result. Use a right-side staggered poster stack preview when it strengthens the Hook.
 - Do not display poster, cover, or thumbnail exports inside mismatched fixed-size frames. Keep 16:9, 4:3, and 3:4 assets in matching native-ratio surfaces, with no extra border frame unless a framed gallery is explicitly requested.

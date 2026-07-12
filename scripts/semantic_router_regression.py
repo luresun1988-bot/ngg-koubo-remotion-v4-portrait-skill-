@@ -18,7 +18,7 @@ from v4_utf8 import configure_utf8  # noqa: E402
 configure_utf8()
 
 
-CASES: list[dict[str, str]] = [
+CASES: list[dict[str, Any]] = [
     {"id": "negative-01", "text": "别再手动做主图，这件事太慢了", "intent": "negative-friction", "eventType": "highlightBox"},
     {"id": "negative-02", "text": "账号没转正就是一个风险点", "intent": "negative-friction", "eventType": "highlightBox"},
     {"id": "negative-03", "text": "你还在靠人工一条条发布，这就是成本", "intent": "negative-friction", "eventType": "highlightBox"},
@@ -114,10 +114,31 @@ CASES: list[dict[str, str]] = [
     {"id": "real-project-manual-impossible", "text": "作为一个 Codex 博主，这种事我当然不可能手动做。", "intent": "negative-friction", "eventType": "highlightBox", "eventTextContains": "不可能手动"},
     {"id": "real-project-webpage-handoff", "text": "我直接打开 Codex，把网页丢给它，让它自己读页面、看题目、整理答案。", "intent": "automation-handoff", "eventType": "captionHighlight"},
     {"id": "real-project-flow-transform", "text": "不是它会写代码，而是你把一个麻烦事交给它，它真的能把整套流程跑通。", "intent": "transformation-stack", "eventType": "transformationStack"},
+    {"id": "topic-intro-01", "text": "这期我们聊一下数字人", "intent": "topic-intro", "eventType": "topicKeyword"},
+    {"id": "claim-01", "text": "这个工具主要负责提升视频画质", "intent": "explanation-claim", "eventType": "claimStrip"},
+    {"id": "adversarial-publish", "text": "发布前先检查文件是否完整", "intent": "explanation-claim", "eventType": "claimStrip"},
+    {"id": "adversarial-from", "text": "从官网下载这个工具就可以了", "intent": "explanation-claim", "eventType": "claimStrip"},
+    {"id": "adversarial-model", "text": "模型文件保存在本地目录", "intent": "explanation-claim", "eventType": "claimStrip"},
+    {"id": "adversarial-want", "text": "如果你想要了解其中的原理", "intent": "explanation-claim", "eventType": "claimStrip"},
+    {
+        "id": "compound-numeric-complete",
+        "text": "10 张高清详情图已经自动生成好了",
+        "intent": "numeric-metric",
+        "eventType": "dataPunch",
+        "modifiersContain": ["numeric", "completed", "automated"],
+    },
 ]
 
+CANONICAL_EVENT_TYPES_BY_INTENT = {
+    "negative-friction": "semanticProblemMap",
+    "negative-to-positive": "semanticProblemMap",
+    "automation-handoff": "automationHandoff",
+    "platform-fanout": "platformFanout",
+    "asset-variants": "ratioGallery",
+}
 
-def visual_script_for_case(case: dict[str, str], index: int) -> dict[str, Any]:
+
+def visual_script_for_case(case: dict[str, Any], index: int) -> dict[str, Any]:
     start = index * 180
     end = start + 150
     scene_id = f"scene-{index + 1:03d}"
@@ -146,13 +167,11 @@ def visual_script_for_case(case: dict[str, str], index: int) -> dict[str, Any]:
         "audioCues": [],
         "qaFrames": [],
     }
-
-
 def routed_event(data: dict[str, Any]) -> dict[str, Any]:
     return next(event for event in data["visualEvents"] if event.get("type") != "cornerChapterLabel")
 
 
-def run_case(case: dict[str, str], index: int) -> dict[str, Any]:
+def run_case(case: dict[str, Any], index: int) -> dict[str, Any]:
     data = visual_script_for_case(case, index)
     semantic_router.apply_semantic_beats(data)
     visual_event_builder.apply_visual_events(data)
@@ -166,18 +185,24 @@ def run_case(case: dict[str, str], index: int) -> dict[str, Any]:
         event_text = f"{event_text} {event.get('numericPrefix') or ''}{event.get('numericValue')}{event.get('numericSuffix') or ''}"
     expected_text = case.get("eventTextContains")
     text_ok = True if not expected_text else expected_text in event_text
-    ok = beat.get("semanticIntent") == case["intent"] and event.get("type") == case["eventType"] and text_ok
+    expected_type = CANONICAL_EVENT_TYPES_BY_INTENT.get(str(case["intent"]), str(case["eventType"]))
+    required_modifiers = [str(item) for item in case.get("modifiersContain", [])]
+    actual_modifiers = [str(item) for item in beat.get("semanticModifiers", [])]
+    modifiers_ok = all(item in actual_modifiers for item in required_modifiers)
+    ok = beat.get("semanticIntent") == case["intent"] and event.get("type") == expected_type and text_ok and modifiers_ok
     return {
         "id": case["id"],
         "text": case["text"],
         "expectedIntent": case["intent"],
         "actualIntent": beat.get("semanticIntent"),
-        "expectedEventType": case["eventType"],
+        "expectedEventType": expected_type,
         "actualEventType": event.get("type"),
         "expectedEventText": expected_text or "",
         "actualEventText": event_text,
         "semanticRole": event.get("semanticRole"),
         "timingAnchor": event.get("timingAnchor", ""),
+        "expectedModifiers": required_modifiers,
+        "actualModifiers": actual_modifiers,
         "ok": ok,
     }
 
@@ -214,7 +239,7 @@ def run_real_project_opening_case() -> dict[str, Any]:
     semantic_router.apply_semantic_beats(data)
     visual_event_builder.apply_visual_events(data)
     actual = [beat.get("semanticIntent") for beat in data.get("semanticBeats", [])]
-    expected = ["result-promise", "workflow-step", "negative-friction"]
+    expected = ["result-promise", "explanation-claim", "negative-friction"]
     event_types = [event.get("type") for event in data.get("visualEvents", []) if event.get("type") != "cornerChapterLabel"]
     return {
         "id": "real-project-opening-sequence",
@@ -229,9 +254,37 @@ def run_real_project_opening_case() -> dict[str, Any]:
     }
 
 
+def run_short_tail_intent_case() -> dict[str, Any]:
+    data: dict[str, Any] = {
+        "schemaVersion": "ngg-koubo-remotion-v4-portrait",
+        "composition": {"format": "9:16", "width": 1080, "height": 1920, "fps": 25, "durationFrames": 150},
+        "media": [],
+        "scenes": [{
+            "id": "scene-tail", "type": "Explanation", "startFrame": 0, "endFrame": 150,
+            "semanticRole": "", "presenterLayout": "large", "materialLayout": "none",
+            "narrationText": "这个工具主要负责提升视频画质。评论区告诉我你还想看什么。",
+        }],
+        "captionCues": [
+            {"id": "cap-tail-01", "sceneId": "scene-tail", "startFrame": 0, "endFrame": 120, "text": "这个工具主要负责提升视频画质。"},
+            {"id": "cap-tail-02", "sceneId": "scene-tail", "startFrame": 120, "endFrame": 150, "text": "评论区告诉我你还想看什么。"},
+        ],
+        "semanticBeats": [], "visualEvents": [], "audioCues": [], "qaFrames": [],
+    }
+    semantic_router.apply_semantic_beats(data)
+    actual = [str(beat.get("semanticIntent") or "") for beat in data["semanticBeats"]]
+    expected = ["explanation-claim", "cta-resolve"]
+    return {
+        "id": "short-tail-intent-preserved", "text": data["scenes"][0]["narrationText"],
+        "expectedIntent": ",".join(expected), "actualIntent": ",".join(actual),
+        "expectedEventType": "separate-short-cta", "actualEventType": "semantic-beats-only",
+        "semanticRole": "", "timingAnchor": "", "ok": actual == expected,
+    }
+
+
 def main() -> int:
     results = [run_case(case, index) for index, case in enumerate(CASES)]
     results.append(run_real_project_opening_case())
+    results.append(run_short_tail_intent_case())
     failed = [item for item in results if not item["ok"]]
     for item in results:
         marker = "PASS" if item["ok"] else "MISS"

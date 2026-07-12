@@ -65,6 +65,7 @@ SFX_SUGGESTIONS: dict[str, dict[str, Any]] = {
     },
 }
 PUNCTUATION = " ，。？！、；;：:.!?"
+NUMERIC_VALUE_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|个|张|条|分钟|秒)?")
 
 NEGATIVE_TERMS = ["手动", "不是", "麻烦", "低效", "重复", "卡住", "风险", "不值得", "太慢", "人工成本"]
 POSITIVE_TERMS = ["自动化", "自动", "完成", "搞定", "跑完", "输出完成", "Codex", "一键", "接管"]
@@ -323,7 +324,9 @@ def semantic_role_for_beat(beat: dict[str, Any]) -> str:
         "scene-lock": "scene-lock",
         "transformation-stack": "transformation-stack",
         "cta-resolve": "cta-resolve",
-    }.get(intent, "workflow-step")
+        "topic-intro": "topic-intro",
+        "explanation-claim": "explanation-claim",
+    }.get(intent, "explanation-claim")
 
 
 def lane_for_event(event: dict[str, Any]) -> str | None:
@@ -338,7 +341,7 @@ def lane_for_event(event: dict[str, Any]) -> str | None:
         return "proof"
     if event_type in {"dataPunch", "metricSpotlight"}:
         return "right" if "right" in safe_area else "left"
-    if event_type in {"flowPath", "statusStack", "transitionPushZoom"} or role in {"platform-fanout", "workflow-step", "manual-field"}:
+    if event_type in {"flowPath", "statusStack", "transitionPushZoom", "platformFanout"} or role in {"platform-fanout", "workflow-step", "manual-field"}:
         return "right"
     return "left"
 
@@ -387,6 +390,8 @@ def desired_duration_for_event(event: dict[str, Any], scene: dict[str, Any] | No
         base = 135
     if event_type in {"kineticTitle", "ctaTitle"}:
         base = 120
+    if event_type in {"topicKeyword", "claimStrip"}:
+        base = 95
     if density_mode == "dense-strong" and scene_type in {"Hook", "CTA", "Contrast"}:
         base = max(base, 140)
     if density_mode == "light" and event_type not in {"materialMain", "ctaTitle", "kineticTitle"}:
@@ -416,10 +421,26 @@ def proof_asset_from_media(data: dict[str, Any]) -> str | None:
 
 
 def poster_steps(text: str) -> list[dict[str, str]]:
+    ratios: list[tuple[str, str]] = []
+    if "16:9" in text:
+        ratios.append(("横屏 16:9", "PanelsTopLeft"))
+    elif any(signal in text for signal in ["横屏", "横版"]):
+        ratios.append(("横版", "PanelsTopLeft"))
+    if "3:4" in text:
+        ratios.append(("竖图 3:4", "Image"))
+    elif any(signal in text for signal in ["竖屏", "竖版"]):
+        ratios.append(("竖版", "Image"))
+    if "1:1" in text:
+        ratios.append(("方图 1:1", "Images"))
+    elif any(signal in text for signal in ["方图", "方形"]):
+        ratios.append(("方图", "Images"))
+    if "4:3" in text:
+        ratios.append(("横图 4:3", "PanelsTopLeft"))
+    if not ratios:
+        ratios = [("横版", "PanelsTopLeft"), ("竖版", "Image"), ("方图", "Images")]
     return [
-        {"id": "ratio-16x9", "label": "横屏 16:9", "iconName": "PanelsTopLeft"},
-        {"id": "ratio-3x4", "label": "竖屏 3:4", "iconName": "Image"},
-        {"id": "ratio-4x3", "label": "方图 4:3", "iconName": "Images"},
+        {"id": f"ratio-{index + 1:02d}", "label": label, "iconName": icon}
+        for index, (label, icon) in enumerate(ratios[:4])
     ]
 
 
@@ -448,10 +469,20 @@ def field_steps(text: str) -> list[dict[str, str]]:
 
 
 def capability_steps(text: str) -> list[dict[str, str]]:
-    return [
-        {"id": "cap-01", "label": "OpenAI", "iconName": "Bot", "status": "领先"},
-        {"id": "cap-02", "label": "Google", "iconName": "Network", "status": "追赶"},
-        {"id": "cap-03", "label": "Anthropic", "iconName": "BrainCircuit", "status": "对比"},
+    candidates = [
+        ("OpenAI", "Bot"), ("Google", "Network"), ("Anthropic", "BrainCircuit"),
+        ("国内", "Landmark"), ("国外", "Globe2"), ("企业客户", "Building2"),
+        ("模型能力", "BrainCircuit"), ("市场份额", "BarChart3"), ("排名", "Trophy"),
+    ]
+    steps = [
+        {"id": f"cap-{index + 1:02d}", "label": label, "iconName": icon}
+        for index, (label, icon) in enumerate(candidates)
+        if label in text
+    ]
+    return steps[:3] or [
+        {"id": "cap-01", "label": "比较对象", "iconName": "Scale"},
+        {"id": "cap-02", "label": "能力指标", "iconName": "BrainCircuit"},
+        {"id": "cap-03", "label": "差异结论", "iconName": "BarChart3"},
     ]
 
 
@@ -477,13 +508,57 @@ def scene_steps(text: str) -> list[dict[str, str]]:
 
 
 def transformation_steps(text: str) -> list[dict[str, str]]:
-    return [
-        {"id": "state-01", "label": "一个人", "iconName": "User"},
-        {"id": "state-02", "label": "一个团队", "iconName": "Users"},
-        {"id": "driver-01", "label": "第二大脑", "iconName": "BrainCircuit", "status": "DRIVER"},
-        {"id": "driver-02", "label": "护城河", "iconName": "ShieldCheck", "status": "MOAT"},
-        {"id": "result-01", "label": "能力放大", "iconName": "TrendingUp", "status": "RESULT"},
+    source = "原状态"
+    target = "目标状态"
+    relation = re.search(r"从([^，。！？]{1,10}?)(?:变成|转化成|到)([^，。！？]{1,10})", text)
+    if relation:
+        source = relation.group(1).strip()
+        target = relation.group(2).strip()
+    elif "一个人" in text and "团队" in text:
+        source, target = "一个人", "一个团队"
+    elif "个人" in text and "团队" in text:
+        source, target = "个人", "团队"
+    drivers = [term for term in ["第二大脑", "知识库", "杠杆", "护城河", "可复制流程"] if term in text]
+    result = next((term for term in ["能力放大", "长期系统", "团队资产", "可复制流程"] if term in text), "转化结果")
+    steps = [
+        {"id": "state-01", "label": source[:10], "iconName": "User"},
+        {"id": "state-02", "label": target[:10], "iconName": "Users"},
     ]
+    steps.extend(
+        {"id": f"driver-{index + 1:02d}", "label": driver, "iconName": "BrainCircuit", "status": "驱动"}
+        for index, driver in enumerate(drivers[:2])
+    )
+    steps.append({"id": "result-01", "label": result, "iconName": "TrendingUp", "status": "结果"})
+    return steps
+
+
+def platform_steps(text: str) -> list[dict[str, str]]:
+    platforms = [
+        ("抖音", "Video"), ("小红书", "Image"), ("B站", "MonitorUp"),
+        ("快手", "SendHorizontal"), ("视频号", "PanelsTopLeft"),
+    ]
+    steps = [
+        {"id": f"platform-{index + 1:02d}", "label": label, "iconName": icon}
+        for index, (label, icon) in enumerate(platforms)
+        if label in text
+    ]
+    return steps[:5] or [
+        {"id": "platform-01", "label": "渠道适配", "iconName": "Route"},
+        {"id": "platform-02", "label": "多端发布", "iconName": "Network"},
+        {"id": "platform-03", "label": "统一交付", "iconName": "PackageCheck"},
+    ]
+
+
+def topic_keyword(text: str, beat: dict[str, Any]) -> str:
+    entities = [str(item) for item in beat.get("entities", []) if str(item)]
+    for entity in entities:
+        clean = re.sub(r"\s+", "", entity)
+        if 2 <= len(clean) <= 8 and not NUMERIC_VALUE_RE.search(clean):
+            return clean
+    match = re.search(r"(?:聊|讲|说|看|拆解|测试|介绍)(?:一下|一讲)?([^，。！？]{2,8})", text)
+    if match:
+        return match.group(1).strip()
+    return key_message(text, 8, ["数字人", "自动化", "工作流", "主图", "详情图", "大模型", "效率"]) or "本期主题"
 
 
 def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any] | None:
@@ -528,7 +603,7 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
         negative, positive, emphasis_words = compact_negative_positive(text)
         event = {
             **base,
-            "type": "highlightBox",
+            "type": "semanticProblemMap",
             "text": negative or "还在手动",
             "status": "MANUAL BOTTLENECK",
             "emphasisWords": emphasis_words or ["手动"],
@@ -569,7 +644,7 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
         title_copy, subtext_copy, emphasis_words = confirm_copy(text)
         return {
             **base,
-            "type": "captionHighlight",
+            "type": "automationHandoff",
             "text": title_copy or "Codex 接管",
             "subtext": subtext_copy or "把流程交给系统执行",
             "status": "AUTO HANDOFF",
@@ -594,12 +669,13 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
 
     if intent == "numeric-metric":
         metric_copy = key_message(text, 16, ["提升", "增长", "比例", "指标", "%", "倍", "万", "亿", "分钟", "秒"])
+        modifiers = [str(item) for item in beat.get("semanticModifiers", [])]
         return {
             **base,
             "type": "dataPunch",
             "text": metric_copy or "数字指标",
-            "subtext": "从 0 增长到目标值",
-            "status": "METRIC",
+            "subtext": "明确生成结果" if "completed" in modifiers else "数字指标变化",
+            "status": "已生成" if "completed" in modifiers else "数字结果",
             "iconName": "TrendingUp",
             "motionType": "count-up-chart",
             **numeric_fields(text),
@@ -620,7 +696,7 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
     if intent == "asset-variants":
         return {
             **base,
-            "type": "flowPath",
+            "type": "ratioGallery",
             "text": "多尺寸主图",
             "title": "横屏 / 竖屏 / 方图",
             "status": "ASSET VARIANTS",
@@ -631,10 +707,11 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
     if intent == "platform-fanout":
         return {
             **base,
-            "type": "transitionPushZoom",
+            "type": "platformFanout",
             "text": "一份素材包",
             "subtext": "分发到多个平台",
             "iconName": "Network",
+            "internalSteps": platform_steps(text),
             "motionType": "hub-to-platform-flow",
         }
 
@@ -661,13 +738,16 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
         }
 
     if intent == "transformation-stack":
+        steps = transformation_steps(text)
+        source_label = str(steps[0].get("label") or "原状态")
+        target_label = str(steps[1].get("label") or "目标状态")
         return {
             **base,
             "type": "transformationStack",
-            "text": "从个人到团队",
-            "subtext": "AI 变成能力杠杆",
+            "text": f"{source_label} → {target_label}",
+            "subtext": key_message(text, 16, ["转化", "变成", "杠杆", "护城河", "能力", "流程"]),
             "status": "TRANSFORM",
-            "internalSteps": transformation_steps(text),
+            "internalSteps": steps,
             "motionType": "state-driver-result-build",
         }
 
@@ -703,6 +783,28 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
             "status": status_copy,
             "emphasisWords": emphasis_words,
             "motionType": "cta-result-keyword",
+        }
+
+    if intent == "topic-intro":
+        keyword = topic_keyword(text, beat)
+        return {
+            **base,
+            "type": "topicKeyword",
+            "text": keyword,
+            "subtext": "本期主题",
+            "status": "主题",
+            "emphasisWords": [keyword],
+            "motionType": "word-by-word-topic-reveal",
+        }
+
+    if intent == "explanation-claim":
+        claim = key_message(text, 16, ["关键", "本质", "真正", "核心", "重点", "原因", "方法"])
+        return {
+            **base,
+            "type": "claimStrip",
+            "text": claim or normalize_hud_source(text)[:16] or "观点说明",
+            "status": "观点",
+            "motionType": "lightweight-claim-slide",
         }
 
     title_copy = key_message(text, 14, ["流程", "步骤", "规则", "自动", "发布", "主图"])

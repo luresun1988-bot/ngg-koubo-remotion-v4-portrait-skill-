@@ -168,7 +168,7 @@ def global_lane_handoff_keeps_buffer() -> bool:
         },
     ]
     visual_event_builder.apply_visual_events(data)
-    events = [event for event in routed_events(data) if event.get("type") == "highlightBox"]
+    events = [event for event in routed_events(data) if event.get("type") == "semanticProblemMap"]
     events.sort(key=lambda item: item["startFrame"])
     return len(events) == 2 and int(events[1]["startFrame"]) >= int(events[0]["endFrame"]) + 10
 

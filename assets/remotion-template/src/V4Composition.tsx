@@ -12,17 +12,21 @@ import {
 import {
   AutomationHandoffPanel,
   CapabilitySharePanel,
+  ClaimStrip,
   CornerChapterLabel,
   DataPunch,
+  DepthKeywordLayer,
   FlowListPanel,
   InfoCard,
   KineticTitle,
   MaterialBoard,
   PlatformFanOutPanel,
+  RatioGallery,
   SceneLockGridPanel,
   SemanticProblemMap,
   StatusSticker,
   TransformationStackPanel,
+  TopicKeyword,
   V4Caption,
 } from './components/V4Primitives';
 import {colors, fontStack, mediaWindowShadow} from './v4Styles';
@@ -365,8 +369,11 @@ const eventShadeSide = (event: VisualEvent, scene: Scene): ShadeSide | null => {
   if (
     event.type === 'cornerChapterLabel' ||
     event.type === 'ctaTitle' ||
+    event.type === 'ctaRecommend' ||
     event.type === 'materialMain' ||
-    event.type === 'materialZoom'
+    event.type === 'materialZoom' ||
+    event.type === 'evidenceWindow' ||
+    event.type === 'depthKeyword'
   ) {
     return null;
   }
@@ -378,12 +385,13 @@ const eventShadeSide = (event: VisualEvent, scene: Scene): ShadeSide | null => {
       ? 'left'
       : null;
 
-  if (event.type === 'kineticTitle' || event.type === 'bigJudgement' || event.type === 'dataPunch' || event.type === 'quoteSource' || event.type === 'metricSpotlight') return explicitSide ?? 'left';
-  if (event.type === 'flowPath' || event.type === 'statusStack' || event.type === 'platformFanout' || event.type === 'workflowDashboard') return explicitSide ?? 'right';
+  if (event.type === 'kineticTitle' || event.type === 'bigJudgement' || event.type === 'dataPunch' || event.type === 'quoteSource' || event.type === 'metricSpotlight' || event.type === 'topicKeyword') return explicitSide ?? 'left';
+  if (event.type === 'claimStrip') return explicitSide ?? 'right';
+  if (event.type === 'flowPath' || event.type === 'statusStack' || event.type === 'platformFanout' || event.type === 'workflowDashboard' || event.type === 'ratioGallery') return explicitSide ?? 'right';
   if (event.type === 'capabilityShare' || event.type === 'sceneLockGrid' || event.type === 'transformationStack') return explicitSide ?? 'left';
-  if (event.type === 'highlightBox' && event.semanticRole === 'semantic-problem-map') return 'left';
+  if (event.type === 'semanticProblemMap' || (event.type === 'highlightBox' && event.semanticRole === 'semantic-problem-map')) return 'left';
   if (event.type === 'transitionPushZoom' && event.semanticRole === 'platform-fanout') return 'right';
-  if (event.type === 'captionHighlight' && event.semanticRole === 'automation-handoff') return 'left';
+  if (event.type === 'automationHandoff' || (event.type === 'captionHighlight' && event.semanticRole === 'automation-handoff')) return 'left';
 
   if (event.type === 'infoCard') {
     if (event.semanticRole === 'manual-field') return 'right';
@@ -414,13 +422,14 @@ const primaryHudLane = (event: VisualEvent, scene: Scene): HudLane | null => {
     event.type === 'cornerChapterLabel' ||
     event.type === 'statusSticker' ||
     event.type === 'iconPulse' ||
-    event.type === 'presenterReposition'
+    event.type === 'presenterReposition' ||
+    event.type === 'depthKeyword'
   ) {
     return null;
   }
 
-  if (event.type === 'ctaTitle') return 'left';
-  if (event.type === 'materialMain' || event.type === 'materialZoom') return 'proof';
+  if (event.type === 'ctaTitle' || event.type === 'ctaRecommend') return 'left';
+  if (event.type === 'materialMain' || event.type === 'materialZoom' || event.type === 'evidenceWindow') return 'proof';
 
   return eventShadeSide(event, scene);
 };
@@ -519,7 +528,7 @@ export const V4Composition: React.FC<{visualScript: VisualScript}> = ({visualScr
     presenterMotion.currentLayout === 'pip' ||
     (presenterMotion.previousLayout === 'pip' && presenterMotion.transitionProgress < 1);
   const events = visibleHudEvents(rawEvents, currentScene);
-  const materialEvent = rawEvents.find((event) => event.type === 'materialMain');
+  const materialEvent = rawEvents.find((event) => ['materialMain', 'materialZoom', 'evidenceWindow'].includes(event.type));
   const materialFocusMode =
     Boolean(materialEvent) ||
     currentScene.materialLayout === 'main' ||
@@ -533,28 +542,32 @@ export const V4Composition: React.FC<{visualScript: VisualScript}> = ({visualScr
     (event) => event.type === 'infoCard' && (!suppressCompetingHud || isProofEvent(event)),
   );
   const problemMaps = events.filter(
-    (event) => event.type === 'highlightBox' && event.semanticRole === 'semantic-problem-map',
+    (event) => event.type === 'semanticProblemMap' || (event.type === 'highlightBox' && event.semanticRole === 'semantic-problem-map'),
   );
   const platformFanouts = events.filter(
-    (event) => event.type === 'transitionPushZoom' && event.semanticRole === 'platform-fanout',
+    (event) => event.type === 'platformFanout' || (event.type === 'transitionPushZoom' && event.semanticRole === 'platform-fanout'),
   );
   const automationHandoffs = events.filter(
-    (event) => event.type === 'captionHighlight' && event.semanticRole === 'automation-handoff',
+    (event) => event.type === 'automationHandoff' || (event.type === 'captionHighlight' && event.semanticRole === 'automation-handoff'),
   );
   const dataPunches = events.filter(
     (event) => event.type === 'dataPunch' || event.type === 'metricSpotlight',
   );
   const flowLists = events.filter(
-    (event) => event.type === 'flowPath' || event.type === 'statusStack',
+    (event) => event.type === 'flowPath' || event.type === 'statusStack' || event.type === 'workflowDashboard',
   );
   const capabilityShares = events.filter((event) => event.type === 'capabilityShare');
   const sceneLockGrids = events.filter((event) => event.type === 'sceneLockGrid');
   const transformationStacks = events.filter((event) => event.type === 'transformationStack');
   const titles = events.filter(
-    (event) => event.type === 'kineticTitle' || event.type === 'ctaTitle',
+    (event) => ['kineticTitle', 'bigJudgement', 'ctaTitle', 'ctaRecommend'].includes(event.type),
   );
+  const topicKeywords = events.filter((event) => event.type === 'topicKeyword');
+  const claimStrips = events.filter((event) => event.type === 'claimStrip' || event.type === 'quoteSource');
+  const ratioGalleries = events.filter((event) => event.type === 'ratioGallery');
+  const depthKeywords = rawEvents.filter((event) => event.type === 'depthKeyword');
   const cornerLabels = events.filter((event) => event.type === 'cornerChapterLabel');
-  const stickers = events.filter((event) => event.type === 'statusSticker');
+  const stickers = events.filter((event) => event.type === 'statusSticker' || event.type === 'iconPulse');
   const visibleTitles = suppressCompetingHud ? titles.filter(isProofEvent) : titles;
   const visibleProblemMaps = suppressCompetingHud ? [] : problemMaps;
   const visiblePlatformFanouts = suppressCompetingHud ? [] : platformFanouts;
@@ -564,6 +577,9 @@ export const V4Composition: React.FC<{visualScript: VisualScript}> = ({visualScr
   const visibleCapabilityShares = suppressCompetingHud ? [] : capabilityShares;
   const visibleSceneLockGrids = suppressCompetingHud ? [] : sceneLockGrids;
   const visibleTransformationStacks = suppressCompetingHud ? [] : transformationStacks;
+  const visibleTopicKeywords = suppressCompetingHud ? [] : topicKeywords;
+  const visibleClaimStrips = suppressCompetingHud ? [] : claimStrips;
+  const visibleRatioGalleries = suppressCompetingHud ? [] : ratioGalleries;
   const visibleCornerLabels = suppressCompetingHud ? cornerLabels.filter(isProofEvent) : cornerLabels;
   const visibleStickers = suppressCompetingHud ? stickers.filter(isProofEvent) : stickers;
 
@@ -602,6 +618,9 @@ export const V4Composition: React.FC<{visualScript: VisualScript}> = ({visualScr
         impactScale={presenterImpactScale}
         aboveMaterial={presenterAboveMaterial}
       />
+      {depthKeywords.map((event) => (
+        <DepthKeywordLayer key={event.id} event={event} />
+      ))}
       <PresenterAudioLayer
         config={visualScript.presenterAudio}
         compositionDuration={visualScript.composition.durationFrames}
@@ -632,6 +651,18 @@ export const V4Composition: React.FC<{visualScript: VisualScript}> = ({visualScr
           event={event}
           align={event.type === 'ctaTitle' ? 'center' : 'left'}
         />
+      ))}
+
+      {visibleTopicKeywords.map((event) => (
+        <TopicKeyword key={event.id} event={event} />
+      ))}
+
+      {visibleClaimStrips.map((event) => (
+        <ClaimStrip key={event.id} event={event} />
+      ))}
+
+      {visibleRatioGalleries.map((event) => (
+        <RatioGallery key={event.id} event={event} />
       ))}
 
       {infoCards.map((event, index) => (

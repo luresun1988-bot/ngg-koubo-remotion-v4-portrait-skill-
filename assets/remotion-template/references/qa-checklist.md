@@ -70,6 +70,10 @@ Check:
 - Verify segmented presenter projects contain `combined_presenter_video_only.mp4`, `presenter_narration_48k.wav`, and a passing `qa/media/presenter_normalization.json`; decoded frames and WAV samples must match the report exactly.
 - Verify every `presenter-impact-punch` is source-bound, 18–28 frames at 30 fps, reaches peak in 4–6 frames, rebounds in another 4–6, returns in 6–10, peaks at 1.06–1.10, stays about eight seconds from the next punch, and occurs no more than three times in a rolling minute.
 - Behind-presenter keywords belong to the first eligible theme thesis, not necessarily frame 0. Opening result/proof material may defer the effect; greetings, filler, ordinary steps, and tool names must not satisfy it.
+- A theme-thesis candidate must remain a proposal. `depthKeyword` requires explicit approval, 1-6 white characters, and a transparent composition-aligned `foregroundAssetPath`.
+- Unknown explanation copy must use `claimStrip` or an intentionally clean hold, never a fabricated `flowPath`.
+- Inspect every component's `internalSteps`: platform names, companies/models, ratios, percentages, fields, transformation states, drivers, and results must be source-bound.
+- Require schema/renderer event-type parity; an accepted event type that produces no visible renderer path is a hard failure.
 - Run the dynamic motion-preview plan and inspect every generated clip. A contact sheet alone cannot approve punch speed, rebound, PiP geometry, or lip sync.
 - Windows Chinese paths and filenames survive initialization, media probing, and JSON generation without mojibake.
 - `sourceVideoMode=precomposed-video` normally uses `packagingDensity=light`; extra HUD should not overload existing subtitles, PiP, or screen demos.

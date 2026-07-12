@@ -49,7 +49,7 @@ def build_plan(data: dict[str, Any], max_previews: int = 12) -> list[dict[str, A
                     "sourceEventId": event.get("id"),
                 }
             )
-        elif event.get("type") == "depthTitle" or event.get("depthTitleCandidate") is True:
+        elif event.get("type") in {"depthTitle", "depthKeyword"} or event.get("depthTitleCandidate") is True:
             depth_start = int(event.get("depthStartFrame", start) or start)
             depth_end = int(event.get("depthEndFrame", end) or end)
             preview_start, preview_end = clamp_range(

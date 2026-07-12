@@ -147,6 +147,10 @@ Choose HUD patterns by semantic role:
 - `proof-focus`: readable proof material with highlight boxes, arrows, highlight cues, and simplified overlays.
 - `cta-resolve`: final result-summary typography, not an ordinary card. Default structure is one large closing judgement, one short explanatory line, and one compact keyword/action strip such as `关键词：Codex 用法`. Use white base text plus semantic green emphasis for the decisive word. In fullscreen-presenter scenes, place CTA typography in the left/upper-left safe area by default and keep the center head/face area clear.
 - `poster-stack-preview`: for cover/poster/thumbnail topics, show 2-3 poster exports as a right-side staggered stack during the Hook or early proof beat, while the left title carries the negative or result statement.
+- `topic-intro`: `topicKeyword`, a short subject label with character-by-character reveal. It is not automatically behind the presenter.
+- `explanation-claim`: `claimStrip`, a lightweight short-claim rail. Use this instead of inventing a process diagram for ordinary explanation.
+- `asset-variants`: `ratioGallery`, with only the ratios or orientation variants actually spoken or provided.
+- `depthKeyword`: manual-only behind-presenter typography. Require one approved white keyword of at most six characters plus a transparent, composition-aligned foreground cutout asset. Without that foreground asset, do not claim true behind-presenter depth; use `topicKeyword` or `claimStrip` instead.
 
 Semantic fulfillment rules:
 
@@ -159,6 +163,7 @@ Semantic fulfillment rules:
 - The paired red-warning plus green-confirm layout is reserved for lines that explicitly contain both sides of the contrast, such as "不是 A，而是 B" or "交给 Codex 自动完成".
 - Pain-point language needs a contrast/problem map rather than a neutral explanation card.
 - Layered HUDs must not reveal every layer at once. For `capabilityShare`, show label/title first, then object tiles, then lower data rows and bar growth. For `sceneLockGrid`, show label/title first, then scene tiles one by one. For `transformationStack`, show source state, arrow, target state, driver chips, then result metric.
+- Component content is source-bound. Platform nodes, company/model names, percentages, ratios, fields, transformation states, drivers, and results must come from transcript entities, provided material, or explicit user instructions. Never retain gallery/demo defaults as factual project content.
 
 ## Icons And Stickers
 

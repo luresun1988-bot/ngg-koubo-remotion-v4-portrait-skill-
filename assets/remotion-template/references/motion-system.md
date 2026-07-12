@@ -70,11 +70,13 @@ Use these defaults when creating `visualEvents`:
 | Capability/share/ranking comparison | `capability-share` | `capabilityShare` | `layered-capability-share` |
 | Scenario binding, industry/category landing | `scene-lock` | `sceneLockGrid` | `scene-grid-stagger` |
 | From A to B, leverage, moat/driver/result | `transformation-stack` | `transformationStack` | `state-driver-result-build` |
-| "Not A, but B"; real bottleneck; pain contrast | `semantic-problem-map` | `highlightBox` | `contrast-swap-scan` |
-| Negative/friction hook such as "还在手动", "别再", "不是", wrong path, risk | `negative-friction` | `highlightBox` / `statusSticker` | `red-warning-pop-strike` |
+| "Not A, but B"; real bottleneck; pain contrast | `semantic-problem-map` | `semanticProblemMap` | `contrast-swap-scan` |
+| Negative/friction hook such as "还在手动", "别再", "不是", wrong path, risk | `negative-friction` | `semanticProblemMap` / `statusSticker` | `red-warning-pop-strike` |
 | Repeated upload/title/intro/tag/cover fields or local directory checks | `manual-field` | `infoCard` | `status-polling-field-tree` |
-| One content package splits to several platforms/channels | `platform-fanout` | `transitionPushZoom` | `hub-to-platform-flow` |
-| Manual/repeated work becomes AI/system execution | `automation-handoff` | `captionHighlight` | `field-collapse-to-action` |
+| One content package splits to several platforms/channels | `platform-fanout` | `platformFanout` | `hub-to-platform-flow` |
+| Manual/repeated work becomes AI/system execution | `automation-handoff` | `automationHandoff` | `field-collapse-to-action` |
+| Episode/topic introduction | `topic-intro` | `topicKeyword` | `word-by-word-topic-reveal` |
+| Ordinary explanation or low-confidence claim | `explanation-claim` | `claimStrip` | `lightweight-claim-slide` |
 | Readable screenshot, screen recording, proof asset | `proof-focus` or `proof-material` | `materialMain` / `materialZoom` | `material-push-in` / `material-zoom-highlight` |
 | Thumbnail/poster subject with 2-3 provided poster exports | `poster-stack-preview` | `materialZoom` / `materialMain` | `right-poster-stack-pop` |
 | CTA or final action | `cta-resolve` | `ctaTitle` | `cta-result-keyword` |

@@ -33,6 +33,7 @@ CARD_LIKE_MAIN_EVENT_TYPES = {
     "capabilityShare",
     "sceneLockGrid",
     "transformationStack",
+    "automationHandoff",
 }
 RENDERED_AUDIO_TYPES = {"sfx", "bgm"}
 PENDING_AUDIO_STATUSES = {"pending-selection", "pending-generation", "disabled", "muted"}
@@ -41,7 +42,7 @@ NUMERIC_VALUE_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|x|X)?")
 NUMERIC_UNIT_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|x|X)")
 FLOW_TEXT_RE = re.compile(r"(第一|第二|第三|第1|第2|第3|步骤|流程|结论|行动|最后|step|Step|01|02|03)")
 NUMERIC_FULFILLMENT_TYPES = {"dataPunch", "metricSpotlight", "capabilityShare", "transformationStack"}
-FLOW_FULFILLMENT_TYPES = {"flowPath", "statusStack", "platformFanout", "transitionPushZoom", "captionHighlight", "sceneLockGrid", "transformationStack"}
+FLOW_FULFILLMENT_TYPES = {"flowPath", "statusStack", "platformFanout", "transitionPushZoom", "automationHandoff", "captionHighlight", "sceneLockGrid", "transformationStack"}
 MAIN_HUD_DURATION_BUDGET_TYPES = {
     "kineticTitle",
     "highlightBox",
@@ -58,15 +59,24 @@ MAIN_HUD_DURATION_BUDGET_TYPES = {
     "capabilityShare",
     "sceneLockGrid",
     "transformationStack",
+    "semanticProblemMap",
+    "automationHandoff",
+    "topicKeyword",
+    "claimStrip",
+    "ratioGallery",
 }
 
 HUD_COPY_LIMITS = {
     "highlightBox": {"text": 16, "subtext": 16},
+    "semanticProblemMap": {"text": 16, "subtext": 16},
     "captionHighlight": {"text": 10, "subtext": 16},
+    "automationHandoff": {"text": 10, "subtext": 16},
     "flowPath": {"title": 14, "text": 8},
     "statusStack": {"title": 14, "text": 8},
     "kineticTitle": {"text": 16, "subtext": 12},
     "ctaTitle": {"text": 14, "subtext": 14},
+    "topicKeyword": {"text": 8, "subtext": 8},
+    "claimStrip": {"text": 18},
 }
 
 VISUAL_FAMILY_BY_TYPE = {
@@ -90,14 +100,20 @@ VISUAL_FAMILY_BY_TYPE = {
     "capabilityShare": "capability-share",
     "sceneLockGrid": "scene-lock-grid",
     "transformationStack": "transformation-stack",
+    "semanticProblemMap": "contrast-map",
+    "automationHandoff": "automation-panel",
+    "topicKeyword": "topic-keyword",
+    "claimStrip": "claim-strip",
+    "ratioGallery": "ratio-gallery",
+    "depthKeyword": "depth-keyword",
 }
 
 SEMANTIC_ALLOWED_EVENT_TYPES = {
-    "negative-friction": {"highlightBox", "kineticTitle", "statusSticker"},
-    "negative-to-positive": {"highlightBox"},
+    "negative-friction": {"semanticProblemMap", "highlightBox", "kineticTitle", "statusSticker"},
+    "negative-to-positive": {"semanticProblemMap", "highlightBox"},
     "result-promise": {"kineticTitle", "bigJudgement"},
     "positive-confirm": {"captionHighlight", "statusSticker"},
-    "automation-handoff": {"captionHighlight", "flowPath", "statusStack"},
+    "automation-handoff": {"automationHandoff", "captionHighlight", "flowPath", "statusStack"},
     "numeric-metric": {"dataPunch", "metricSpotlight"},
     "enumeration": {"flowPath", "statusStack"},
     "workflow-fields": {"flowPath", "statusStack", "captionHighlight"},
@@ -105,11 +121,13 @@ SEMANTIC_ALLOWED_EVENT_TYPES = {
     "capability-share": {"capabilityShare"},
     "scene-lock": {"sceneLockGrid"},
     "transformation-stack": {"transformationStack"},
-    "asset-variants": {"flowPath", "materialMain"},
+    "asset-variants": {"ratioGallery", "flowPath", "materialMain"},
     "platform-fanout": {"transitionPushZoom", "platformFanout"},
     "proof-material": {"materialMain", "statusSticker"},
     "cta-resolve": {"ctaTitle", "ctaRecommend"},
     "workflow-step": {"flowPath", "statusStack", "captionHighlight"},
+    "topic-intro": {"topicKeyword"},
+    "explanation-claim": {"claimStrip", "quoteSource"},
 }
 
 
@@ -157,7 +175,7 @@ def media_checks(data: dict[str, Any], remotion_root: Path | None) -> tuple[list
     for idx, event in enumerate(data.get("visualEvents", [])):
         if not isinstance(event, dict):
             continue
-        for field in ["assetPath", "assetStack"]:
+        for field in ["assetPath", "assetStack", "foregroundAssetPath"]:
             value = event.get(field)
             values = value if isinstance(value, list) else [value]
             for item in values:
@@ -249,20 +267,22 @@ def audio_policy_checks(data: dict[str, Any]) -> tuple[list[str], list[str]]:
 
 def event_shade_side(event: dict[str, Any], scene: dict[str, Any] | None = None) -> str | None:
     event_type = str(event.get("type") or "")
-    if event_type in {"cornerChapterLabel", "ctaTitle", "materialMain", "materialZoom"}:
+    if event_type in {"cornerChapterLabel", "ctaTitle", "ctaRecommend", "materialMain", "materialZoom", "evidenceWindow", "depthKeyword"}:
         return None
 
     placement = f"{event.get('safeArea', '')} {event.get('style', '')} {event.get('motionType', '')}".lower()
     explicit_side = "right" if "right" in placement else "left" if "left" in placement else None
     semantic_role = str(event.get("semanticRole") or "")
 
-    if event_type in {"kineticTitle", "bigJudgement", "dataPunch", "quoteSource"}:
+    if event_type in {"kineticTitle", "bigJudgement", "dataPunch", "quoteSource", "topicKeyword"}:
         return explicit_side or "left"
-    if event_type in {"flowPath", "statusStack", "platformFanout"}:
+    if event_type == "claimStrip":
+        return explicit_side or "right"
+    if event_type in {"flowPath", "statusStack", "platformFanout", "ratioGallery"}:
         return explicit_side or "right"
     if event_type in {"capabilityShare", "sceneLockGrid", "transformationStack"}:
         return explicit_side or "left"
-    if event_type == "highlightBox" and semantic_role == "semantic-problem-map":
+    if event_type == "semanticProblemMap" or (event_type == "highlightBox" and semantic_role == "semantic-problem-map"):
         return "left"
     if event_type == "metricSpotlight":
         return explicit_side or "left"
@@ -270,7 +290,7 @@ def event_shade_side(event: dict[str, Any], scene: dict[str, Any] | None = None)
         return explicit_side or "right"
     if event_type == "transitionPushZoom" and semantic_role == "platform-fanout":
         return "right"
-    if event_type == "captionHighlight" and semantic_role == "automation-handoff":
+    if event_type == "automationHandoff" or (event_type == "captionHighlight" and semantic_role == "automation-handoff"):
         return "left"
 
     if event_type == "infoCard":
@@ -291,7 +311,7 @@ def event_shade_side(event: dict[str, Any], scene: dict[str, Any] | None = None)
 
 def main_hud_lane(event: dict[str, Any], scene: dict[str, Any] | None = None) -> str | None:
     event_type = str(event.get("type") or "")
-    if event_type in {"cornerChapterLabel", "statusSticker", "iconPulse", "presenterReposition"}:
+    if event_type in {"cornerChapterLabel", "statusSticker", "iconPulse", "presenterReposition", "depthKeyword"}:
         return None
     if event_type in {"ctaTitle", "ctaRecommend"}:
         return "center"
@@ -576,7 +596,7 @@ def hud_copy_quality_checks(data: dict[str, Any]) -> tuple[list[str], list[str]]
                 f"{event_id}.{field} has {len(value)} chars; limit is {limit}. "
                 "HUD copy must be key-message copy, not full transcript text"
             )
-            if event_type in {"highlightBox", "captionHighlight"}:
+            if event_type in {"highlightBox", "semanticProblemMap", "captionHighlight", "automationHandoff"}:
                 errors.append(message)
             else:
                 warnings.append(message.replace(" failed: ", " warning: "))
@@ -588,7 +608,7 @@ def hud_copy_quality_checks(data: dict[str, Any]) -> tuple[list[str], list[str]]
         ]
         combined = f"{event.get('title', '')}{event.get('text', '')}{event.get('subtext', '')}"
 
-        if event_type == "highlightBox":
+        if event_type in {"highlightBox", "semanticProblemMap"}:
             if not emphasis_words:
                 errors.append(
                     f"hud-emphasis-missing failed: {event_id} is a warning/contrast HUD but has no emphasisWords"
@@ -598,7 +618,7 @@ def hud_copy_quality_checks(data: dict[str, Any]) -> tuple[list[str], list[str]]
                     f"hud-emphasis-missing failed: {event_id} emphasisWords do not appear in visible HUD copy"
                 )
 
-        if event_type == "captionHighlight" and str(event.get("semanticRole") or "") == "automation-handoff":
+        if event_type in {"captionHighlight", "automationHandoff"} and str(event.get("semanticRole") or "") == "automation-handoff":
             if not emphasis_words:
                 warnings.append(
                     f"hud-emphasis-missing warning: {event_id} confirm/handoff HUD should mark the green emphasis phrase"
@@ -702,7 +722,7 @@ def semantic_beat_fulfillment_checks(data: dict[str, Any]) -> tuple[list[str], l
 
         if intent in {"negative-friction", "negative-to-positive"}:
             if not any(
-                str(event.get("type") or "") == "highlightBox"
+                str(event.get("type") or "") in {"highlightBox", "semanticProblemMap"}
                 and str(event.get("semanticRole") or "") == "semantic-problem-map"
                 for event in matched_events
             ):
@@ -711,7 +731,7 @@ def semantic_beat_fulfillment_checks(data: dict[str, Any]) -> tuple[list[str], l
                     f"{beat_id} must render a red warning/contrast component, not a neutral or generic card"
                 )
             if intent == "negative-friction" and any(
-                str(event.get("type") or "") == "highlightBox"
+                str(event.get("type") or "") in {"highlightBox", "semanticProblemMap"}
                 and str(event.get("subtext") or "").strip()
                 for event in matched_events
             ):
@@ -720,7 +740,7 @@ def semantic_beat_fulfillment_checks(data: dict[str, Any]) -> tuple[list[str], l
                     f"{beat_id} is negative-only, so it must not invent a green resolution card"
                 )
             if intent == "negative-to-positive" and not any(
-                str(event.get("type") or "") == "highlightBox"
+                str(event.get("type") or "") in {"highlightBox", "semanticProblemMap"}
                 and str(event.get("subtext") or "").strip()
                 for event in matched_events
             ):

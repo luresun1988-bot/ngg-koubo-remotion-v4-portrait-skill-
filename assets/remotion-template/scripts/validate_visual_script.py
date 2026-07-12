@@ -116,6 +116,19 @@ FOCUS_FORBIDDEN_TYPES = {
     "ctaTitle",
     "ctaRecommend",
     "evidenceWindow",
+    "semanticProblemMap",
+    "automationHandoff",
+    "topicKeyword",
+    "claimStrip",
+    "ratioGallery",
+    "depthKeyword",
+}
+RENDERABLE_EVENT_TYPES = {
+    "kineticTitle", "captionHighlight", "cornerChapterLabel", "infoCard", "statusSticker", "iconPulse",
+    "materialMain", "materialZoom", "highlightBox", "presenterReposition", "transitionPushZoom", "ctaTitle",
+    "bigJudgement", "dataPunch", "quoteSource", "flowPath", "statusStack", "platformFanout", "evidenceWindow",
+    "ctaRecommend", "metricSpotlight", "workflowDashboard", "capabilityShare", "sceneLockGrid", "transformationStack",
+    "semanticProblemMap", "automationHandoff", "topicKeyword", "claimStrip", "ratioGallery", "depthKeyword",
 }
 FOCUS_FORBIDDEN_ROLES = {
     "semantic-problem-map",
@@ -410,6 +423,7 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
                 "captions must use complete transcript/ASR copy, not summaries or omitted text"
             )
 
+    theme_thesis_candidates = 0
     for idx, beat in enumerate(semantic_beats):
         if not isinstance(beat, dict):
             errors.append(f"semanticBeats[{idx}] must be an object")
@@ -428,6 +442,19 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
         end = frame_value(beat, "endFrame")
         if start is None or end is None or end <= start:
             errors.append(f"semanticBeats[{idx}] must have valid startFrame/endFrame")
+        if beat.get("themeThesisCandidate") is True:
+            theme_thesis_candidates += 1
+            keyword = str(beat.get("suggestedDepthKeyword") or "").strip()
+            if not 1 <= len(keyword) <= 6:
+                errors.append(f"semanticBeats[{idx}] theme thesis suggestedDepthKeyword must contain 1-6 characters")
+            if beat.get("requiresApproval") is not True:
+                errors.append(f"semanticBeats[{idx}] theme thesis candidate must set requiresApproval=true")
+            scene = scene_by_id.get(scene_id, {})
+            if str(scene.get("presenterLayout") or "") not in {"fullscreen", "large"}:
+                errors.append(f"semanticBeats[{idx}] theme thesis candidate requires fullscreen/large presenter")
+
+    if theme_thesis_candidates > 1:
+        errors.append(f"semanticBeats has {theme_thesis_candidates} theme thesis candidates; allow at most one")
 
     card_events_by_scene: dict[str, list[dict[str, Any]]] = {}
     independent_icon_flyins: dict[str, int] = {}
@@ -441,16 +468,37 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
             errors.append(f"visualEvents[{idx}] references unknown sceneId: {scene_id}")
         event_type = event.get("type")
         role = str(event.get("semanticRole") or "")
+        if event_type not in RENDERABLE_EVENT_TYPES:
+            errors.append(f"visualEvents[{idx}] uses unsupported/unrendered type: {event_type!r}")
         if not role:
             warnings.append(f"visualEvents[{idx}] missing semanticRole")
         if not event.get("motionType"):
             warnings.append(f"visualEvents[{idx}] missing motionType")
-        if role == "platform-fanout" and event_type != "transitionPushZoom":
-            warnings.append(f"visualEvents[{idx}] platform-fanout should usually use type=transitionPushZoom")
-        if role == "automation-handoff" and event_type != "captionHighlight":
-            warnings.append(f"visualEvents[{idx}] automation-handoff should usually use type=captionHighlight")
-        if role == "semantic-problem-map" and event_type != "highlightBox":
-            warnings.append(f"visualEvents[{idx}] semantic-problem-map should usually use type=highlightBox")
+        if role == "platform-fanout" and event_type not in {"platformFanout", "transitionPushZoom"}:
+            warnings.append(f"visualEvents[{idx}] platform-fanout should use type=platformFanout")
+        if role == "automation-handoff" and event_type not in {"automationHandoff", "captionHighlight"}:
+            warnings.append(f"visualEvents[{idx}] automation-handoff should use type=automationHandoff")
+        if role == "semantic-problem-map" and event_type not in {"semanticProblemMap", "highlightBox"}:
+            warnings.append(f"visualEvents[{idx}] semantic-problem-map should use type=semanticProblemMap")
+        if event_type == "transitionPushZoom" and role != "platform-fanout":
+            errors.append(f"visualEvents[{idx}] transitionPushZoom is a legacy platform-fanout alias and requires semanticRole=platform-fanout")
+        if event_type == "highlightBox" and role != "semantic-problem-map":
+            errors.append(f"visualEvents[{idx}] highlightBox is a legacy semantic-problem-map alias")
+        if event_type == "captionHighlight" and role != "automation-handoff":
+            errors.append(f"visualEvents[{idx}] captionHighlight is a legacy automation-handoff alias")
+        if event_type == "presenterReposition" and event.get("motionType") != "presenter-impact-punch":
+            errors.append(f"visualEvents[{idx}] presenterReposition only supports motionType=presenter-impact-punch")
+        if event_type == "depthKeyword":
+            text = str(event.get("text") or "").strip()
+            if not 1 <= len(text) <= 6:
+                errors.append(f"visualEvents[{idx}] depthKeyword text must contain 1-6 characters")
+            if event.get("approvalStatus") != "approved":
+                errors.append(f"visualEvents[{idx}] depthKeyword requires approvalStatus=approved")
+            if not event.get("foregroundAssetPath"):
+                errors.append(f"visualEvents[{idx}] depthKeyword requires a transparent foregroundAssetPath")
+            scene = scene_by_id.get(scene_id, {})
+            if str(scene.get("presenterLayout") or "") not in {"fullscreen", "large"}:
+                errors.append(f"visualEvents[{idx}] depthKeyword requires fullscreen/large presenter")
         if event_type == "infoCard":
             card_events_by_scene.setdefault(scene_id, []).append(event)
         if event_type == "materialMain":
