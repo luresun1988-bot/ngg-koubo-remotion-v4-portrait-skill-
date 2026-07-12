@@ -202,6 +202,38 @@ def media_checks(data: dict[str, Any], remotion_root: Path | None) -> tuple[list
     return errors, warnings
 
 
+def fps_contract_checks(data: dict[str, Any], remotion_root: Path | None) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    if remotion_root is None:
+        return errors, warnings
+    report_path = remotion_root / "qa" / "media" / "presenter_normalization.json"
+    if not report_path.is_file():
+        warnings.append("fps-contract: presenter normalization report is missing; source/composition FPS cannot be cross-checked")
+        return errors, warnings
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError) as exc:
+        errors.append(f"fps-contract: cannot read presenter normalization report: {exc}")
+        return errors, warnings
+    frame_rate = report.get("frameRate", {}) if isinstance(report.get("frameRate"), dict) else {}
+    composition = data.get("composition", {}) if isinstance(data.get("composition"), dict) else {}
+    composition_fps = int(composition.get("fps") or 0)
+    recorded_fps = int(frame_rate.get("compositionFps") or report.get("fps") or 0)
+    if recorded_fps and composition_fps != recorded_fps:
+        errors.append(
+            f"fps-contract: visual_script composition.fps={composition_fps} differs from presenter report fps={recorded_fps}"
+        )
+    if frame_rate.get("mixedPresenterFps") is True and report.get("normalizationApplied") is not True:
+        errors.append("fps-contract: mixed presenter FPS requires normalizationApplied=true")
+    if frame_rate.get("requiresCfrNormalization") is True and report.get("normalizationApplied") is not True:
+        errors.append("fps-contract: fractional/VFR/override mismatch requires CFR normalization before rendering")
+    verification = report.get("verification", {}) if isinstance(report.get("verification"), dict) else {}
+    if verification.get("passed") is not True:
+        errors.append("fps-contract: presenter normalization verification did not pass")
+    return errors, warnings
+
+
 def audio_policy_checks(data: dict[str, Any]) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -976,6 +1008,9 @@ def main() -> int:
     media_errors, media_warnings = media_checks(data, args.remotion_root)
     errors.extend(media_errors)
     warnings.extend(media_warnings)
+    fps_errors, fps_warnings = fps_contract_checks(data, args.remotion_root)
+    errors.extend(fps_errors)
+    warnings.extend(fps_warnings)
     audio_errors, audio_warnings = audio_policy_checks(data)
     errors.extend(audio_errors)
     warnings.extend(audio_warnings)

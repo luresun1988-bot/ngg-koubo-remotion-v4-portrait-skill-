@@ -22,7 +22,10 @@ REGRESSIONS = [
     "visual_density_regression.py",
     "presenter_impact_regression.py",
     "presenter_media_regression.py",
+    "fps_contract_regression.py",
     "final_media_qa_regression.py",
+    "render_pipeline_regression.py",
+    "upgrade_existing_project_regression.py",
     "motion_preview_regression.py",
     "portrait_runtime_contract_regression.py",
 ]

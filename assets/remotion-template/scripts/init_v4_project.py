@@ -110,14 +110,27 @@ def video_summary(path: Path) -> dict[str, Any]:
     video_stream = next((item for item in streams if item.get("codec_type") == "video"), {})
     audio_streams = [item for item in streams if item.get("codec_type") == "audio"]
     duration = float(raw.get("format", {}).get("duration", 0) or 0)
-    fps_text = video_stream.get("avg_frame_rate") or video_stream.get("r_frame_rate") or ""
-    fps = ratio_to_float(fps_text) or 0.0
+    avg_fps_text = str(video_stream.get("avg_frame_rate") or "")
+    r_fps_text = str(video_stream.get("r_frame_rate") or "")
+    fps_text = avg_fps_text or r_fps_text
+    avg_fps = ratio_to_float(avg_fps_text) or 0.0
+    r_fps = ratio_to_float(r_fps_text) or 0.0
+    fps = avg_fps or r_fps
+    variable_frame_rate = bool(avg_fps and r_fps and abs(avg_fps - r_fps) > 0.01)
+    fractional_fps = bool(fps and abs(fps - round(fps)) > 0.01)
     return {
         "path": str(path),
         "durationSec": duration,
         "durationFrames": round(duration * fps),
         "fpsText": fps_text,
         "fps": fps,
+        "avgFpsText": avg_fps_text,
+        "rFpsText": r_fps_text,
+        "avgFps": avg_fps,
+        "rFps": r_fps,
+        "variableFrameRate": variable_frame_rate,
+        "fractionalFps": fractional_fps,
+        "requiresCfrNormalization": variable_frame_rate or fractional_fps,
         "width": int(video_stream.get("width", 0) or 0),
         "height": int(video_stream.get("height", 0) or 0),
         "hasAudio": bool(audio_streams),
@@ -155,6 +168,10 @@ def resolve_composition_fps(
         "sourceFps": measured,
         "sourceFpsText": [str(item.get("fpsText") or "") for item in summaries],
         "mixedPresenterFps": len(set(nominal)) > 1,
+        "variableFrameRate": any(bool(item.get("variableFrameRate")) for item in summaries),
+        "fractionalFps": any(bool(item.get("fractionalFps")) for item in summaries),
+        "requiresCfrNormalization": any(bool(item.get("requiresCfrNormalization")) for item in summaries)
+        or any(value != selected for value in nominal),
     }
 
 
@@ -183,6 +200,74 @@ def find_videos(project_root: Path) -> list[Path]:
         if path.is_file() and path.suffix.lower() in VIDEO_EXTS
     ]
     return sorted(videos, key=lambda item: item.name.lower())
+
+
+def looks_like_segmented_presenters(videos: list[Path]) -> bool:
+    segment_pattern = re.compile(
+        r"^(?:\d+|(?:segment|seg|part|clip|presenter|digital[_ -]?human|数字人|口播)[_ -]*\d+)$",
+        re.IGNORECASE,
+    )
+    return len(videos) > 1 and all(segment_pattern.fullmatch(video.stem) for video in videos)
+
+
+def configured_presenter_videos(project_root: Path) -> list[Path]:
+    config_path = project_root / "project_config.json"
+    if not config_path.is_file():
+        return []
+    try:
+        data = json.loads(config_path.read_text(encoding="utf-8-sig"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    source_media = data.get("sourceMedia", {}) if isinstance(data.get("sourceMedia"), dict) else {}
+    values = source_media.get("talkingHeadVideos", [])
+    if not isinstance(values, list):
+        return []
+    resolved: list[Path] = []
+    for value in values:
+        candidate = Path(str(value))
+        if not candidate.is_absolute():
+            candidate = project_root / candidate
+        resolved.append(candidate.resolve())
+    return resolved
+
+
+def select_presenter_videos(
+    project_root: Path,
+    explicit_presenters: list[Path] | None,
+    legacy_sources: list[Path] | None,
+) -> tuple[list[Path], dict[str, Any]]:
+    if explicit_presenters and legacy_sources:
+        raise SystemExit("use --presenter-video or legacy --source-video, not both")
+    if explicit_presenters:
+        videos = [path.resolve() for path in explicit_presenters]
+        source = "explicit-presenter-video"
+    elif legacy_sources:
+        videos = [path.resolve() for path in legacy_sources]
+        source = "legacy-source-video"
+    else:
+        configured = configured_presenter_videos(project_root)
+        if configured:
+            videos = configured
+            source = "project-config"
+        else:
+            videos = find_videos(project_root)
+            source = "auto-discovery"
+            if len(videos) > 1 and not looks_like_segmented_presenters(videos):
+                names = ", ".join(path.name for path in videos[:8])
+                raise SystemExit(
+                    "multiple ambiguous videos were discovered; V4 will not guess which are presenters. "
+                    f"Use repeated --presenter-video arguments or project_config.json sourceMedia.talkingHeadVideos. Candidates: {names}"
+                )
+    if not videos:
+        raise SystemExit(f"no presenter videos found under {project_root}")
+    missing = [str(path) for path in videos if not path.is_file()]
+    if missing:
+        raise SystemExit(f"missing configured presenter videos: {missing}")
+    return videos, {
+        "selectionSource": source,
+        "presenterVideos": [str(path) for path in videos],
+        "segmentedPresenterSet": len(videos) > 1,
+    }
 
 
 def load_text_segments(project_root: Path) -> list[str]:
@@ -465,7 +550,8 @@ def normalize_presenter_segment(
     duration_seconds = expected_frames / fps
     video_filter = (
         f"scale=1080:1920:force_original_aspect_ratio=decrease,"
-        f"pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black,fps={fps}"
+        f"pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black,fps={fps},"
+        f"tpad=stop_mode=clone:stop_duration={2 / fps:.9f}"
     )
     run(
         [
@@ -544,6 +630,66 @@ def normalize_presenter_segment(
     return exact_wav_samples(wav_out, expected_samples)
 
 
+def normalize_single_presenter_cfr(
+    source: Path,
+    output: Path,
+    fps: int,
+    expected_frames: int,
+    audio_mode: str,
+    has_audio: bool,
+) -> None:
+    duration_seconds = expected_frames / fps
+    video_filter = (
+        f"scale=1080:1920:force_original_aspect_ratio=decrease,"
+        f"pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black,fps={fps},"
+        f"tpad=stop_mode=clone:stop_duration={2 / fps:.9f}"
+    )
+    command = [
+        "ffmpeg",
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-i",
+        str(source),
+        "-map",
+        "0:v:0",
+        "-vf",
+        video_filter,
+        "-frames:v",
+        str(expected_frames),
+        "-c:v",
+        "libx264",
+        "-preset",
+        "medium",
+        "-crf",
+        "18",
+        "-pix_fmt",
+        "yuv420p",
+    ]
+    if audio_mode == "embedded" and has_audio:
+        command.extend(
+            [
+                "-map",
+                "0:a:0",
+                "-af",
+                f"aresample={PRESENTER_SAMPLE_RATE}:async=1:first_pts=0,apad,atrim=duration={duration_seconds:.9f}",
+                "-ar",
+                str(PRESENTER_SAMPLE_RATE),
+                "-ac",
+                "2",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "192k",
+            ]
+        )
+    else:
+        command.append("-an")
+    command.extend(["-movflags", "+faststart", str(output)])
+    run(command)
+
+
 def concat_pcm_wavs(paths: list[Path], output: Path) -> int:
     total_samples = 0
     with wave.open(str(output), "wb") as target:
@@ -603,6 +749,48 @@ def prepare_presenter_media(
         raise SystemExit("presenter sync offset is supported only with normalized-wav audio")
 
     if len(videos) == 1 and audio_mode in {"embedded", "none"}:
+        summary = summaries[0]
+        source_fps = float(summary.get("fps") or 0)
+        needs_cfr = bool(summary.get("requiresCfrNormalization")) or (
+            source_fps > 0 and abs(source_fps - fps) > 0.01
+        )
+        if needs_cfr:
+            out = public_input / "presenter_source_cfr.mp4"
+            expected_frames = duration_frames_at_fps(summary, fps)
+            normalize_single_presenter_cfr(
+                videos[0],
+                out,
+                fps,
+                expected_frames,
+                audio_mode,
+                bool(summary.get("hasAudio")),
+            )
+            decoded_frames = decoded_video_frame_count(out)
+            if decoded_frames != expected_frames:
+                raise SystemExit(
+                    f"single presenter CFR frame mismatch: expected {expected_frames}, got {decoded_frames}"
+                )
+            output_streams = ffprobe_json(out).get("streams", [])
+            output_has_audio = any(stream.get("codec_type") == "audio" for stream in output_streams)
+            if audio_mode == "embedded" and bool(summary.get("hasAudio")) and not output_has_audio:
+                raise SystemExit("single presenter CFR normalization lost embedded audio")
+            report = {
+                "schemaVersion": "ngg-v4-portrait-presenter-normalization-v1",
+                "resolvedAudioMode": audio_mode,
+                "normalizationApplied": True,
+                "normalizationReason": "fractional-vfr-or-explicit-fps-mismatch",
+                "sourceCount": 1,
+                "fps": fps,
+                "totalFrames": expected_frames,
+                "verification": {
+                    "passed": True,
+                    "mode": "single-source-cfr-normalized",
+                    "decodedVideoFrames": decoded_frames,
+                    "hasAudio": output_has_audio,
+                },
+            }
+            descriptor = {"mode": audio_mode, "syncOffsetFrames": 0}
+            return "input/presenter_source_cfr.mp4", summaries, descriptor, report
         out = public_input / "presenter_source.mp4"
         shutil.copy2(videos[0], out)
         report = {
@@ -735,6 +923,7 @@ def project_config(
     caption_render_mode: str,
     presenter_audio: dict[str, Any],
     frame_rate: dict[str, Any],
+    presenter_selection: dict[str, Any],
 ) -> dict[str, Any]:
     return {
         "projectRoot": str(project_root),
@@ -756,6 +945,7 @@ def project_config(
         "captionRenderMode": caption_render_mode,
         "presenterAudio": presenter_audio,
         "frameRate": frame_rate,
+        "presenterSelection": presenter_selection,
         "captionTimeline": timeline_meta or {},
         "posterTopicKeyword": "",
         "semanticSearch": True,
@@ -1551,7 +1741,18 @@ def main() -> int:
         default=None,
         help="Explicit composition FPS override. By default use the probed primary presenter FPS, then fall back to 25.",
     )
-    parser.add_argument("--source-video", action="append", type=Path)
+    parser.add_argument(
+        "--presenter-video",
+        action="append",
+        type=Path,
+        help="Presenter video or ordered presenter segment. Repeat for segmented presenters.",
+    )
+    parser.add_argument(
+        "--source-video",
+        action="append",
+        type=Path,
+        help="Legacy alias for --presenter-video.",
+    )
     parser.add_argument(
         "--caption-render-mode",
         choices=("embedded", "none"),
@@ -1595,9 +1796,12 @@ def main() -> int:
         if output_root.exists() and args.force:
             shutil.rmtree(output_root)
 
-    videos = [video.resolve() for video in args.source_video] if args.source_video else find_videos(project_root)
-    if not videos:
-        raise SystemExit(f"no source videos found under {project_root}")
+    videos, presenter_selection = select_presenter_videos(
+        project_root,
+        args.presenter_video,
+        args.source_video,
+    )
+    print(f"presenter selection: {presenter_selection['selectionSource']} ({len(videos)} file(s))")
 
     source_summaries = [video_summary(video) for video in videos]
     composition_fps, frame_rate_report = resolve_composition_fps(source_summaries, args.fps)
@@ -1649,6 +1853,7 @@ def main() -> int:
         args.caption_render_mode,
         presenter_audio,
         frame_rate_report,
+        presenter_selection,
     )
     config["posterTopicKeyword"] = derive_poster_topic_keyword(texts)
     config_path = output_root / "project_config.json"

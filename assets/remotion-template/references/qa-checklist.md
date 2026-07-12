@@ -30,7 +30,7 @@ python scripts/visual_density_regression.py
 After the final render, run:
 
 ```text
-python scripts/final_media_qa.py --video 06_remotion/final.mp4 --visual-script 06_remotion/visual_script.json --out 06_remotion/qa/final_media_qa.md
+powershell -ExecutionPolicy Bypass -File scripts/render_final_and_qa.ps1 -RemotionRoot 06_remotion -VisualScript visual_script.json -Output out/final.mp4
 ```
 
 Do not deliver the final MP4 unless this check passes.
@@ -79,6 +79,8 @@ Check:
 - `captionRenderMode=none` still requires complete authoritative `captionCues` and `captionTimeline`; inspect the render to confirm that no bottom caption layer appears.
 - Verify the primary presenter source is mounted once and remains continuous across fullscreen/PiP/material transitions. Check lip sync immediately before and after every layout boundary.
 - Verify `composition.fps` matches the probed primary presenter nominal FPS unless an explicit override is documented. Confirm captions, scenes, visual events, SFX, and duration frames were quantized at that same FPS; 25 fps is only the missing-probe fallback.
+- Verify `presenterSelection` names only the actual presenter or ordered presenter segments. Ambiguous multi-video discovery, proof recordings, and B-roll in the presenter set are hard failures.
+- Verify fractional/VFR sources record `requiresCfrNormalization=true`, produce a constant-FPS presenter output, preserve the selected audio mode, and pass the pre-render FPS contract check.
 - For mixed-FPS presenter segments, verify every segment was normalized to the selected composition FPS and `project_config.json.frameRate.mixedPresenterFps` is recorded. Never approve frame numbers copied directly from a timeline authored at another FPS.
 - Verify segmented presenter projects contain `combined_presenter_video_only.mp4`, `presenter_narration_48k.wav`, and a passing `qa/media/presenter_normalization.json`; decoded frames and WAV samples must match the report exactly.
 - Verify every `presenter-impact-punch` is source-bound and scaled from composition FPS: 18–28 frames at 30 fps or about 15–23 at 25 fps, with proportionally scaled push/rebound/return phases, a 1.06–1.10 peak, about eight seconds between punches, and no more than three in a rolling minute.

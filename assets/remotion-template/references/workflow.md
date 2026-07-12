@@ -9,8 +9,10 @@ New projects must use the V4 Remotion template. Copy `assets/remotion-template/`
 Preferred initialization:
 
 ```text
-python scripts/init_v4_project.py --project-root <project> --output-dir 10_v4
+python scripts/init_v4_project.py --project-root <project> --output-dir 10_v4 --presenter-video <main.mp4>
 ```
+
+Repeat `--presenter-video` in playback order for segmented presenters. The legacy `--source-video` alias remains accepted, but new work should use the role-specific option. When neither option is supplied, initialization may use `project_config.json.sourceMedia.talkingHeadVideos`; ambiguous multi-video discovery must stop instead of guessing.
 
 The initializer copies the template without PowerShell wildcards, creates `project_config.json`, probes source video, combines segmented presenter clips into one public source when needed, creates a starter `visual_script.json`, and writes `src/generatedVisualScript.ts`. Before releasing a Skill change, refresh mirrored template files with `python scripts/sync_template_mirrors.py --write` and verify them with `python scripts/sync_template_mirrors.py`.
 
@@ -37,6 +39,11 @@ The project directory is not fixed. The project must contain or receive a `proje
     "sourceFps": [25.0],
     "sourceFpsText": ["25/1"],
     "mixedPresenterFps": false
+  },
+  "presenterSelection": {
+    "selectionSource": "explicit-presenter-video",
+    "presenterVideos": ["04_video/main.mp4"],
+    "segmentedPresenterSet": false
   },
   "posterTopicKeyword": "",
   "semanticSearch": true,
@@ -173,6 +180,7 @@ Do not use online images, videos, charts, screenshots, logos, or data as final a
    - Quantize all second-based SRT/VTT/ASR times with the selected composition FPS.
    - Recalculate duration frames as `round(durationSec * compositionFps)`; do not inherit frame counts measured at another FPS.
    - If segmented presenter clips use mixed FPS, keep the primary clip's nominal FPS unless explicitly overridden, normalize every presenter segment to the selected FPS, and record `mixedPresenterFps=true` in QA.
+   - If `avg_frame_rate` and `r_frame_rate` disagree, or the measured rate is fractional such as 23.976/29.97/59.94, set `requiresCfrNormalization=true` and create a constant-FPS presenter source before timeline generation.
 3. Load or generate transcript/timecodes in this order: SRT/VTT, alignment/timestamp JSON, ASR JSON/SRT, segmented source durations.
    - If generated from ASR, save `asr_segments.json` and optionally `asr_transcript.srt` under `06_remotion/qa/asr/` or the project timing directory.
    - Align scene boundaries to real ASR/SRT semantic breakpoints when a scene cut would split a spoken sentence into unusably short caption fragments.
@@ -199,10 +207,19 @@ Do not use online images, videos, charts, screenshots, logos, or data as final a
 15. Render sampled stills/contact sheet.
     - On a fresh Remotion install, warm the Chrome Headless Shell cache with one still or render command before launching multiple Remotion still/render jobs in parallel. On Windows, parallel first-run stills can race the cache download/extract step and fail with a missing `chrome-headless-shell-win64.zip`.
 16. Fix hard QA failures.
-17. Render the final MP4, apply TV-range BT.709 matrix/transfer/primaries metadata, and run:
-    - `python scripts/final_media_qa.py --video 06_remotion/final.mp4 --visual-script 06_remotion/visual_script.json --out 06_remotion/qa/final_media_qa.md`
-    - Stop on any FPS, resolution, frame-count, H.264/AAC, `yuv420p`, BT.709, audio-coverage, or full-decode error.
+17. Render and validate the delivery MP4 through one command:
+    - `powershell -ExecutionPolicy Bypass -File scripts/render_final_and_qa.ps1 -RemotionRoot 06_remotion -VisualScript visual_script.json -Output out/final.mp4`
+    - The wrapper runs schema/lint/data/type checks, serial Remotion render, BT.709 H.264/AAC post-process, and final full-file QA. Stop on any stage failure; failed output is retained with a `.failed.mp4` suffix and must not be delivered.
 18. Produce `qa_report.md` and reference the passing final-media report.
+
+To refresh only reusable runtime files in an existing project, first dry-run and inspect the plan:
+
+```text
+python scripts/upgrade_existing_project.py --remotion-root <existing/06_remotion>
+python scripts/upgrade_existing_project.py --remotion-root <existing/06_remotion> --write
+```
+
+The upgrade writes `qa/runtime_upgrade_report.json`, backs up replaced runtime files under `qa/runtime_upgrade_backup/`, and does not overwrite project source, media, `visual_script.json`, or package files.
 
 ## Outputs
 
