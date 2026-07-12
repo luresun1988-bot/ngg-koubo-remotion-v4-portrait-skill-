@@ -91,6 +91,7 @@ The V4 template currently implements these concrete presets:
 - `word-pop`: staged word entrance for pain/question hooks.
 - `crash-rebound-keyword-pop`: title scale-in, rebound, and short keyword emphasis for results, routes, and CTA.
 - `keyword-second-pop`: emphasized title words scale up briefly once after the primary entrance, then settle back; no continuous pulsing.
+- `presenter-impact-punch`: reserve for a strong source-bound question, core judgement, reversal, warning, or asserted result. At 30 fps use 18–28 frames total: push to 1.06–1.10 in 4–6 frames, rebound to 1.03–1.05 in another 4–6 frames, hold briefly, and return in 6–10 frames. Keep a face-safe origin near `50% 37%`, at most three punches in a rolling minute, and about eight seconds between punches. Do not overlap proof/material focus, PiP transitions, or another major camera move.
 - `contrast-swap-scan`: pain contrast board with state highlight and "not A / but B" layout.
 - `hub-to-platform-flow`: center package fans out to platform nodes with staggered line reveal.
 - `field-collapse-to-action`: repeated fields expand, check, and hand off into Codex/system execution.
@@ -185,6 +186,8 @@ Presenter movement follows scene type:
 Movement style:
 
 - Scale and translate with easing.
+- Keep the base camera stable. Do not use presenter scale to fill a semantic refresh quota; cards, icons, numbers, and labels provide ordinary refreshes.
+- A slow symmetric `1 -> peak -> 1` zoom lasting longer than one second reads as drift and is forbidden for semantic emphasis.
 - No hard jumps.
 - Sample frames before and after repositioning.
 - Segment boundaries must not create face/body jumps.

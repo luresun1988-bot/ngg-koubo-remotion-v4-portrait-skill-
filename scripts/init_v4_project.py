@@ -412,6 +412,7 @@ def project_config(
     videos: list[Path],
     source_video_mode: str,
     timeline_meta: dict[str, str] | None,
+    caption_render_mode: str,
 ) -> dict[str, Any]:
     return {
         "projectRoot": str(project_root),
@@ -430,6 +431,7 @@ def project_config(
         "style": "high-energy-packaging",
         "sourceVideoMode": source_video_mode,
         "packagingDensity": packaging_density_for_mode(source_video_mode),
+        "captionRenderMode": caption_render_mode,
         "captionTimeline": timeline_meta or {},
         "posterTopicKeyword": "",
         "semanticSearch": True,
@@ -1078,6 +1080,7 @@ def starter_visual_script(
     timeline_cues: list[dict[str, Any]] | None = None,
     timeline_meta: dict[str, str] | None = None,
     source_video_mode: str = "raw-presenter",
+    caption_render_mode: str = "embedded",
 ) -> dict[str, Any]:
     duration_frames = sum(max(1, int(item["durationFrames"])) for item in summaries)
     if not summaries:
@@ -1158,6 +1161,7 @@ def starter_visual_script(
             "durationFrames": duration_frames,
         },
         "sourceVideoMode": source_video_mode,
+        "captionRenderMode": caption_render_mode,
         "packagingDensity": packaging_density_for_mode(source_video_mode),
         "captionTimeline": caption_timeline,
         "researchNotes": [
@@ -1217,6 +1221,12 @@ def main() -> int:
     parser.add_argument("--template-root", default=DEFAULT_TEMPLATE, type=Path)
     parser.add_argument("--fps", type=int, default=25)
     parser.add_argument("--source-video", action="append", type=Path)
+    parser.add_argument(
+        "--caption-render-mode",
+        choices=("embedded", "none"),
+        default="embedded",
+        help="Render bottom captions or keep the authoritative timeline without rendering captions.",
+    )
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
 
@@ -1266,7 +1276,14 @@ def main() -> int:
     if timeline_cues:
         texts = [str(cue.get("text") or "") for cue in timeline_cues]
     source_video_mode = infer_source_video_mode(videos, timeline_meta)
-    config = project_config(project_root, output_root, videos, source_video_mode, timeline_meta)
+    config = project_config(
+        project_root,
+        output_root,
+        videos,
+        source_video_mode,
+        timeline_meta,
+        args.caption_render_mode,
+    )
     config["posterTopicKeyword"] = derive_poster_topic_keyword(texts)
     config_path = output_root / "project_config.json"
     config_path.write_text(
@@ -1284,6 +1301,7 @@ def main() -> int:
         timeline_cues=timeline_cues,
         timeline_meta=timeline_meta,
         source_video_mode=source_video_mode,
+        caption_render_mode=args.caption_render_mode,
     )
     visual_script, split_count = split_cues(visual_script, max_chars=30, min_frames=12)
     visual_script_path.write_text(json.dumps(visual_script, ensure_ascii=True, indent=2), encoding="utf-8")

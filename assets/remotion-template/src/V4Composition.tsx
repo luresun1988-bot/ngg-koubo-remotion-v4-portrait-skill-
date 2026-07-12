@@ -2,6 +2,7 @@ import React from 'react';
 import {
   AbsoluteFill,
   Audio,
+  Easing,
   OffthreadVideo,
   Sequence,
   interpolate,
@@ -25,7 +26,7 @@ import {
   V4Caption,
 } from './components/V4Primitives';
 import {colors, fontStack, mediaWindowShadow} from './v4Styles';
-import type {AudioCue, Scene, VisualEvent, VisualScript} from './v4Types';
+import type {AudioCue, PresenterAudio, Scene, VisualEvent, VisualScript} from './v4Types';
 
 type ShadeSide = 'left' | 'right';
 type HudLane = ShadeSide | 'center' | 'proof';
@@ -69,21 +70,63 @@ const videoStyleFor = (layout: Scene['presenterLayout']): React.CSSProperties =>
   };
 };
 
-const SceneVideo: React.FC<{scene: Scene}> = ({scene}) => {
-  const duration = scene.endFrame - scene.startFrame;
+const presenterImpactScaleFor = (event: VisualEvent | undefined, frame: number): number => {
+  if (!event || event.motionType !== 'presenter-impact-punch') return 1;
+  const duration = Math.max(2, event.endFrame - event.startFrame);
+  const local = frame - event.startFrame;
+  const pushEnd = Math.min(duration - 1, Math.max(4, Math.round(duration * 0.2)));
+  const reboundEnd = Math.min(duration - 1, pushEnd + Math.max(4, Math.round(duration * 0.2)));
+  const returnStart = Math.max(reboundEnd + 1, duration - Math.max(6, Math.round(duration * 0.32)));
+  const lastFrame = Math.max(returnStart + 1, duration - 1);
+  return interpolate(
+    local,
+    [0, pushEnd, reboundEnd, returnStart, lastFrame],
+    [1, event.presenterPeakScale ?? 1.08, event.presenterSettleScale ?? 1.04, event.presenterSettleScale ?? 1.04, 1],
+    {
+      easing: Easing.bezier(0.16, 1, 0.3, 1),
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    },
+  );
+};
+
+const ContinuousPresenter: React.FC<{
+  sourceVideo?: string;
+  layout: Scene['presenterLayout'];
+  muted: boolean;
+  impactScale: number;
+}> = ({sourceVideo, layout, muted, impactScale}) => {
+  const targetStyle = videoStyleFor(layout);
+  const {objectFit: _objectFit, ...containerStyle} = targetStyle;
   return (
-    <Sequence from={scene.startFrame} durationInFrames={duration}>
-      {scene.sourceVideo ? (
+    <div
+      style={{
+        ...containerStyle,
+        opacity: layout === 'none' ? 0 : 1,
+        zIndex: layout === 'pip' ? 20 : 0,
+        overflow: 'hidden',
+      }}
+    >
+      {sourceVideo ? (
         <OffthreadVideo
-          src={staticFile(scene.sourceVideo)}
-          startFrom={scene.startFrame}
-          style={videoStyleFor(scene.presenterLayout)}
+          src={staticFile(sourceVideo)}
+          muted={muted}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            scale: impactScale,
+            transformOrigin: '50% 37%',
+          }}
         />
       ) : (
         <div
           style={{
-            ...videoStyleFor(scene.presenterLayout),
-            display: scene.presenterLayout === 'none' ? 'none' : 'grid',
+            position: 'absolute',
+            inset: 0,
+            display: layout === 'none' ? 'none' : 'grid',
             placeItems: 'center',
             background:
               'linear-gradient(135deg, rgba(18,25,38,0.96), rgba(5,7,11,0.96))',
@@ -96,6 +139,21 @@ const SceneVideo: React.FC<{scene: Scene}> = ({scene}) => {
           源视频缺失
         </div>
       )}
+    </div>
+  );
+};
+
+const PresenterAudioLayer: React.FC<{
+  config?: PresenterAudio;
+  compositionDuration: number;
+}> = ({config, compositionDuration}) => {
+  if (config?.mode !== 'normalized-wav' || !config.path) return null;
+  const offset = Math.trunc(config.syncOffsetFrames ?? 0);
+  const sequenceStart = Math.max(0, offset);
+  const trimBefore = Math.max(0, -offset);
+  return (
+    <Sequence from={sequenceStart} durationInFrames={Math.max(1, compositionDuration - sequenceStart)}>
+      <Audio src={staticFile(config.path.replaceAll('\\', '/'))} trimBefore={trimBefore || undefined} />
     </Sequence>
   );
 };
@@ -318,6 +376,12 @@ export const V4Composition: React.FC<{visualScript: VisualScript}> = ({visualScr
     (caption) => frame >= caption.startFrame && frame < caption.endFrame,
   );
   const rawEvents = activeEvents(visualScript.visualEvents, frame);
+  const presenterSource = visualScript.scenes.find((scene) => Boolean(scene.sourceVideo))?.sourceVideo;
+  const presenterAudioMode = visualScript.presenterAudio?.mode ?? 'embedded';
+  const presenterImpactEvent = rawEvents.find(
+    (event) => event.type === 'presenterReposition' && event.motionType === 'presenter-impact-punch',
+  );
+  const presenterImpactScale = presenterImpactScaleFor(presenterImpactEvent, frame);
   const events = visibleHudEvents(rawEvents, currentScene);
   const materialEvent = rawEvents.find((event) => event.type === 'materialMain');
   const materialFocusMode =
@@ -395,9 +459,16 @@ export const V4Composition: React.FC<{visualScript: VisualScript}> = ({visualScr
           font-display: block;
         }`}
       </style>
-      {visualScript.scenes.filter((scene) => scene.presenterLayout !== 'pip').map((scene) => (
-        <SceneVideo key={scene.id} scene={scene} />
-      ))}
+      <ContinuousPresenter
+        sourceVideo={presenterSource}
+        layout={currentScene.presenterLayout}
+        muted={presenterAudioMode !== 'embedded'}
+        impactScale={presenterImpactScale}
+      />
+      <PresenterAudioLayer
+        config={visualScript.presenterAudio}
+        compositionDuration={visualScript.composition.durationFrames}
+      />
       {visualScript.audioCues.map((cue) => (
         <AudioCueLayer
           key={cue.id}
@@ -417,10 +488,6 @@ export const V4Composition: React.FC<{visualScript: VisualScript}> = ({visualScr
       ))}
 
       {materialEvent ? <MaterialBoard event={materialEvent} /> : null}
-
-      {currentScene.presenterLayout === 'pip' ? (
-        <SceneVideo key={`${currentScene.id}-pip`} scene={currentScene} />
-      ) : null}
 
       {visibleTitles.map((event) => (
         <KineticTitle
@@ -479,7 +546,7 @@ export const V4Composition: React.FC<{visualScript: VisualScript}> = ({visualScr
         <StatusSticker key={event.id} event={event} />
       ))}
 
-      {activeCaption ? (
+      {visualScript.captionRenderMode !== 'none' && activeCaption ? (
         <V4Caption
           text={activeCaption.text}
           highlightWords={activeCaption.highlightWords ?? activeCaption.keywords ?? []}

@@ -216,6 +216,18 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
     if not isinstance(composition.get("durationFrames"), int) or composition.get("durationFrames", 0) <= 0:
         errors.append("composition.durationFrames must be a positive integer")
 
+    caption_render_mode = data.get("captionRenderMode", "embedded")
+    if caption_render_mode not in {"embedded", "none"}:
+        errors.append("captionRenderMode must be embedded or none")
+    presenter_audio = data.get("presenterAudio")
+    if presenter_audio is not None:
+        if not isinstance(presenter_audio, dict):
+            errors.append("presenterAudio must be an object when provided")
+        elif presenter_audio.get("mode") not in {"embedded", "normalized-wav", "none"}:
+            errors.append("presenterAudio.mode must be embedded, normalized-wav, or none")
+        elif presenter_audio.get("mode") == "normalized-wav" and not presenter_audio.get("path"):
+            errors.append("presenterAudio.path is required for normalized-wav mode")
+
     scenes = ensure_list(data, "scenes", errors)
     semantic_beats = ensure_list(data, "semanticBeats", errors)
     caption_cues = ensure_list(data, "captionCues", errors)
@@ -439,6 +451,90 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
     for scene_id in focus_scenes:
         if material_events_by_scene.get(scene_id, 0) == 0:
             warnings.append(f"material focus scene {scene_id} has no materialMain event")
+
+    presenter_impacts = sorted(
+        (
+            event
+            for event in visual_events
+            if isinstance(event, dict)
+            and event.get("type") == "presenterReposition"
+            and event.get("motionType") == "presenter-impact-punch"
+        ),
+        key=lambda event: int(event.get("startFrame", 0) or 0),
+    )
+    if presenter_impacts:
+        fps = int(composition.get("fps") or 25)
+        min_duration = max(1, round(18 * fps / 30))
+        max_duration = max(min_duration, round(28 * fps / 30))
+        min_gap = round(8 * fps)
+        allowed_roles = {
+            "result-promise",
+            "negative-friction",
+            "negative-to-positive",
+            "semantic-problem-map",
+            "positive-confirm",
+            "cta-resolve",
+            "theme-thesis",
+        }
+        forbidden_overlap_types = {
+            "materialMain",
+            "materialZoom",
+            "transitionPushZoom",
+        }
+        for impact in presenter_impacts:
+            impact_id = str(impact.get("id") or "?")
+            start = int(impact.get("startFrame", 0) or 0)
+            end = int(impact.get("endFrame", start) or start)
+            duration = end - start
+            if duration < min_duration or duration > max_duration:
+                errors.append(
+                    f"presenter impact {impact_id} lasts {duration}f; require {min_duration}-{max_duration}f"
+                )
+            if str(impact.get("semanticRole") or "") not in allowed_roles:
+                errors.append(
+                    f"presenter impact {impact_id} must bind to a strong question/judgement/reversal/warning/result role"
+                )
+            if not impact.get("sourceBeatId"):
+                errors.append(f"presenter impact {impact_id} requires sourceBeatId")
+            peak = impact.get("presenterPeakScale", 1.08)
+            settle = impact.get("presenterSettleScale", 1.04)
+            if not isinstance(peak, (int, float)) or not 1.06 <= float(peak) <= 1.10:
+                errors.append(f"presenter impact {impact_id} peak scale must be 1.06-1.10 in portrait")
+            if not isinstance(settle, (int, float)) or not 1.03 <= float(settle) <= 1.05:
+                errors.append(f"presenter impact {impact_id} settle scale must be 1.03-1.05 in portrait")
+            scene = scene_by_id.get(str(impact.get("sceneId") or ""), {})
+            if str(scene.get("presenterLayout") or "") not in {"fullscreen", "large"}:
+                errors.append(f"presenter impact {impact_id} requires fullscreen/large presenter")
+            for other in visual_events:
+                if other is impact or not isinstance(other, dict):
+                    continue
+                if str(other.get("type") or "") not in forbidden_overlap_types:
+                    continue
+                if overlaps(
+                    start,
+                    end,
+                    int(other.get("startFrame", 0) or 0),
+                    int(other.get("endFrame", 0) or 0),
+                ):
+                    errors.append(
+                        f"presenter impact {impact_id} overlaps forbidden {other.get('type')} event {other.get('id')}"
+                    )
+        for previous, current in zip(presenter_impacts, presenter_impacts[1:]):
+            gap = int(current.get("startFrame", 0) or 0) - int(previous.get("endFrame", 0) or 0)
+            if gap < min_gap:
+                errors.append(
+                    f"presenter impacts {previous.get('id')} and {current.get('id')} are only {gap}f apart; require {min_gap}f"
+                )
+        for index, current in enumerate(presenter_impacts):
+            window_start = int(current.get("startFrame", 0) or 0) - 60 * fps
+            rolling_count = sum(
+                1
+                for prior in presenter_impacts[: index + 1]
+                if int(prior.get("startFrame", 0) or 0) >= window_start
+            )
+            if rolling_count > 3:
+                errors.append("presenter-impact-punch frequency exceeds three events in a rolling minute")
+                break
 
     for scene_id, card_events in card_events_by_scene.items():
         max_simultaneous = 0

@@ -18,9 +18,9 @@ function Invoke-Checked {
 }
 
 $GalleryRoot = $PSScriptRoot
-$RepoRoot = Split-Path -Parent $GalleryRoot
-$SkillRoot = $RepoRoot
-$TemplateRoot = $RepoRoot
+$AssetsRoot = Split-Path -Parent $GalleryRoot
+$SkillRoot = Split-Path -Parent $AssetsRoot
+$TemplateRoot = Join-Path $AssetsRoot "remotion-template"
 $WorkRoot = Join-Path $GalleryRoot "_work"
 $RemotionRoot = Join-Path $WorkRoot "remotion"
 $RenderRoot = Join-Path $GalleryRoot "renders"

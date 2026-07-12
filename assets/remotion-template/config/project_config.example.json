@@ -12,6 +12,7 @@
   "outputFormat": "9:16",
   "template": "ngg-koubo-remotion-v4-portrait",
   "style": "dark-fullscreen-semantic-hud",
+  "captionRenderMode": "embedded",
   "semanticSearch": true,
   "sfxEnabled": true,
   "bgmEnabled": true,

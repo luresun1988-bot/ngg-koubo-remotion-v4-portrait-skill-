@@ -103,6 +103,8 @@ export type VisualEvent = {
   anchorCueId?: string;
   densityMode?: 'dense' | 'dense-strong' | 'light' | 'proof-focus' | string;
   densityReason?: string;
+  presenterPeakScale?: number;
+  presenterSettleScale?: number;
   internalSteps?: Array<{
     id?: string;
     label?: string;
@@ -142,11 +144,19 @@ export type AudioCue = {
   notes?: string;
 };
 
+export type PresenterAudio = {
+  mode: 'embedded' | 'normalized-wav' | 'none';
+  path?: string;
+  syncOffsetFrames?: number;
+};
+
 export type VisualScript = {
   schemaVersion: 'ngg-koubo-remotion-v4-portrait';
   projectConfigPath?: string;
   metadata?: Record<string, unknown>;
   sourceVideoMode?: 'raw-presenter' | 'segmented-presenter' | 'precomposed-video' | string;
+  presenterAudio?: PresenterAudio;
+  captionRenderMode?: 'embedded' | 'none';
   packagingDensity?: 'dense' | 'light' | string;
   composition: {
     format: '9:16';

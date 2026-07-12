@@ -2,6 +2,8 @@
 
 Use this reference when creating or rebuilding `semanticBeats` and `visualEvents`.
 
+Treat the first source-bound theme thesis separately from the absolute opening. The first strong presenter-led question, problem framing, core judgement, contrast, or result promise may receive behind-presenter keyword typography. If the opening first shows result/proof material, preserve the proof and defer the effect until that first eligible fullscreen/large presenter thesis. Greetings, setup filler, ordinary workflow steps, and tool names do not qualify.
+
 V4 chooses HUD by spoken meaning first, then by component type. The required pipeline is:
 
 ```text

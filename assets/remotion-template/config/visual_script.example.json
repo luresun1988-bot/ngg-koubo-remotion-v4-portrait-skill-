@@ -1,6 +1,7 @@
 {
   "schemaVersion": "ngg-koubo-remotion-v4-portrait",
   "projectConfigPath": "../project_config.json",
+  "captionRenderMode": "embedded",
   "composition": {
     "format": "9:16",
     "width": 1080,

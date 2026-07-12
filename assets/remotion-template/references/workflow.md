@@ -131,6 +131,8 @@ Caption timing source rules:
 - If the project has one rendered source clip per spoken segment, segment durations may be used as sentence-level caption timing, and `captionTimeline.method` should be `source-segment-duration`.
 - Do not rebuild captions by splitting a scene's full `narrationText` proportionally across the scene duration. That method passes text-completeness checks but can drift badly against the voice after 10-20 seconds.
 - Record the timing source in `visual_script.json.captionTimeline` so QA can distinguish real timecodes from estimated captions.
+- Record `captionRenderMode` separately from the timing source. Use `embedded` by default. Use `none` when the user will add captions later; keep the complete authoritative caption timeline for semantic routing even though the Remotion caption layer is disabled.
+- Mount the primary presenter once for the whole composition. Fullscreen, large, side, PiP, and hidden states are layout transitions of that one source. Never remount scene-local copies or restart embedded audio at scene boundaries.
 
 For Chinese ASR:
 
