@@ -128,6 +128,12 @@ export type VisualEvent = {
   assetStack?: string[];
   foregroundAssetPath?: string;
   approvalStatus?: 'candidate' | 'approved' | 'rejected';
+  ctaProvenance?: {
+    kind: 'action' | 'keyword' | 'claim' | string;
+    sourceText: string;
+    action?: string;
+    keyword?: string;
+  };
   semanticRole: string;
   motionType: string;
   style?: string;

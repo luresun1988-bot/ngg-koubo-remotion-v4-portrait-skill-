@@ -10,7 +10,7 @@
     "width": 1080,
     "height": 1920,
     "fps": 25,
-    "durationFrames": 1800
+    "durationFrames": 2250
   },
   "captionTimeline": {
     "sourceType": "provided",
@@ -59,7 +59,7 @@
       "semanticRole": "semantic-problem-map",
       "presenterLayout": "fullscreen",
       "materialLayout": "none",
-      "intent": "Component gallery sample for highlightBox.",
+      "intent": "Component gallery sample for semanticProblemMap.",
       "sourceVideo": "input/gallery_presenter.mp4",
       "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u5c31\u8fd9\u70b9\u4eba\uff0c\u7b97\u529b\u5df2\u7ecf\u4e0d\u591f\u5206\u4e86\uff0c\u8fd9\u4e00\u6b65\u8be5\u81ea\u52a8\u5316\u4e86"
     },
@@ -150,7 +150,7 @@
       "semanticRole": "platform-fanout",
       "presenterLayout": "fullscreen",
       "materialLayout": "none",
-      "intent": "Component gallery sample for transitionPushZoom.",
+      "intent": "Component gallery sample for platformFanout.",
       "sourceVideo": "input/gallery_presenter.mp4",
       "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u4e00\u4efd\u7d20\u6750\u5305\uff0c\u5206\u53d1\u591a\u5e73\u53f0"
     },
@@ -163,7 +163,7 @@
       "semanticRole": "automation-handoff",
       "presenterLayout": "fullscreen",
       "materialLayout": "none",
-      "intent": "Component gallery sample for captionHighlight.",
+      "intent": "Component gallery sample for automationHandoff.",
       "sourceVideo": "input/gallery_presenter.mp4",
       "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u91cd\u590d\u586b\u5199\uff0c\u4ea4\u7ed9 Codex \u6267\u884c"
     },
@@ -192,6 +192,45 @@
       "intent": "Component gallery sample for ctaTitle.",
       "sourceVideo": "input/gallery_presenter.mp4",
       "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u60f3\u8981\u8fd9\u5957\u65b9\u6cd5\uff0c\u8bc4\u8bba\u533a\u6263\uff1a\u4e3b\u56fe Skill"
+    },
+    {
+      "id": "scene-13-topic",
+      "type": "Explanation",
+      "segmentId": "gallery-13",
+      "startFrame": 1800,
+      "endFrame": 1950,
+      "semanticRole": "topic-intro",
+      "presenterLayout": "fullscreen",
+      "materialLayout": "none",
+      "intent": "Component gallery sample for topicKeyword.",
+      "sourceVideo": "input/gallery_presenter.mp4",
+      "narrationText": "\u8fd9\u671f\u6211\u4eec\u804a\u4e00\u4e0b\u6570\u5b57\u4eba"
+    },
+    {
+      "id": "scene-14-claim",
+      "type": "Explanation",
+      "segmentId": "gallery-14",
+      "startFrame": 1950,
+      "endFrame": 2100,
+      "semanticRole": "explanation-claim",
+      "presenterLayout": "fullscreen",
+      "materialLayout": "none",
+      "intent": "Component gallery sample for claimStrip.",
+      "sourceVideo": "input/gallery_presenter.mp4",
+      "narrationText": "\u8fd9\u4e2a\u5de5\u5177\u4e3b\u8981\u8d1f\u8d23\u63d0\u5347\u89c6\u9891\u753b\u8d28"
+    },
+    {
+      "id": "scene-15-ratio",
+      "type": "Process",
+      "segmentId": "gallery-15",
+      "startFrame": 2100,
+      "endFrame": 2250,
+      "semanticRole": "asset-variants",
+      "presenterLayout": "fullscreen",
+      "materialLayout": "none",
+      "intent": "Component gallery sample for ratioGallery.",
+      "sourceVideo": "input/gallery_presenter.mp4",
+      "narrationText": "\u4e3b\u56fe\u540c\u65f6\u8f93\u51fa\u6a2a\u7248\u3001\u7ad6\u7248\u548c\u65b9\u56fe"
     }
   ],
   "captionCues": [
@@ -290,6 +329,30 @@
       "endFrame": 1790,
       "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u60f3\u8981\u8fd9\u5957\u65b9\u6cd5\uff0c\u8bc4\u8bba\u533a\u6263\uff1a\u4e3b\u56fe Skill",
       "highlightWords": []
+    },
+    {
+      "id": "cap-13",
+      "sceneId": "scene-13-topic",
+      "startFrame": 1810,
+      "endFrame": 1940,
+      "text": "\u8fd9\u671f\u6211\u4eec\u804a\u4e00\u4e0b\u6570\u5b57\u4eba",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-14",
+      "sceneId": "scene-14-claim",
+      "startFrame": 1960,
+      "endFrame": 2090,
+      "text": "\u8fd9\u4e2a\u5de5\u5177\u4e3b\u8981\u8d1f\u8d23\u63d0\u5347\u89c6\u9891\u753b\u8d28",
+      "highlightWords": []
+    },
+    {
+      "id": "cap-15",
+      "sceneId": "scene-15-ratio",
+      "startFrame": 2110,
+      "endFrame": 2240,
+      "text": "\u4e3b\u56fe\u540c\u65f6\u8f93\u51fa\u6a2a\u7248\u3001\u7ad6\u7248\u548c\u65b9\u56fe",
+      "highlightWords": []
     }
   ],
   "visualEvents": [
@@ -340,7 +403,7 @@
     {
       "id": "ve-02-negative",
       "sceneId": "scene-02-negative",
-      "type": "highlightBox",
+      "type": "semanticProblemMap",
       "startFrame": 162,
       "endFrame": 292,
       "text": "\u5c31\u8fd9\u70b9\u4eba\uff0c\u7b97\u529b\u5df2\u7ecf\u4e0d\u591f\u5206\u4e86",
@@ -664,7 +727,7 @@
     {
       "id": "ve-09-platform",
       "sceneId": "scene-09-platform",
-      "type": "transitionPushZoom",
+      "type": "platformFanout",
       "startFrame": 1212,
       "endFrame": 1342,
       "text": "\u4e00\u4efd\u7d20\u6750\u5305",
@@ -693,7 +756,7 @@
     {
       "id": "ve-10-automation",
       "sceneId": "scene-10-automation",
-      "type": "captionHighlight",
+      "type": "automationHandoff",
       "startFrame": 1362,
       "endFrame": 1492,
       "text": "\u91cd\u590d\u586b\u5199",
@@ -757,16 +820,22 @@
       "type": "ctaTitle",
       "startFrame": 1662,
       "endFrame": 1792,
-      "text": "\u6293\u4f4fAI\u7ea2\u5229\u4e09\u65b9\u5411",
-      "subtext": "\u4e0d\u662f\u8f6c\u884c\uff0c\u662f\u628a\u73b0\u6709\u80fd\u529b\u653e\u5927",
-      "status": "\u884c\u52a8\u603b\u7ed3",
+      "text": "\u8bc4\u8bba\u533a\u6263\uff1a\u4e3b\u56fe Skill",
+      "subtext": "\u60f3\u8981\u8fd9\u5957\u65b9\u6cd5",
+      "status": "\u5173\u952e\u8bcd\uff1a\u4e3b\u56fe Skill",
       "semanticRole": "cta-resolve",
       "motionType": "crash-rebound",
       "style": "dark-fullscreen-semantic-hud cta-summary",
       "safeArea": "avoid-face-caption",
       "emphasisWords": [
-        "AI"
+        "\u4e3b\u56fe Skill"
       ],
+      "ctaProvenance": {
+        "kind": "keyword",
+        "sourceText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u60f3\u8981\u8fd9\u5957\u65b9\u6cd5\uff0c\u8bc4\u8bba\u533a\u6263\uff1a\u4e3b\u56fe Skill",
+        "action": "\u8bc4\u8bba\u533a",
+        "keyword": "\u4e3b\u56fe Skill"
+      },
       "internalSteps": [
         {
           "label": "01",
@@ -789,6 +858,94 @@
       ],
       "sourceBeatId": "gallery-beat-12",
       "beatGroupId": "scene-12-cta-gallery-beat-12"
+    },
+    {
+      "id": "ve-13-corner",
+      "sceneId": "scene-13-topic",
+      "type": "cornerChapterLabel",
+      "startFrame": 1800,
+      "endFrame": 1950,
+      "text": "TOPIC",
+      "subtext": "\u4e3b\u9898\u5f15\u5165",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-13-topic",
+      "sceneId": "scene-13-topic",
+      "type": "topicKeyword",
+      "startFrame": 1812,
+      "endFrame": 1942,
+      "text": "\u6570\u5b57\u4eba",
+      "subtext": "\u672c\u671f\u4e3b\u9898",
+      "semanticRole": "topic-intro",
+      "motionType": "word-by-word-topic-reveal",
+      "style": "dark-fullscreen-semantic-hud",
+      "safeArea": "avoid-face-caption",
+      "sourceBeatId": "gallery-beat-13",
+      "beatGroupId": "scene-13-topic-gallery-beat-13"
+    },
+    {
+      "id": "ve-14-corner",
+      "sceneId": "scene-14-claim",
+      "type": "cornerChapterLabel",
+      "startFrame": 1950,
+      "endFrame": 2100,
+      "text": "CLAIM",
+      "subtext": "\u8f7b\u91cf\u89c2\u70b9",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-14-claim",
+      "sceneId": "scene-14-claim",
+      "type": "claimStrip",
+      "startFrame": 1962,
+      "endFrame": 2092,
+      "text": "\u4e3b\u8981\u8d1f\u8d23\u63d0\u5347\u89c6\u9891\u753b\u8d28",
+      "status": "\u89c2\u70b9",
+      "semanticRole": "explanation-claim",
+      "motionType": "lightweight-claim-slide",
+      "style": "dark-fullscreen-semantic-hud",
+      "safeArea": "avoid-face-caption right",
+      "sourceBeatId": "gallery-beat-14",
+      "beatGroupId": "scene-14-claim-gallery-beat-14"
+    },
+    {
+      "id": "ve-15-corner",
+      "sceneId": "scene-15-ratio",
+      "type": "cornerChapterLabel",
+      "startFrame": 2100,
+      "endFrame": 2250,
+      "text": "RATIO",
+      "subtext": "\u5c3a\u5bf8\u8f93\u51fa",
+      "semanticRole": "chapter-label",
+      "motionType": "corner-slide-fade",
+      "style": "top-left-corner-label",
+      "safeArea": "top-left-no-shade"
+    },
+    {
+      "id": "ve-15-ratio",
+      "sceneId": "scene-15-ratio",
+      "type": "ratioGallery",
+      "startFrame": 2112,
+      "endFrame": 2242,
+      "text": "\u591a\u5c3a\u5bf8\u4e3b\u56fe",
+      "semanticRole": "asset-variants",
+      "motionType": "ratio-gallery-stagger",
+      "style": "dark-fullscreen-semantic-hud",
+      "safeArea": "avoid-face-caption right",
+      "internalSteps": [
+        {"id": "ratio-01", "label": "\u6a2a\u7248 16:9", "iconName": "PanelsTopLeft"},
+        {"id": "ratio-02", "label": "\u7ad6\u7248 3:4", "iconName": "Image"},
+        {"id": "ratio-03", "label": "\u65b9\u56fe 1:1", "iconName": "Images"}
+      ],
+      "sourceBeatId": "gallery-beat-15",
+      "beatGroupId": "scene-15-ratio-gallery-beat-15"
     }
   ],
   "audioCues": [],
@@ -822,7 +979,7 @@
     },
     {
       "frame": 225,
-      "reason": "Gallery hold frame for highlightBox",
+      "reason": "Gallery hold frame for semanticProblemMap",
       "checks": [
         "component-style",
         "caption-safe",
@@ -885,7 +1042,7 @@
     },
     {
       "frame": 1315,
-      "reason": "Gallery hold frame for transitionPushZoom",
+      "reason": "Gallery hold frame for platformFanout",
       "checks": [
         "component-style",
         "caption-safe",
@@ -894,7 +1051,7 @@
     },
     {
       "frame": 1460,
-      "reason": "Gallery hold frame for captionHighlight",
+      "reason": "Gallery hold frame for automationHandoff",
       "checks": [
         "component-style",
         "caption-safe",
@@ -918,6 +1075,21 @@
         "caption-safe",
         "motion-readable"
       ]
+    },
+    {
+      "frame": 1875,
+      "reason": "Gallery hold frame for topicKeyword",
+      "checks": ["component-style", "caption-safe", "motion-readable"]
+    },
+    {
+      "frame": 2025,
+      "reason": "Gallery hold frame for claimStrip",
+      "checks": ["component-style", "caption-safe", "motion-readable"]
+    },
+    {
+      "frame": 2175,
+      "reason": "Gallery hold frame for ratioGallery",
+      "checks": ["component-style", "caption-safe", "motion-readable"]
     }
   ],
   "semanticBeats": [
@@ -1079,8 +1251,8 @@
       "endFrame": 1492,
       "beatGroupId": "scene-10-automation-gallery-beat-10",
       "text": "\u91cd\u590d\u586b\u5199",
-      "semanticIntent": "positive-confirm",
-      "visualForm": "greenConfirmCard",
+      "semanticIntent": "automation-handoff",
+      "visualForm": "automationHandoff",
       "confidence": 1.0,
       "keywords": [],
       "requiredChecks": [
@@ -1111,7 +1283,7 @@
       "startFrame": 1662,
       "endFrame": 1792,
       "beatGroupId": "scene-12-cta-gallery-beat-12",
-      "text": "\u60f3\u8981\u8fd9\u5957\u65b9\u6cd5",
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u60f3\u8981\u8fd9\u5957\u65b9\u6cd5\uff0c\u8bc4\u8bba\u533a\u6263\uff1a\u4e3b\u56fe Skill",
       "semanticIntent": "cta-resolve",
       "visualForm": "ctaTitle",
       "confidence": 1.0,
@@ -1121,6 +1293,48 @@
       "requiredChecks": [
         "cta-visual-treatment"
       ],
+      "sourceCueIds": []
+    },
+    {
+      "id": "gallery-beat-13",
+      "sceneId": "scene-13-topic",
+      "startFrame": 1812,
+      "endFrame": 1942,
+      "beatGroupId": "scene-13-topic-gallery-beat-13",
+      "text": "\u8fd9\u671f\u6211\u4eec\u804a\u4e00\u4e0b\u6570\u5b57\u4eba",
+      "semanticIntent": "topic-intro",
+      "visualForm": "topicKeyword",
+      "confidence": 1.0,
+      "keywords": ["\u6570\u5b57\u4eba"],
+      "requiredChecks": ["lightweight-topic-treatment", "no-generic-flow-fallback"],
+      "sourceCueIds": []
+    },
+    {
+      "id": "gallery-beat-14",
+      "sceneId": "scene-14-claim",
+      "startFrame": 1962,
+      "endFrame": 2092,
+      "beatGroupId": "scene-14-claim-gallery-beat-14",
+      "text": "\u8fd9\u4e2a\u5de5\u5177\u4e3b\u8981\u8d1f\u8d23\u63d0\u5347\u89c6\u9891\u753b\u8d28",
+      "semanticIntent": "explanation-claim",
+      "visualForm": "claimStrip",
+      "confidence": 1.0,
+      "keywords": ["\u63d0\u5347\u753b\u8d28"],
+      "requiredChecks": ["lightweight-claim-treatment", "no-generic-flow-fallback"],
+      "sourceCueIds": []
+    },
+    {
+      "id": "gallery-beat-15",
+      "sceneId": "scene-15-ratio",
+      "startFrame": 2112,
+      "endFrame": 2242,
+      "beatGroupId": "scene-15-ratio-gallery-beat-15",
+      "text": "\u4e3b\u56fe\u540c\u65f6\u8f93\u51fa\u6a2a\u7248\u3001\u7ad6\u7248\u548c\u65b9\u56fe",
+      "semanticIntent": "asset-variants",
+      "visualForm": "ratioGallery",
+      "confidence": 1.0,
+      "keywords": ["\u6a2a\u7248", "\u7ad6\u7248", "\u65b9\u56fe"],
+      "requiredChecks": ["asset-ratio-preserved", "no-generic-card-fallback"],
       "sourceCueIds": []
     }
   ]

@@ -389,7 +389,7 @@ const eventShadeSide = (event: VisualEvent, scene: Scene): ShadeSide | null => {
   if (event.type === 'claimStrip') return explicitSide ?? 'right';
   if (event.type === 'flowPath' || event.type === 'statusStack' || event.type === 'platformFanout' || event.type === 'workflowDashboard' || event.type === 'ratioGallery') return explicitSide ?? 'right';
   if (event.type === 'capabilityShare' || event.type === 'sceneLockGrid' || event.type === 'transformationStack') return explicitSide ?? 'left';
-  if (event.type === 'semanticProblemMap' || (event.type === 'highlightBox' && event.semanticRole === 'semantic-problem-map')) return 'left';
+  if (event.type === 'semanticProblemMap' || (event.type === 'highlightBox' && event.semanticRole === 'semantic-problem-map')) return explicitSide ?? 'right';
   if (event.type === 'transitionPushZoom' && event.semanticRole === 'platform-fanout') return 'right';
   if (event.type === 'automationHandoff' || (event.type === 'captionHighlight' && event.semanticRole === 'automation-handoff')) return 'left';
 

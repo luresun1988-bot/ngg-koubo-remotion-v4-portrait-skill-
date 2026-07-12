@@ -1405,6 +1405,7 @@ export const SemanticProblemMap: React.FC<{event: VisualEvent}> = ({event}) => {
   const frame = useCurrentFrame();
   const {fps, width, height} = useVideoConfig();
   const isPortrait = height > width;
+  const compact = shouldUsePortraitCompactHud(event, width, height);
   const local = frame - event.startFrame;
   const duration = event.endFrame - event.startFrame;
   const enter = spring({frame: local, fps, config: {damping: 20, stiffness: 120}});
@@ -1453,17 +1454,17 @@ export const SemanticProblemMap: React.FC<{event: VisualEvent}> = ({event}) => {
         positiveText.includes('\u7528\u4e0a') ? '\u7528\u4e0a' : '');
   const negativeSegments = negativeHighlight ? splitByEmphasis(negativeText, [negativeHighlight]) : [negativeText];
   const positiveSegments = positiveHighlight ? splitByEmphasis(positiveText, [positiveHighlight]) : [positiveText];
-  const negativeFontSize = negativeText.length > 15 ? 34 : 39;
-  const positiveFontSize = positiveText.length > 15 ? 28 : 31;
+  const negativeFontSize = compact ? (negativeText.length > 12 ? 23 : 27) : negativeText.length > 15 ? 34 : 39;
+  const positiveFontSize = compact ? (positiveText.length > 12 ? 22 : 26) : positiveText.length > 15 ? 28 : 31;
 
   return (
     <div
       style={{
         position: 'absolute',
-        left: isPortrait ? 54 : 58,
-        top: isPortrait ? 280 : 164,
-        width: isPortrait ? 930 : 720,
-        height: isPortrait ? 310 : 286,
+        left: compact ? 54 : isPortrait ? 54 : 58,
+        top: compact ? 150 : isPortrait ? 280 : 164,
+        width: compact ? 972 : isPortrait ? 930 : 720,
+        height: compact ? 136 : isPortrait ? 310 : 286,
         opacity,
         transform: `translateX(${x}px)`,
         fontFamily: fontStack,
@@ -1474,9 +1475,9 @@ export const SemanticProblemMap: React.FC<{event: VisualEvent}> = ({event}) => {
           position: 'absolute',
           left: 0,
           top: 0,
-          width: '100%',
-          minHeight: 128,
-          borderRadius: 16,
+          width: compact ? (hasPositiveResolution ? 464 : 700) : '100%',
+          minHeight: compact ? 118 : 128,
+          borderRadius: compact ? 14 : 16,
           background: 'rgba(12,13,17,0.82)',
           boxShadow: `${hudRingShadow}, inset 0 0 0 2px rgba(216,60,48,0.78)`,
           transform: `scale(${negativeScale})`,
@@ -1487,11 +1488,11 @@ export const SemanticProblemMap: React.FC<{event: VisualEvent}> = ({event}) => {
         <div
           style={{
             position: 'absolute',
-            left: 26,
-            top: 29,
-            width: 62,
-            height: 62,
-            borderRadius: 14,
+              left: compact ? 18 : 26,
+              top: compact ? 31 : 29,
+              width: compact ? 48 : 62,
+              height: compact ? 48 : 62,
+              borderRadius: compact ? 11 : 14,
             display: 'grid',
             placeItems: 'center',
             color: colors.red,
@@ -1499,20 +1500,20 @@ export const SemanticProblemMap: React.FC<{event: VisualEvent}> = ({event}) => {
             boxShadow: 'inset 0 0 0 2px rgba(216,60,48,0.76), 0 16px 30px rgba(0,0,0,0.32)',
           }}
         >
-          <NegativeIcon size={36} strokeWidth={2.5} />
-        </div>
-        <div style={{position: 'absolute', left: 108, top: 24, color: colors.red, fontSize: 17, fontWeight: 950, letterSpacing: 6, textShadow: hudTextHighlight}}>
+            <NegativeIcon size={compact ? 28 : 36} strokeWidth={2.5} />
+          </div>
+        <div style={{position: 'absolute', left: compact ? 82 : 108, top: compact ? 19 : 24, color: colors.red, fontSize: compact ? 14 : 17, fontWeight: 950, letterSpacing: compact ? 3 : 6, textShadow: hudTextHighlight}}>
           {event.status ?? 'WRONG PATH'}
         </div>
-        <div style={{position: 'absolute', left: 108, right: 76, top: 60, color: colors.white, fontSize: negativeFontSize, fontWeight: 950, lineHeight: 1.08, textShadow: hudTextHighlight, whiteSpace: 'nowrap', overflow: 'hidden'}}>
+        <div style={{position: 'absolute', left: compact ? 82 : 108, right: compact ? 44 : 76, top: compact ? 53 : 60, color: colors.white, fontSize: negativeFontSize, fontWeight: 950, lineHeight: 1.08, textShadow: hudTextHighlight, whiteSpace: 'nowrap', overflow: 'hidden'}}>
           {negativeSegments.map((segment, index) => (
             <span key={`${segment}-${index}`} style={{color: segment === negativeHighlight ? colors.red : colors.white}}>
               {segment}
             </span>
           ))}
         </div>
-        <div style={{position: 'absolute', right: 26, top: 46, color: colors.red, opacity: 0.95}}>
-          <CircleX size={30} strokeWidth={2.4} />
+        <div style={{position: 'absolute', right: compact ? 16 : 26, top: compact ? 44 : 46, color: colors.red, opacity: 0.95}}>
+          <CircleX size={compact ? 24 : 30} strokeWidth={2.4} />
         </div>
       </div>
 
@@ -1520,10 +1521,10 @@ export const SemanticProblemMap: React.FC<{event: VisualEvent}> = ({event}) => {
         <div
           style={{
             position: 'absolute',
-            left: 0,
-            top: 156,
-            width: isPortrait ? 780 : 600,
-            minHeight: 92,
+            left: compact ? 488 : 0,
+            top: compact ? 0 : 156,
+            width: compact ? 484 : isPortrait ? 780 : 600,
+            minHeight: compact ? 118 : 92,
             borderRadius: 14,
             background: 'rgba(7,28,21,0.76)',
             boxShadow: `${hudRingShadow}, inset 0 0 0 2px rgba(32,224,176,0.58)`,
@@ -1535,11 +1536,11 @@ export const SemanticProblemMap: React.FC<{event: VisualEvent}> = ({event}) => {
           <div
             style={{
               position: 'absolute',
-              left: 24,
-              top: 23,
-              width: 46,
-              height: 46,
-              borderRadius: 12,
+              left: compact ? 18 : 24,
+              top: compact ? 35 : 23,
+              width: compact ? 44 : 46,
+              height: compact ? 44 : 46,
+              borderRadius: compact ? 11 : 12,
               display: 'grid',
               placeItems: 'center',
               color: colors.green,
@@ -1547,9 +1548,9 @@ export const SemanticProblemMap: React.FC<{event: VisualEvent}> = ({event}) => {
               boxShadow: 'inset 0 0 0 2px rgba(32,224,176,0.58)',
             }}
           >
-            <CheckCircle2 size={28} strokeWidth={2.5} />
+            <CheckCircle2 size={compact ? 26 : 28} strokeWidth={2.5} />
           </div>
-          <div style={{position: 'absolute', left: 88, right: 22, top: 26, color: colors.white, fontSize: positiveFontSize, fontWeight: 950, lineHeight: 1.1, textShadow: hudTextHighlight, whiteSpace: 'nowrap', overflow: 'hidden'}}>
+          <div style={{position: 'absolute', left: compact ? 78 : 88, right: 22, top: compact ? 42 : 26, color: colors.white, fontSize: positiveFontSize, fontWeight: 950, lineHeight: 1.1, textShadow: hudTextHighlight, whiteSpace: 'nowrap', overflow: 'hidden'}}>
             {positiveSegments.map((segment, index) => (
               <span key={`${segment}-${index}`} style={{color: segment === positiveHighlight ? colors.green : colors.white}}>
                 {segment}
@@ -1563,8 +1564,8 @@ export const SemanticProblemMap: React.FC<{event: VisualEvent}> = ({event}) => {
         style={{
           position: 'absolute',
           left: 4,
-          top: 135,
-          width: 150,
+          top: compact ? 126 : 135,
+          width: compact ? (hasPositiveResolution ? 456 : 220) : 150,
           height: 3,
           background: colors.red,
           opacity: interpolate(local, [10, 26], [0, 1], {

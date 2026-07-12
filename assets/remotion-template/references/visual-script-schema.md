@@ -288,7 +288,7 @@ Icon and grouped-card fields:
 Numeric fulfillment fields:
 
 - Use `type: "dataPunch"` or `type: "metricSpotlight"` for clear numeric metrics such as `+30%`, `3倍`, `885万`, `0.04%`, growth, conversion rate, scale, or ratio.
-- Set `numericValue`, `numericPrefix`, and `numericSuffix` when possible. Example: `numericValue: 30`, `numericPrefix: "+"`, `numericSuffix: "%"`.
+- Set `numericValue`, `numericPrefix`, and `numericSuffix` when possible. Example: `numericValue: 30`, `numericPrefix: "+"`, `numericSuffix: "%"`. Preserve source suffixes such as `K/k`; normalize lowercase `k/m/g` to uppercase for display rather than dropping the suffix.
 - The template animates the value from zero/baseline to `numericValue`; do not encode numeric metrics as a plain `infoCard`.
 
 Process/enumeration fulfillment fields:
@@ -327,6 +327,26 @@ Main HUD lane scheduling:
 - The lane/side decision must be consistent with the rendered component position. HUD edge shades are disabled by default; if `HudEdgeShade` is explicitly re-enabled later, the same lane/side decision must drive both the component and the shade.
 - If a component needs multiple beats in the same area, use `internalSteps` or one longer event with internal animation instead of several overlapping events.
 - Do not schedule three consecutive main events with the same rendered component family. Adjacent process beats should vary between `flowPath`, `statusStack`, `dataPunch`, `platformFanout`, material proof, stickers, or CTA typography when the semantics allow it.
+- Treat sourced `ctaTitle` / `ctaRecommend` as priority events. If an earlier same-lane HUD would make the CTA unreadably short or remove it, trim/drop the earlier HUD and keep the CTA with the lane buffer.
+
+CTA provenance fields:
+
+```json
+{
+  "type": "ctaTitle",
+  "text": "点个关注",
+  "subtext": "我们下期见",
+  "ctaProvenance": {
+    "kind": "action",
+    "sourceText": "点个关注，我们下期见",
+    "action": "关注"
+  }
+}
+```
+
+- Generated CTA events must include `ctaProvenance.sourceText`.
+- Add `action` or `keyword` only when the exact action or keyword appears in `sourceText`.
+- Do not manufacture comment, reply, follow, private-message, pickup, or keyword copy from gallery defaults.
 
 Material focus rule:
 

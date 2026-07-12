@@ -38,8 +38,8 @@ CARD_LIKE_MAIN_EVENT_TYPES = {
 RENDERED_AUDIO_TYPES = {"sfx", "bgm"}
 PENDING_AUDIO_STATUSES = {"pending-selection", "pending-generation", "disabled", "muted"}
 SFX_VISUAL_SYNC_WINDOW_FRAMES = 8
-NUMERIC_VALUE_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|x|X)?")
-NUMERIC_UNIT_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|x|X)")
+NUMERIC_VALUE_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|[KkMmGg]|x|X)?")
+NUMERIC_UNIT_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|[KkMmGg]|x|X)")
 FLOW_TEXT_RE = re.compile(r"(第一|第二|第三|第1|第2|第3|步骤|流程|结论|行动|最后|step|Step|01|02|03)")
 NUMERIC_FULFILLMENT_TYPES = {"dataPunch", "metricSpotlight", "capabilityShare", "transformationStack"}
 FLOW_FULFILLMENT_TYPES = {"flowPath", "statusStack", "platformFanout", "transitionPushZoom", "automationHandoff", "captionHighlight", "sceneLockGrid", "transformationStack"}
@@ -631,6 +631,49 @@ def hud_copy_quality_checks(data: dict[str, Any]) -> tuple[list[str], list[str]]
     return errors, warnings
 
 
+def cta_provenance_checks(data: dict[str, Any]) -> tuple[list[str], list[str]]:
+    errors: list[str] = []
+    warnings: list[str] = []
+    beats = {
+        str(beat.get("id") or ""): beat
+        for beat in data.get("semanticBeats", [])
+        if isinstance(beat, dict)
+    }
+    action_terms = ["评论区", "关注", "点赞", "收藏", "私信", "领取", "自提", "告诉我"]
+
+    for event in data.get("visualEvents", []):
+        if not isinstance(event, dict) or str(event.get("type") or "") not in {"ctaTitle", "ctaRecommend"}:
+            continue
+        event_id = str(event.get("id") or "?")
+        source_beat_id = str(event.get("sourceBeatId") or "")
+        source_beat = beats.get(source_beat_id, {})
+        provenance = event.get("ctaProvenance")
+        if source_beat_id and not isinstance(provenance, dict):
+            errors.append(f"cta-provenance failed: {event_id} is generated from {source_beat_id} but has no ctaProvenance")
+            continue
+
+        source_text = str((provenance or {}).get("sourceText") or source_beat.get("text") or "")
+        visible = visible_event_text(event)
+        if not source_text:
+            warnings.append(f"cta-provenance warning: {event_id} has no sourceText to audit")
+            continue
+
+        for term in action_terms:
+            if term in visible and term not in source_text:
+                errors.append(f"cta-provenance failed: {event_id} invented action {term!r} not present in sourceText")
+        if "关键词：" in visible and not any(term in source_text for term in ["关键词", "扣", "回复", "发送"]):
+            errors.append(f"cta-provenance failed: {event_id} invented a keyword CTA not supported by sourceText")
+
+        action = str((provenance or {}).get("action") or "")
+        keyword = str((provenance or {}).get("keyword") or "")
+        if action and action not in source_text:
+            errors.append(f"cta-provenance failed: {event_id}.ctaProvenance.action is not present in sourceText")
+        if keyword and keyword not in source_text:
+            errors.append(f"cta-provenance failed: {event_id}.ctaProvenance.keyword is not present in sourceText")
+
+    return errors, warnings
+
+
 def semantic_fulfillment_checks(data: dict[str, Any]) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -942,6 +985,9 @@ def main() -> int:
     copy_errors, copy_warnings = hud_copy_quality_checks(data)
     errors.extend(copy_errors)
     warnings.extend(copy_warnings)
+    cta_errors, cta_warnings = cta_provenance_checks(data)
+    errors.extend(cta_errors)
+    warnings.extend(cta_warnings)
     beat_errors, beat_warnings = semantic_beat_fulfillment_checks(data)
     errors.extend(beat_errors)
     warnings.extend(beat_warnings)

@@ -49,6 +49,8 @@ def main() -> int:
         ("模型文件保存在本地目录", "explanation-claim", "claimStrip"),
         ("这期我们聊一下数字人", "topic-intro", "topicKeyword"),
         ("10 张高清详情图已经自动生成好了", "numeric-metric", "dataPunch"),
+        ("生成时把分辨率调到 2K，画面会更清晰", "numeric-metric", "dataPunch"),
+        ("下一期我会介绍如何用 Codex 自动剪辑", "explanation-claim", "claimStrip"),
     ]
     for text, intent, event_type in cases:
         data = sample(text)
@@ -56,6 +58,91 @@ def main() -> int:
         event = next(item for item in data["visualEvents"] if item.get("type") != "cornerChapterLabel")
         if beat.get("semanticIntent") != intent or event.get("type") != event_type:
             failures.append(f"route mismatch: {text} -> {beat.get('semanticIntent')}/{event.get('type')}")
+
+    numeric_2k = sample("生成时把分辨率调到 2K，画面会更清晰")
+    numeric_2k_beat = numeric_2k["semanticBeats"][0]
+    numeric_2k_event = next(item for item in numeric_2k["visualEvents"] if item.get("type") == "dataPunch")
+    if "2K" not in numeric_2k_beat.get("entities", []) or numeric_2k_event.get("numericSuffix") != "K":
+        failures.append(
+            f"numeric entity lost K suffix: entities={numeric_2k_beat.get('entities')} event={numeric_2k_event}"
+        )
+
+    cta = sample("点个关注，我们下期见", "CTA")
+    cta_event = next((item for item in cta["visualEvents"] if item.get("type") == "ctaTitle"), None)
+    if not cta_event:
+        failures.append("source CTA was dropped by scheduling")
+    else:
+        visible = " ".join(str(cta_event.get(key) or "") for key in ["text", "subtext", "status"])
+        provenance = cta_event.get("ctaProvenance") or {}
+        if "评论区" in visible or "关键词：Codex 用法" in visible:
+            failures.append(f"CTA invented comment/keyword copy: {visible}")
+        if provenance.get("sourceText") != "点个关注，我们下期见":
+            failures.append(f"CTA provenance mismatch: {provenance}")
+
+    collision_data = {
+        "schemaVersion": "ngg-koubo-remotion-v4-portrait",
+        "composition": {"format": "9:16", "width": 1080, "height": 1920, "fps": 30, "durationFrames": 240},
+        "media": [],
+        "scenes": [{
+            "id": "scene-cta", "type": "CTA", "startFrame": 0, "endFrame": 240,
+            "semanticRole": "cta-resolve", "presenterLayout": "large", "materialLayout": "none",
+            "sourceVideo": "input/presenter.mp4", "narrationText": "下一期我会介绍如何用 Codex 自动剪辑。点个关注，我们下期见。",
+        }],
+        "captionCues": [
+            {"id": "cap-preview", "sceneId": "scene-cta", "startFrame": 0, "endFrame": 170, "text": "下一期我会介绍如何用 Codex 自动剪辑。"},
+            {"id": "cap-action", "sceneId": "scene-cta", "startFrame": 170, "endFrame": 240, "text": "点个关注，我们下期见。"},
+        ],
+        "semanticBeats": [], "visualEvents": [], "audioCues": [], "qaFrames": [],
+    }
+    semantic_router.apply_semantic_beats(collision_data)
+    visual_event_builder.apply_visual_events(collision_data)
+    collision_intents = [str(item.get("semanticIntent") or "") for item in collision_data["semanticBeats"]]
+    collision_ctas = [item for item in collision_data["visualEvents"] if item.get("type") == "ctaTitle"]
+    if collision_intents != ["cta-resolve"] or len(collision_ctas) != 1:
+        failures.append(f"future preview / CTA collision regression: intents={collision_intents} ctas={collision_ctas}")
+    elif int(collision_ctas[0].get("endFrame", 0)) - int(collision_ctas[0].get("startFrame", 0)) < 95:
+        failures.append(f"merged future-preview CTA is too short: {collision_ctas[0]}")
+
+    priority_data = {
+        "schemaVersion": "ngg-koubo-remotion-v4-portrait",
+        "composition": {"format": "9:16", "width": 1080, "height": 1920, "fps": 30, "durationFrames": 240},
+        "media": [],
+        "scenes": [{
+            "id": "scene-priority", "type": "CTA", "startFrame": 0, "endFrame": 240,
+            "semanticRole": "cta-resolve", "presenterLayout": "large", "materialLayout": "none",
+            "sourceVideo": "input/presenter.mp4", "narrationText": "流程已经完成。点个关注，我们下期见。",
+        }],
+        "captionCues": [
+            {"id": "cap-confirm", "sceneId": "scene-priority", "startFrame": 0, "endFrame": 190, "text": "流程已经完成。"},
+            {"id": "cap-cta", "sceneId": "scene-priority", "startFrame": 170, "endFrame": 240, "text": "点个关注，我们下期见。"},
+        ],
+        "semanticBeats": [
+            {
+                "id": "beat-confirm", "sceneId": "scene-priority", "startFrame": 0, "endFrame": 190,
+                "text": "流程已经完成。", "semanticIntent": "positive-confirm", "visualForm": "greenConfirmCard",
+                "requiredChecks": ["positive-confirm-treatment"], "sourceCueIds": ["cap-confirm"],
+            },
+            {
+                "id": "beat-cta", "sceneId": "scene-priority", "startFrame": 170, "endFrame": 240,
+                "text": "点个关注，我们下期见。", "semanticIntent": "cta-resolve", "visualForm": "ctaTitle",
+                "requiredChecks": ["cta-visual-treatment"], "sourceCueIds": ["cap-cta"],
+            },
+        ],
+        "visualEvents": [], "audioCues": [], "qaFrames": [],
+    }
+    visual_event_builder.apply_visual_events(priority_data)
+    priority_events = [item for item in priority_data["visualEvents"] if item.get("type") != "cornerChapterLabel"]
+    priority_ctas = [item for item in priority_events if item.get("type") == "ctaTitle"]
+    same_lane_overlap = any(
+        left.get("id") != right.get("id")
+        and visual_event_builder.lane_for_event(left) == visual_event_builder.lane_for_event(right) == "left"
+        and int(left.get("startFrame", 0)) < int(right.get("endFrame", 0))
+        and int(right.get("startFrame", 0)) < int(left.get("endFrame", 0))
+        for left in priority_events
+        for right in priority_events
+    )
+    if len(priority_ctas) != 1 or same_lane_overlap:
+        failures.append(f"priority CTA scheduling failed: events={priority_events}")
 
     platform = sample("只分发到抖音和B站")
     platform_event = next(item for item in platform["visualEvents"] if item.get("type") == "platformFanout")

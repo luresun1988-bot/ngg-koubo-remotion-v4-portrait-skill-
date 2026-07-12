@@ -15,10 +15,13 @@ Use this reference before finalizing any V4 visual script, template change, or Q
 
 ## Semantic Prohibitions
 
-- Do not ignore negative or friction words. Words such as "è¿å¨æå¨", "æå¨", "éº»ç¦", "å«å", "ä¸æ¯", "ä½æ", "éå¤", "å¡ä½", and "é£é©" require a red warning, strike/delete, red rail, or contrast-swap treatment.
+- Do not ignore negative or friction words. Words such as "还在手动", "手动", "麻烦", "别再", "不是", "低效", "重复", "卡住", and "风险" require a red warning, strike/delete, red rail, or contrast-swap treatment.
 - Do not render a negative Hook as only a positive green result line. Show the wrong path first, then resolve to the positive action.
 - Do not render numeric metrics as small static cards. Numeric claims need count-up, bars, progress, or chart motion.
+- Do not drop or truncate numeric suffixes. `2K` must not become `2`, and `1k` may normalize to `1K` but not to `1`.
 - Do not collapse enumeration or workflow language into one ordinary information card. Use numbered rows, flow nodes, or internal-step sequences.
+- Do not treat future episode previews as completed work or present-tense automation handoff merely because they contain "自动" or a tool name.
+- Do not invent CTA actions or keywords. Generated CTA copy must be traceable to `ctaProvenance.sourceText`, and a sourced CTA must not be discarded by lane scheduling.
 
 ## Material Prohibitions
 

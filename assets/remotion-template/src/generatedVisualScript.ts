@@ -3,6 +3,11 @@ import type {VisualScript} from './v4Types';
 export const visualScript = {
   "schemaVersion": "ngg-koubo-remotion-v4-portrait",
   "projectConfigPath": "../project_config.json",
+  "captionRenderMode": "embedded",
+  "presenterAudio": {
+    "mode": "embedded",
+    "syncOffsetFrames": 0
+  },
   "composition": {
     "format": "9:16",
     "width": 1080,
@@ -320,11 +325,17 @@ export const visualScript = {
       "safeArea": "avoid-face-caption",
       "sourceBeatId": "beat-008",
       "type": "ctaTitle",
-      "text": "\u522b\u518d\u624b\u52a8",
-      "subtext": "\u8bc4\u8bba\u533a\u81ea\u63d0",
+      "text": "Comment",
+      "subtext": "distribution",
+      "status": "keyword",
       "emphasisWords": [
-        "\u81ea\u63d0"
+        "distribution"
       ],
+      "ctaProvenance": {
+        "kind": "keyword",
+        "sourceText": "Comment with the keyword distribution if you want this workflow.",
+        "keyword": "distribution"
+      },
       "motionType": "crash-rebound"
     }
   ],

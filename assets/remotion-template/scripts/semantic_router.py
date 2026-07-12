@@ -20,7 +20,7 @@ MIN_BEAT_FRAMES = 80
 TARGET_BEAT_FRAMES = 115
 MAX_BEAT_FRAMES = 165
 
-NUMERIC_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|倍|万|亿|人|道|题|个|张|条|分钟|秒|份|账号)?")
+NUMERIC_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|倍|万|亿|[KkMmGg]|人|道|题|个|张|条|分钟|秒|份|账号)?")
 ENUMERATION_RE = re.compile(r"(第一|第二|第三|第四|第五|第[一二三四五六七八九十]+|[二三四五六七八九十]\s*(?:个|件|种|步|项|条|点|方向|指标)|一\s*(?:个|件|种|项|条|点|方向|指标)|[0-9]{1,2}\s*(?:个|件|种|步|项|条|点|方向|指标)|[0-9]{2})")
 
 RULES: dict[str, dict[str, Any]] = {
@@ -110,6 +110,9 @@ AUTOMATION_HANDOFF_ACTION_TERMS = [
 PROOF_STRONG_TERMS = ["录屏", "截图", "生成结果", "后台演示", "证明", "实测", "看这段", "页面结果"]
 FLOW_TRANSFORMATION_TERMS = ["不是它会写代码", "不是会写代码", "麻烦事交给它", "整套流程跑通", "流程跑通"]
 TOPIC_INTRO_RE = re.compile(r"(?:这期|今天|这次|接下来)(?:视频)?(?:我们)?(?:来)?(?:聊|讲|说|看|拆解|测试|介绍)")
+FUTURE_EPISODE_PREVIEW_RE = re.compile(
+    r"(?:下一期|下期|下一集|下集|下一条)[^，。！？]{0,24}(?:会|将|准备|介绍|讲|说|演示|拆解|测试|分享|教)"
+)
 COMPLETION_TERMS = ["已经完成", "生成好了", "已经生成", "输出完成", "流程跑完", "搞定", "跑通", "完成了"]
 AUTOMATED_TERMS = ["自动化", "自动生成", "自动完成", "一键", "系统执行", "Codex 接管", "交给 Codex"]
 ENTITY_TERMS = [
@@ -145,6 +148,30 @@ def rule_result(intent: str, keywords: list[str], confidence: float = 0.82) -> d
 def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[str, Any]:
     matched = {intent: contains_any(text, rule["terms"]) for intent, rule in RULES.items()}
     matched = {intent: hits for intent, hits in matched.items() if hits}
+
+    # A future episode preview describes planned content. It is neither a
+    # completed result nor an automation handoff, even when it contains words
+    # such as "自动" or a tool name. Keep a source keyword so CTA scene fallback
+    # cannot overwrite this decision.
+    future_preview = FUTURE_EPISODE_PREVIEW_RE.search(text)
+    if future_preview and not any(term in text for term in ["评论区", "领取", "自提", "告诉我", "私信", "关键词", "关注", "点赞", "收藏"]):
+        return {
+            "semanticIntent": "explanation-claim",
+            "visualForm": "claimStrip",
+            "keywords": [future_preview.group(0).strip()],
+            "requiredChecks": ["future-preview-not-complete", "lightweight-claim-treatment"],
+            "confidence": 0.94,
+        }
+
+    explicit_contrast = re.search(r"不是[^，。！？]{1,24}而是[^，。！？]{1,24}", text)
+    if explicit_contrast and not any(term in text for term in FLOW_TRANSFORMATION_TERMS):
+        return {
+            "semanticIntent": "negative-to-positive",
+            "visualForm": "negativeWarningThenConfirm",
+            "keywords": ["不是", "而是"],
+            "requiredChecks": ["negative-red-treatment", "positive-confirm-treatment", "no-generic-card-fallback"],
+            "confidence": 0.96,
+        }
 
     if any(term in text for term in FLOW_TRANSFORMATION_TERMS):
         return {
@@ -203,7 +230,7 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
         return rule_result("scene-lock", matched["scene-lock"], 0.88)
 
     numeric_match = NUMERIC_RE.search(text)
-    if numeric_match and any(term in text for term in ["提升", "增长", "比例", "指标", "数据", "%", "倍", "万", "亿", "道题", "题", "张", "数量", "规模", "分钟", "秒", "小于", "省下", "批量", "处理", "账号", "扩到", "生成"]):
+    if numeric_match and any(term in text for term in ["提升", "增长", "比例", "指标", "数据", "分辨率", "清晰", "%", "倍", "万", "亿", "K", "k", "道题", "题", "张", "数量", "规模", "分钟", "秒", "小于", "省下", "批量", "处理", "账号", "扩到", "生成"]):
         return {
             "semanticIntent": "numeric-metric",
             "visualForm": "dataPunch",
@@ -494,6 +521,21 @@ def merge_short_tail_beats(beats: list[dict[str, Any]], scenes: list[dict[str, A
         previous = merged[-1] if merged and str(merged[-1].get("sceneId") or "") == scene_id else None
         previous_intent = str((previous or {}).get("semanticIntent") or "")
         current_intent = str(beat.get("semanticIntent") or "")
+        if (
+            previous
+            and previous_intent == "explanation-claim"
+            and FUTURE_EPISODE_PREVIEW_RE.search(str(previous.get("text") or ""))
+            and current_intent == "cta-resolve"
+        ):
+            previous["endFrame"] = max(int(previous.get("endFrame", 0) or 0), end)
+            previous["text"] = str(previous.get("text") or "") + str(beat.get("text") or "")
+            previous["semanticIntent"] = "cta-resolve"
+            previous["visualForm"] = "ctaTitle"
+            previous["keywords"] = list(dict.fromkeys(list(previous.get("keywords") or []) + list(beat.get("keywords") or [])))[:4]
+            previous["requiredChecks"] = ["cta-visual-treatment", "future-preview-not-complete", "no-generic-card-fallback"]
+            previous["confidence"] = max(float(previous.get("confidence", 0) or 0), float(beat.get("confidence", 0) or 0))
+            previous["sourceCueIds"] = list(previous.get("sourceCueIds") or []) + list(beat.get("sourceCueIds") or [])
+            continue
         if previous and previous_intent == "result-promise" and current_intent in {"negative-friction", "negative-to-positive"}:
             previous["endFrame"] = max(int(previous.get("endFrame", 0) or 0), end)
             previous["text"] = str(previous.get("text") or "") + str(beat.get("text") or "")

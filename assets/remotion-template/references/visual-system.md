@@ -139,7 +139,7 @@ Choose HUD patterns by semantic role:
 - `capability-share`: `capabilityShare`, for capability, market/share, model/company ranking, global/local comparison, or "who is leading" beats. It uses a compact section label, 2-3 object/logo/icon tiles, and a lower data/share panel with animated bars.
 - `scene-lock`: `sceneLockGrid`, for scenario binding, industry categories, local usage contexts, or "where this lands" beats. It uses a compact section label plus scenario tiles.
 - `transformation-stack`: `transformationStack`, for "from A to B", individual-to-team, moat/leverage, driver-to-result, or productivity shift beats. It uses a top state transition, middle driver chips, and a bottom result metric strip.
-- `semantic-problem-map`: contrast panel for "not A, but B" or "the real bottleneck is X".
+- `semantic-problem-map`: contrast panel for "not A, but B" or "the real bottleneck is X". In fullscreen/large portrait presenter scenes, use the compact top-safe horizontal contrast strip above the face band; reserve the full stacked panel for proof/material-main/PiP or explicit full-panel review samples.
 - `manual-field`: repeated task or repeated field filling, local directory checks, or field availability checks. Prefer the right-safe-zone `STATUS POLLING` timeline above a `FIELDS` file-tree/field-list: a bare status line with spaced labels/nodes, then a slim blue rail plus 2-3 row backings with semantic icons, status dots, checks, or `生成中`. Do not use a large outer card, stacked task-card container, or circular `AI/FILES` badge for this pattern.
 - `workflow-step`: `flowPath` or `statusStack`, with numbered rows/nodes and item-by-item reveal.
 - `platform-fanout`: one source package fans out to several platforms or channels.

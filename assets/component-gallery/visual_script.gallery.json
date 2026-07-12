@@ -820,16 +820,22 @@
       "type": "ctaTitle",
       "startFrame": 1662,
       "endFrame": 1792,
-      "text": "\u6293\u4f4fAI\u7ea2\u5229\u4e09\u65b9\u5411",
-      "subtext": "\u4e0d\u662f\u8f6c\u884c\uff0c\u662f\u628a\u73b0\u6709\u80fd\u529b\u653e\u5927",
-      "status": "\u884c\u52a8\u603b\u7ed3",
+      "text": "\u8bc4\u8bba\u533a\u6263\uff1a\u4e3b\u56fe Skill",
+      "subtext": "\u60f3\u8981\u8fd9\u5957\u65b9\u6cd5",
+      "status": "\u5173\u952e\u8bcd\uff1a\u4e3b\u56fe Skill",
       "semanticRole": "cta-resolve",
       "motionType": "crash-rebound",
       "style": "dark-fullscreen-semantic-hud cta-summary",
       "safeArea": "avoid-face-caption",
       "emphasisWords": [
-        "AI"
+        "\u4e3b\u56fe Skill"
       ],
+      "ctaProvenance": {
+        "kind": "keyword",
+        "sourceText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u60f3\u8981\u8fd9\u5957\u65b9\u6cd5\uff0c\u8bc4\u8bba\u533a\u6263\uff1a\u4e3b\u56fe Skill",
+        "action": "\u8bc4\u8bba\u533a",
+        "keyword": "\u4e3b\u56fe Skill"
+      },
       "internalSteps": [
         {
           "label": "01",
@@ -1277,7 +1283,7 @@
       "startFrame": 1662,
       "endFrame": 1792,
       "beatGroupId": "scene-12-cta-gallery-beat-12",
-      "text": "\u60f3\u8981\u8fd9\u5957\u65b9\u6cd5",
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u60f3\u8981\u8fd9\u5957\u65b9\u6cd5\uff0c\u8bc4\u8bba\u533a\u6263\uff1a\u4e3b\u56fe Skill",
       "semanticIntent": "cta-resolve",
       "visualForm": "ctaTitle",
       "confidence": 1.0,

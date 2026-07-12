@@ -33,6 +33,7 @@ Any hard failure requires revision:
 
 - Text covers face, mouth, eyes, or key hand gestures.
 - In 9:16 fullscreen presenter scenes, large panels, dashboards, workflow boards, platform fan-out diagrams, and CTA summary bars cover the center face band instead of using compact portrait layouts.
+- `semanticProblemMap` crosses the center eye/face band in a fullscreen/large portrait presenter scene instead of using the compact top-safe strip.
 - Text or visual elements cover bottom captions.
 - Captions are unreadable or duplicated as competing layers.
 - Chinese text renders as question-mark placeholders, tofu boxes, replacement characters, or visibly corrupted mojibake.
@@ -106,6 +107,7 @@ Check:
 - `negative-red-treatment`: negative, denial, wrong-path, or friction beats must use red warning, strike/delete, or red contrast treatment.
 - `positive-confirm-treatment`: confirmation/resolution beats must use a green/confirm treatment, not only neutral white text.
 - `numeric-countup-required`: numeric beats must use `dataPunch` / `metricSpotlight` with animated numeric value, bar, chart, or progress.
+- `numeric-suffix-preserved`: source entities such as `2K`, `1k`, `30%`, or `3倍` keep the complete suffix in semantic entities and rendered numeric fields.
 - `workflow-not-generic-card`: workflow, enumeration, and field-list beats must use flow/list/status visual grammar with `internalSteps`, not a generic `infoCard`.
 - `proof-video-must-play`: proof video assets must be rendered as video through `materialMain` + `recording-proof`.
 - `no-generic-card-fallback`: if a generated event falls back to `infoCard`, confirm the semantic beat truly is a small information card; otherwise replace it with the proper component family.
@@ -116,6 +118,9 @@ Check:
 - Negative, denial, or wrong-path beats use red warning, delete/strike, or contrast treatment.
 - `negative-only-no-invented-positive`: pure negative/denial beats render red-only. They must not add a green confirm card unless the transcript itself gives the positive resolution.
 - `negative-to-positive-resolution-missing`: if a beat is marked `negative-to-positive`, its visual event must include an explicit positive resolution; otherwise keep it as `negative-friction`.
+- `future-preview-not-complete`: future episode copy such as "下一期会介绍" must not route to completion or automation handoff unless the same source text explicitly states a present action.
+- `cta-provenance`: generated CTA copy must be supported by `ctaProvenance.sourceText`; comment, keyword, follow, reply, private-message, pickup, and keyword-value text may not be invented.
+- `cta-priority-scheduling`: a sourced CTA must survive same-lane scheduling. Trim/drop the earlier conflicting HUD instead of removing the CTA.
 - Warning/confirm cards use compressed key-message copy, not complete spoken sentences. They should not overflow their card bounds.
 - Warning/confirm card text uses white base text plus red/green emphasis for the decisive phrase; avoid all-white blocks with no semantic emphasis and avoid coloring the whole sentence.
 - `hud-copy-too-long`: warning/confirm HUD text must fit its component budget. Long transcript sentences must be compressed or split before rendering.

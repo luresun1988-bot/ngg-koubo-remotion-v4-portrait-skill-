@@ -38,6 +38,7 @@ Default rhythm is strong-packaging dense motion, but still readable.
 - Main HUD events are scheduled into lanes: `left`, `right`, `center`, and `proof`. A `cornerChapterLabel` is exempt because it is a lightweight marker, not a main HUD.
 - Do not overlap two main HUD effects in the same lane. Leave about 10 frames between same-lane handoffs so the first effect can exit before the next enters.
 - Visual event builders should schedule main HUD lanes on absolute timeline frames, not only within scene-local boundaries. If a same-lane component needs to finish its exit, the next same-lane component should move later instead of stacking, including across adjacent scene boundaries.
+- Preserve sourced CTA events when lane pressure occurs. If a previous left-lane HUD would push the CTA out of its scene or below the minimum readable duration, trim or drop the earlier HUD and keep the CTA plus the normal lane buffer.
 - The lane must drive the rendered HUD position. `HudEdgeShade` is kept as optional code but is disabled by default; if it is re-enabled later, the same lane must drive both the rendered HUD and the shade side.
 - If one idea needs several changes in the same area, implement them as internal steps inside one component instead of stacking separate HUD events.
 - Do not solve every adjacent process beat with the same flow-list/status panel. After one flow-list panel, the next process beat should usually switch to another visual form such as a timeline/filmstrip, data punch, status stickers, platform fan-out, or proof material.
@@ -85,6 +86,7 @@ Use these defaults when creating `visualEvents`:
 Do not use a generic card when a more specific semantic pattern exists. For example, multi-platform publishing should use `platform-fanout`, not five platform cards.
 Do not use `infoCard` for clear numeric metrics or process/enumeration beats. Numeric beats need count-up/chart motion; process beats need numbered rows, nodes, or flow paths.
 Do not render negative/friction language as a normal positive title. The negative part should enter with red warning motion or a strike/delete gesture, then resolve to the positive idea.
+In fullscreen/large portrait presenter scenes, `semanticProblemMap` uses a compact top-safe horizontal layout. It must not animate across the center eye/face band.
 
 ## Deployed Motion Presets
 

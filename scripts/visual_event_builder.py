@@ -65,7 +65,7 @@ SFX_SUGGESTIONS: dict[str, dict[str, Any]] = {
     },
 }
 PUNCTUATION = " ，。？！、；;：:.!?"
-NUMERIC_VALUE_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|个|张|条|分钟|秒)?")
+NUMERIC_VALUE_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|[KkMmGg]|个|张|条|分钟|秒)?")
 
 NEGATIVE_TERMS = ["手动", "不是", "麻烦", "低效", "重复", "卡住", "风险", "不值得", "太慢", "人工成本"]
 POSITIVE_TERMS = ["自动化", "自动", "完成", "搞定", "跑完", "输出完成", "Codex", "一键", "接管"]
@@ -123,13 +123,24 @@ def cue_anchor_for_event(event: dict[str, Any], beat: dict[str, Any], data: dict
         return None
 
     phrases: list[str] = []
-    for key in ("text", "subtext", "title", "status"):
-        value = str(event.get(key) or "")
-        if value:
-            phrases.append(value)
-    phrases.extend(str(item) for item in event.get("emphasisWords", []) if str(item))
-    phrases.extend(str(item) for item in beat.get("keywords", []) if str(item))
-    phrases = sorted({normalize_for_match(phrase) for phrase in phrases if len(normalize_for_match(phrase)) >= 2}, key=len, reverse=True)
+    is_problem_map = str(event.get("type") or "") in {"semanticProblemMap", "highlightBox"}
+    if is_problem_map:
+        phrases.append(str(event.get("text") or ""))
+        phrases.extend(str(item) for item in event.get("emphasisWords", []) if str(item))
+        phrases.extend(str(item) for item in beat.get("keywords", []) if str(item))
+        phrases.extend(str(event.get(key) or "") for key in ("title", "status", "subtext") if str(event.get(key) or ""))
+    else:
+        for key in ("text", "subtext", "title", "status"):
+            value = str(event.get(key) or "")
+            if value:
+                phrases.append(value)
+        phrases.extend(str(item) for item in event.get("emphasisWords", []) if str(item))
+        phrases.extend(str(item) for item in beat.get("keywords", []) if str(item))
+    normalized_phrases = [normalize_for_match(phrase) for phrase in phrases if len(normalize_for_match(phrase)) >= 2]
+    if is_problem_map:
+        phrases = list(dict.fromkeys(normalized_phrases))
+    else:
+        phrases = sorted(set(normalized_phrases), key=len, reverse=True)
 
     for phrase in phrases:
         for cue in cues:
@@ -222,6 +233,8 @@ def focus_words(text: str, terms: list[str], limit: int = 2) -> list[str]:
 
 def compact_negative_positive(text: str) -> tuple[str, str, list[str]]:
     negative, positive = split_negative_positive(text)
+    if "不是" in negative:
+        negative = negative[negative.rfind("不是"):]
     negative_short = key_message(negative, 16, NEGATIVE_TERMS)
     positive_short = key_message(positive, 16, POSITIVE_TERMS) if positive else ""
     if not any(term in negative_short for term in NEGATIVE_TERMS):
@@ -246,26 +259,85 @@ def confirm_copy(text: str) -> tuple[str, str, list[str]]:
     return "自动化交接", copy or "交给 Codex 自动执行", focus_words(copy, POSITIVE_TERMS, 1)
 
 
-def cta_copy(text: str) -> tuple[str, str, str, list[str]]:
+def cta_copy(text: str) -> tuple[str, str, str, list[str], dict[str, str]]:
     clean = normalize_hud_source(text)
-    if "离谱" in clean and "有用" in clean:
-        return "离谱但有用", "不是炫技，是把麻烦流程跑通", "关键词：Codex 用法", ["有用"]
-    if "评论区" in clean:
-        return "评论区告诉我", "你想让 Codex 接管哪一步？", "关键词：Codex 用法", ["告诉我"]
-    return "评论区告诉我", key_message(text, 18, ["自提", "分发", "主图", "Codex"]) or "你想自动化哪一步？", "关键词：Codex 用法", ["评论区"]
+    action = next(
+        (term for term in ["评论区", "关注", "点赞", "收藏", "私信", "领取", "自提", "告诉我"] if term in clean),
+        "",
+    )
+    keyword = ""
+    keyword_match = re.search(r"(?:扣|回复|发送)\s*([^，。！？]{1,12})", text)
+    if keyword_match:
+        keyword = keyword_match.group(1).strip()
+    else:
+        keyword_match = re.search(r"关键词(?:是|叫|为|[:：])\s*([^，。！？]{1,12})", text)
+        if keyword_match:
+            keyword = keyword_match.group(1).strip()
+
+    future_topic_match = re.search(
+        r"(?:下一期|下期|下一集|下集|下一条)[^，。！？]{0,12}(?:介绍|讲|拆解|分享|教)(?:如何|怎么)?([^，。！？]{2,18}?)(?=点个关注|关注|点赞|收藏|评论区|私信|领取|自提|$)",
+        clean,
+    )
+    future_topic = future_topic_match.group(1).strip() if future_topic_match else ""
+    future_topic = re.sub(r"^(?:如何|怎么|用)", "", future_topic)
+
+    if future_topic and action:
+        title = f"下期：{future_topic}"[:14]
+    elif "评论区" in clean and "告诉我" in clean:
+        title = "评论区告诉我"
+    elif "点个关注" in clean:
+        title = "点个关注"
+    elif "关注" in clean:
+        title = "关注我"
+    elif "收藏" in clean:
+        title = "收藏这一条"
+    elif "点赞" in clean:
+        title = "点个赞"
+    elif "私信" in clean:
+        title = "私信我"
+    elif "领取" in clean:
+        title = "直接领取"
+    elif "自提" in clean:
+        title = "自行提取"
+    elif "评论区" in clean:
+        title = "评论区"
+    else:
+        title = key_message(text, 14, ["关注", "点赞", "收藏", "私信", "领取", "自提", "告诉我"]) or "行动提示"
+
+    if future_topic and action:
+        action_copy = "点个关注" if "点个关注" in clean else title if action in title else action
+        subtext = f"{action_copy} · 下期见" if "下期见" in clean else action_copy
+    else:
+        subtext = key_message(text, 18, ["Codex", "流程", "模板", "下期", "下一条", "自动化"])
+    if normalize_for_match(subtext) == normalize_for_match(title):
+        subtext = ""
+    status = f"关键词：{keyword}" if keyword else action
+    emphasis = [item for item in [keyword, action, title] if item and item in f"{title}{subtext}{status}"][:2]
+    provenance = {
+        "kind": "keyword" if keyword else "action" if action else "claim",
+        "sourceText": text.strip(),
+    }
+    if action:
+        provenance["action"] = action
+    if keyword:
+        provenance["keyword"] = keyword
+    return title, subtext, status, emphasis, provenance
 
 
 def numeric_fields(text: str) -> dict[str, Any]:
-    match = re.search(r"([+\-]?)(\d+(?:\.\d+)?)\s*(%|倍|万|亿|人|道|题|个|条|分钟|秒)?", text)
+    match = re.search(r"([+\-]?)(\d+(?:\.\d+)?)\s*(%|倍|万|亿|[KkMmGg]|人|道|题|个|条|分钟|秒)?", text)
     if not match:
         return {"numericValue": 30, "numericPrefix": "+", "numericSuffix": "%"}
     value = float(match.group(2))
     if value.is_integer():
         value = int(value)
+    suffix = match.group(3) or ""
+    if suffix in {"k", "m", "g"}:
+        suffix = suffix.upper()
     return {
         "numericValue": value,
         "numericPrefix": "+" if match.group(1) == "+" else "",
-        "numericSuffix": match.group(3) or "",
+        "numericSuffix": suffix,
     }
 
 
@@ -340,6 +412,8 @@ def lane_for_event(event: dict[str, Any]) -> str | None:
     if event_type == "materialMain":
         return "proof"
     if event_type in {"dataPunch", "metricSpotlight"}:
+        return "right" if "right" in safe_area else "left"
+    if event_type in {"semanticProblemMap", "highlightBox"} or role == "semantic-problem-map":
         return "right" if "right" in safe_area else "left"
     if event_type in {"flowPath", "statusStack", "transitionPushZoom", "platformFanout"} or role in {"platform-fanout", "workflow-step", "manual-field"}:
         return "right"
@@ -609,6 +683,7 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
             "emphasisWords": emphasis_words or ["手动"],
             "iconName": "AlertTriangle",
             "motionType": "red-warning-pop-strike",
+            "safeArea": "right avoid-face-caption",
         }
         if positive:
             event["subtext"] = positive
@@ -668,7 +743,7 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
         }
 
     if intent == "numeric-metric":
-        metric_copy = key_message(text, 16, ["提升", "增长", "比例", "指标", "%", "倍", "万", "亿", "分钟", "秒"])
+        metric_copy = key_message(text, 16, ["分辨率", "清晰", "提升", "增长", "比例", "指标", "%", "倍", "万", "亿", "K", "k", "分钟", "秒"])
         modifiers = [str(item) for item in beat.get("semanticModifiers", [])]
         return {
             **base,
@@ -774,7 +849,7 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
         }
 
     if intent == "cta-resolve":
-        title_copy, subtext_copy, status_copy, emphasis_words = cta_copy(text)
+        title_copy, subtext_copy, status_copy, emphasis_words, provenance = cta_copy(text)
         return {
             **base,
             "type": "ctaTitle",
@@ -782,6 +857,7 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
             "subtext": subtext_copy,
             "status": status_copy,
             "emphasisWords": emphasis_words,
+            "ctaProvenance": provenance,
             "motionType": "cta-result-keyword",
         }
 
@@ -827,10 +903,42 @@ def scene_by_id(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
     }
 
 
+def make_lane_room_for_priority_event(
+    scheduled: list[dict[str, Any]],
+    lane: str,
+    start: int,
+) -> int | None:
+    """Trim or drop a conflicting earlier HUD so a source CTA is never lost."""
+    cutoff = max(0, start - LANE_BUFFER_FRAMES)
+    for index in range(len(scheduled) - 1, -1, -1):
+        previous = scheduled[index]
+        if lane_for_event(previous) != lane:
+            continue
+        previous_start = int(previous.get("startFrame", 0) or 0)
+        previous_end = int(previous.get("endFrame", previous_start) or previous_start)
+        if previous_end <= cutoff:
+            break
+        if cutoff - previous_start >= 24:
+            scheduled[index] = {**previous, "endFrame": cutoff}
+            break
+        scheduled.pop(index)
+
+    remaining_ends = [
+        int(item.get("endFrame", 0) or 0)
+        for item in scheduled
+        if lane_for_event(item) == lane
+    ]
+    return max(remaining_ends) if remaining_ends else None
+
+
 def schedule_events(events: list[dict[str, Any]], data: dict[str, Any]) -> list[dict[str, Any]]:
     composition = data.get("composition", {}) if isinstance(data.get("composition"), dict) else {}
     composition_end = int(composition.get("durationFrames", 0) or 0)
     scenes = scene_by_id(data)
+    ordered_scenes = sorted(scenes.values(), key=lambda item: int(item.get("startFrame", 0) or 0))
+    next_scene_start: dict[str, int] = {}
+    for index, scene in enumerate(ordered_scenes[:-1]):
+        next_scene_start[str(scene.get("id") or "")] = int(ordered_scenes[index + 1].get("startFrame", 0) or 0)
     lane_end: dict[str, int] = {}
     scheduled: list[dict[str, Any]] = []
     for event in sorted(events, key=lambda item: (int(item.get("startFrame", 0) or 0), str(item.get("sceneId") or ""))):
@@ -842,12 +950,23 @@ def schedule_events(events: list[dict[str, Any]], data: dict[str, Any]) -> list[
         scene = scenes.get(scene_id, {})
         scene_start = int(scene.get("startFrame", 0) or 0)
         scene_end = int(scene.get("endFrame", composition_end) or composition_end or 0)
+        if str(event.get("type") or "") in {"semanticProblemMap", "highlightBox"}:
+            following_start = next_scene_start.get(scene_id)
+            if following_start is not None and following_start > scene_end:
+                scene_end = min(composition_end or following_start, following_start)
         if str(event.get("type") or "") in {"dataPunch", "metricSpotlight"} and scene_end:
             scene_end = min(composition_end or scene_end + 60, scene_end + 60)
         start = max(scene_start, int(event.get("startFrame", 0) or 0))
         annotated = annotate_density(event, scene, data)
         duration = desired_duration_for_event(annotated, scene, data)
         previous_end = lane_end.get(lane)
+        is_priority_cta = str(event.get("type") or "") in {"ctaTitle", "ctaRecommend"}
+        if is_priority_cta and previous_end is not None and start < previous_end + LANE_BUFFER_FRAMES:
+            previous_end = make_lane_room_for_priority_event(scheduled, lane, start)
+            if previous_end is None:
+                lane_end.pop(lane, None)
+            else:
+                lane_end[lane] = previous_end
         if previous_end is not None and start < previous_end + LANE_BUFFER_FRAMES:
             start = previous_end + LANE_BUFFER_FRAMES
         end = start + duration

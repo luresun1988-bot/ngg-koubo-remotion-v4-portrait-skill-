@@ -63,10 +63,14 @@ python scripts/sfx_semantic_routing_regression.py
 - Numbered words such as "第一/第二/第三" beat broad transformation words unless the sentence also contains a clear transformation relation such as "从", "变成", "到", "团队", "杠杆", or "护城河".
 - Capability, scene binding, and transformation routes must beat generic cards. Do not silently collapse them to `infoCard`.
 - CTA words must be action-specific: "评论区", "领取", "自提", "告诉我", "私信", "关键词", "关注", "点赞", or "收藏". Do not route every "需要" to CTA.
+- Future episode previews such as "下一期会介绍", "下期将拆解", or "下一条讲" are `explanation-claim` unless the same source text contains an explicit CTA action. Words such as "自动剪辑" inside a future preview do not mean completed automation or a present-tense handoff.
 - Do not route a broad token alone. `从官网下载` is not transformation, `发布前检查` is not platform fan-out, and `模型文件` is not capability/share.
 - Unknown or low-confidence spoken copy defaults to `explanation-claim -> claimStrip`, never to a fabricated workflow diagram.
 - Record compound meaning in `semanticModifiers` and `entities`. For example, `10 张高清详情图已经自动生成好了` keeps `numeric-metric` as the primary intent plus `numeric`, `completed`, and `automated` modifiers.
 - Component data must come from transcript entities, provided assets, or explicit user input. Do not invent platform names, brands, percentages, state labels, or transformation drivers.
+- Preserve complete numeric entities and suffixes. `2K`, `1k`, `30%`, and `3倍` must keep their suffix in `entities` and the generated numeric fields; normalize lowercase `k/m/g` to uppercase for display without dropping it.
+- Build CTA title, subtext, status, action, and keyword only from the source beat. Generated CTA events must record `ctaProvenance.sourceText`; record `action` or `keyword` only when it appears in that source text.
+- CTA has scheduling priority at the end of a scene. If an earlier left-lane HUD would push a sourced CTA below the readable minimum or remove it, trim/drop the earlier HUD and preserve the CTA with the lane buffer.
 
 ## Timing Anchor
 
@@ -115,4 +119,4 @@ Every generated `visualEvent` that fulfills a semantic beat must keep:
 }
 ```
 
-The regression suite currently covers 104 positive, compound, adversarial, real-project, and short-tail intent-preservation examples. `semantic_component_contract_regression.py` additionally checks canonical event types, no invented platforms/brands/states/ratios, approval-gated theme-thesis candidates, and schema/renderer type parity. The SFX regression suite covers the six confirmed semantic audio suggestions and requires `status: "suggested"`. A route change should update the tests and this document in the same commit.
+The regression suite currently covers 108 positive, compound, adversarial, future-preview, numeric-suffix, real-project, and short-tail intent-preservation examples. `semantic_component_contract_regression.py` additionally checks canonical event types, no invented platforms/brands/states/ratios, CTA provenance and scheduling priority, approval-gated theme-thesis candidates, and schema/renderer type parity. The SFX regression suite covers the six confirmed semantic audio suggestions and requires `status: "suggested"`. A route change should update the tests and this document in the same commit.
