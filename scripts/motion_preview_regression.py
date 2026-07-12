@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 
 from build_motion_preview_plan import build_plan
+from make_contact_sheet import load_qa_selection
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,6 +18,9 @@ EXAMPLE = ROOT / "assets" / "remotion-template" / "config" / "visual_script.exam
 def main() -> int:
     data = json.loads(EXAMPLE.read_text(encoding="utf-8-sig"))
     data = copy.deepcopy(data)
+    frames, contact_sheet_fps = load_qa_selection(EXAMPLE)
+    if not frames or contact_sheet_fps != int(data["composition"]["fps"]):
+        raise AssertionError("contact sheet must derive FPS from visual_script.json")
     data["visualEvents"].append(
         {
             "id": "impact-test",

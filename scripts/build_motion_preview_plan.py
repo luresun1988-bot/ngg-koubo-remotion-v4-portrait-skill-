@@ -23,7 +23,7 @@ def clamp_range(start: int, end: int, duration: int) -> tuple[int, int]:
 
 def build_plan(data: dict[str, Any], max_previews: int = 12) -> list[dict[str, Any]]:
     composition = data.get("composition", {}) if isinstance(data.get("composition"), dict) else {}
-    fps = max(1, int(composition.get("fps") or 30))
+    fps = max(1, int(composition.get("fps") or 25))
     duration = max(1, int(composition.get("durationFrames") or 1))
     candidates: list[dict[str, Any]] = []
 

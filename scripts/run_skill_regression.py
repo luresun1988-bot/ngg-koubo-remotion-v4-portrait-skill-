@@ -15,12 +15,14 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 SKILL_ROOT = SCRIPT_DIR.parent
 TEMPLATE_ROOT = SKILL_ROOT / "assets" / "remotion-template"
 REGRESSIONS = [
+    "sync_template_mirrors.py",
     "semantic_router_regression.py",
     "semantic_component_contract_regression.py",
     "sfx_semantic_routing_regression.py",
     "visual_density_regression.py",
     "presenter_impact_regression.py",
     "presenter_media_regression.py",
+    "final_media_qa_regression.py",
     "motion_preview_regression.py",
     "portrait_runtime_contract_regression.py",
 ]

@@ -12,7 +12,7 @@ Preferred initialization:
 python scripts/init_v4_project.py --project-root <project> --output-dir 10_v4
 ```
 
-The initializer copies the template without PowerShell wildcards, creates `project_config.json`, probes source video, combines segmented presenter clips into one public source when needed, creates a starter `visual_script.json`, and writes `src/generatedVisualScript.ts`.
+The initializer copies the template without PowerShell wildcards, creates `project_config.json`, probes source video, combines segmented presenter clips into one public source when needed, creates a starter `visual_script.json`, and writes `src/generatedVisualScript.ts`. Before releasing a Skill change, refresh mirrored template files with `python scripts/sync_template_mirrors.py --write` and verify them with `python scripts/sync_template_mirrors.py`.
 
 After copying the template, run `npm install` in the copied Remotion project. The template includes `package-lock.json`; keep the locked Remotion versions unless the project explicitly upgrades and re-tests the render path.
 
@@ -30,6 +30,14 @@ The project directory is not fixed. The project must contain or receive a `proje
   "outputFormat": "9:16",
   "template": "ngg-koubo-remotion-v4-portrait",
   "style": "high-energy-packaging",
+  "frameRate": {
+    "compositionFps": 25,
+    "selectionSource": "primary-presenter-probe",
+    "defaultFallbackFps": 25,
+    "sourceFps": [25.0],
+    "sourceFpsText": ["25/1"],
+    "mixedPresenterFps": false
+  },
   "posterTopicKeyword": "",
   "semanticSearch": true,
   "sfxEnabled": true,
@@ -161,7 +169,10 @@ Do not use online images, videos, charts, screenshots, logos, or data as final a
 ## Production Sequence
 
 1. Build `project_config.json`.
-2. Probe source media durations, fps, size, and audio streams.
+2. Probe source media durations, average fps, size, and audio streams. Select the primary presenter's nominal measured FPS as the composition FPS; use 25 only when probing is unavailable or use an explicit user override. Record the decision and every presenter source FPS in `project_config.json.frameRate`.
+   - Quantize all second-based SRT/VTT/ASR times with the selected composition FPS.
+   - Recalculate duration frames as `round(durationSec * compositionFps)`; do not inherit frame counts measured at another FPS.
+   - If segmented presenter clips use mixed FPS, keep the primary clip's nominal FPS unless explicitly overridden, normalize every presenter segment to the selected FPS, and record `mixedPresenterFps=true` in QA.
 3. Load or generate transcript/timecodes in this order: SRT/VTT, alignment/timestamp JSON, ASR JSON/SRT, segmented source durations.
    - If generated from ASR, save `asr_segments.json` and optionally `asr_transcript.srt` under `06_remotion/qa/asr/` or the project timing directory.
    - Align scene boundaries to real ASR/SRT semantic breakpoints when a scene cut would split a spoken sentence into unusably short caption fragments.
@@ -188,7 +199,10 @@ Do not use online images, videos, charts, screenshots, logos, or data as final a
 15. Render sampled stills/contact sheet.
     - On a fresh Remotion install, warm the Chrome Headless Shell cache with one still or render command before launching multiple Remotion still/render jobs in parallel. On Windows, parallel first-run stills can race the cache download/extract step and fail with a missing `chrome-headless-shell-win64.zip`.
 16. Fix hard QA failures.
-17. Render final MP4 and produce `qa_report.md`.
+17. Render the final MP4, apply TV-range BT.709 matrix/transfer/primaries metadata, and run:
+    - `python scripts/final_media_qa.py --video 06_remotion/final.mp4 --visual-script 06_remotion/visual_script.json --out 06_remotion/qa/final_media_qa.md`
+    - Stop on any FPS, resolution, frame-count, H.264/AAC, `yuv420p`, BT.709, audio-coverage, or full-decode error.
+18. Produce `qa_report.md` and reference the passing final-media report.
 
 ## Outputs
 
@@ -199,6 +213,8 @@ project_config.json
 06_remotion/visual_script.json
 06_remotion/qa/pre_render_lint.md
 06_remotion/qa/contact_sheet.png
+06_remotion/qa/final_media_qa.md
+06_remotion/qa/final_media_qa.json
 06_remotion/qa/qa_report.md
 06_remotion/final.mp4
 ```

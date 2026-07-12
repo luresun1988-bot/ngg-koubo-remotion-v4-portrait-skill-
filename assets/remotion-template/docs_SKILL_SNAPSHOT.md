@@ -12,7 +12,7 @@ V4 is a production workflow and visual system, not only a style note. Always pla
 ## Required Workflow
 
 1. Inspect the project request, project root, source media, script, captions, proof assets, screenshots, recordings, logos, and any existing Remotion files.
-2. Load or create `project_config.json`. If it is missing, create it from the V4 shape in `references/workflow.md`.
+2. Probe the primary presenter video's actual average frame rate before building any frame-based timeline. Use that nominal source FPS as the composition FPS; use 25 fps only when probing is unavailable, or use an explicit user override. Load or create `project_config.json` and record the selection in `frameRate`.
 3. Require a timeline before detailed editing. Prefer existing `srt`, `vtt`, JSON transcript, or caption files; otherwise generate ASR timecodes with available local tools before planning frame-specific captions or visual events.
 4. Determine one short `posterTopicKeyword` from the video theme before cover/poster generation. This is the only theme text passed to `ngg-koubo-poster` and recorded in poster assets.
 5. Do light semantic research for every project unless the user explicitly disables it. Use research to understand the topic and design relevant visual metaphors; do not treat online images or video as usable final assets without source and rights review.
@@ -23,6 +23,7 @@ V4 is a production workflow and visual system, not only a style note. Always pla
 10. Use the unified V4 Portrait Remotion template for new 9:16 projects. Do not migrate old finished projects unless the user explicitly asks.
 11. Implement all motion with Remotion frame-driven APIs such as `useCurrentFrame()`, `interpolate()`, `spring()`, `Sequence`, and `TransitionSeries`.
 12. Render stills/contact sheets, then run `scripts/render_motion_previews.ps1` for presenter punches, depth typography, and fullscreen/PiP boundaries before the final MP4. Fix hard QA failures before calling the edit complete.
+13. After the final MP4 is rendered and BT.709 metadata is applied, run `scripts/final_media_qa.py`. Require matching composition FPS, resolution, decoded frame count, H.264/AAC, `yuv420p`, TV-range BT.709 matrix/transfer/primaries, complete audio coverage, and a successful full-file decode.
 
 ## Reference Routing
 
@@ -49,6 +50,8 @@ V4 is a production workflow and visual system, not only a style note. Always pla
 - Default presenter layout is fullscreen digital human. Use PiP only when clear proof material, screenshots, screen recordings, or large content assets become the main screen.
 - Mount one continuous primary presenter source from composition frame 0 through the end. Scene changes may alter layout, PiP geometry, and overlays, but must not remount, restart, seek, or duplicate the presenter's embedded audio. Use one continuous normalized WAV when presenter audio is external.
 - For segmented presenters, normalize every segment to composition FPS and 1080x1920, concatenate one video-only MP4, concatenate one exact 48 kHz stereo PCM WAV, and mount each once. Never stream-copy MP4 containers with independent AAC tracks.
+- Treat 25 fps as the fallback, not a forced project standard. Derive composition FPS from the primary presenter probe by default, quantize SRT/ASR seconds and all animation durations onto that FPS, and calculate total frames as `round(durationSec * compositionFps)`. Never reuse raw frame numbers created for another FPS without converting through seconds. When segmented presenter clips have mixed FPS, use the primary clip's nominal FPS unless the user overrides it, normalize every segment to the selected composition FPS, and record the mismatch in QA.
+- Keep reusable files under `scripts/`, `references/`, and the Skill body synchronized with their copies under `assets/remotion-template/`. Run `scripts/sync_template_mirrors.py --write` after changing a mirrored source and require `scripts/sync_template_mirrors.py` to pass before committing.
 - Every important visual event must be chosen from its spoken meaning first. `semanticRole` routes the effect; `type` only describes the broad event family.
 - Visual events must come from `semanticBeats` whenever the project is generated or rebuilt. The required pipeline is: real transcript/timecoded `captionCues` -> `semanticBeats` -> `visualEvents`. Do not jump directly from script text to arbitrary cards.
 - Each semantic beat must record `semanticIntent`, `visualForm`, `beatGroupId`, and `requiredChecks`. Each generated visual event must keep `sourceBeatId` so QA can prove the spoken meaning was fulfilled.
@@ -84,7 +87,7 @@ V4 is a production workflow and visual system, not only a style note. Always pla
 - Do not stack main HUD effects on the same side. Main HUD events are assigned to `left`, `right`, `center`, or `proof` lanes; the same lane must not overlap, and handoffs should leave about 10 frames of buffer unless the overlap is an intentional internal step inside one component.
 - Layered HUD components such as `capabilityShare`, `sceneLockGrid`, and `transformationStack` must reveal internally in order. Do not reveal top, middle, and bottom sections in the same frame.
 - Emphasized HUD keywords may use one secondary enlarge/rebound after the main entrance. Use `emphasisWords` for the 1-3 words that deserve the second pop. Do not apply repeated pulsing or continuous scaling.
-- Treat semantic HUD refresh and presenter camera impact as separate systems. Use `presenterReposition` with `motionType=presenter-impact-punch` only for a strong source-bound question, core judgement, reversal, warning, or asserted result. At 30 fps keep it 18–28 frames total with a 4–6-frame push, 4–6-frame rebound, short hold, and 6–10-frame return; scale peaks at 1.06–1.10 in portrait. Keep at most three in a rolling minute and about eight seconds apart. Never use slow symmetric zoom, continuous drift, or camera movement to satisfy dense-motion quotas.
+- Treat semantic HUD refresh and presenter camera impact as separate systems. Use `presenterReposition` with `motionType=presenter-impact-punch` only for a strong source-bound question, core judgement, reversal, warning, or asserted result. Scale timing from the actual composition FPS: use 18–28 frames total at 30 fps or about 15–23 frames at 25 fps, with proportionally scaled push, rebound, hold, and return phases; scale peaks at 1.06–1.10 in portrait. Keep at most three in a rolling minute and about eight seconds apart. Never use slow symmetric zoom, continuous drift, or camera movement to satisfy dense-motion quotas.
 - Use behind-presenter keyword typography on the first source-bound theme thesis, not mechanically at frame 0. A theme thesis is the first strong presenter-led question, core judgement, contrast, or result promise that clearly states the video's subject. If the opening first shows result/proof material, keep the proof clean and defer the effect until the first eligible fullscreen/large presenter thesis. Greetings, setup filler, ordinary steps, and tool names are ineligible.
 - Theme-thesis routing may only create an approval-required candidate. Create `depthKeyword` after explicit approval and only with a transparent, composition-aligned presenter foreground cutout; otherwise use ordinary foreground `topicKeyword`/`claimStrip` typography.
 - HUD background gradient masks are disabled by default. The template keeps `HudEdgeShade` code as an optional future switch, but new renders should rely on each HUD component's own backing, shadow, and typography unless the user explicitly asks to re-enable edge shades.
@@ -150,6 +153,7 @@ Produce these unless the user asks for a smaller scope:
 - V4 Portrait Remotion project or composition files
 - `06_remotion/qa/contact_sheet.*` or sampled stills
 - `06_remotion/qa/qa_report.md`
+- `06_remotion/qa/final_media_qa.md` and `final_media_qa.json`
 - final 9:16 MP4
 
 ## Implementation Defaults
@@ -185,3 +189,5 @@ For semantic routing revisions, run `python scripts/semantic_router_regression.p
 For visual scheduling or density revisions, run `python scripts/visual_density_regression.py` and require dense, light/precomposed, proof-focus, and lane-buffer cases to pass before committing.
 
 For component-level style or motion revisions, run `assets/component-gallery/render_gallery.ps1 -SkipVideo` first and inspect `assets/component-gallery/renders/contact_sheet.png` plus the component keyframes. Render `component_gallery.mp4` when motion timing needs review.
+
+For media, FPS, template, or QA revisions, run `python scripts/sync_template_mirrors.py`, `python scripts/presenter_media_regression.py`, `python scripts/motion_preview_regression.py`, and `python scripts/final_media_qa_regression.py`. Require every check to pass before committing.

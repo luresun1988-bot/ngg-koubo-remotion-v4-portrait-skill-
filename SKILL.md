@@ -23,6 +23,7 @@ V4 is a production workflow and visual system, not only a style note. Always pla
 10. Use the unified V4 Portrait Remotion template for new 9:16 projects. Do not migrate old finished projects unless the user explicitly asks.
 11. Implement all motion with Remotion frame-driven APIs such as `useCurrentFrame()`, `interpolate()`, `spring()`, `Sequence`, and `TransitionSeries`.
 12. Render stills/contact sheets, then run `scripts/render_motion_previews.ps1` for presenter punches, depth typography, and fullscreen/PiP boundaries before the final MP4. Fix hard QA failures before calling the edit complete.
+13. After the final MP4 is rendered and BT.709 metadata is applied, run `scripts/final_media_qa.py`. Require matching composition FPS, resolution, decoded frame count, H.264/AAC, `yuv420p`, TV-range BT.709 matrix/transfer/primaries, complete audio coverage, and a successful full-file decode.
 
 ## Reference Routing
 
@@ -50,6 +51,7 @@ V4 is a production workflow and visual system, not only a style note. Always pla
 - Mount one continuous primary presenter source from composition frame 0 through the end. Scene changes may alter layout, PiP geometry, and overlays, but must not remount, restart, seek, or duplicate the presenter's embedded audio. Use one continuous normalized WAV when presenter audio is external.
 - For segmented presenters, normalize every segment to composition FPS and 1080x1920, concatenate one video-only MP4, concatenate one exact 48 kHz stereo PCM WAV, and mount each once. Never stream-copy MP4 containers with independent AAC tracks.
 - Treat 25 fps as the fallback, not a forced project standard. Derive composition FPS from the primary presenter probe by default, quantize SRT/ASR seconds and all animation durations onto that FPS, and calculate total frames as `round(durationSec * compositionFps)`. Never reuse raw frame numbers created for another FPS without converting through seconds. When segmented presenter clips have mixed FPS, use the primary clip's nominal FPS unless the user overrides it, normalize every segment to the selected composition FPS, and record the mismatch in QA.
+- Keep reusable files under `scripts/`, `references/`, and the Skill body synchronized with their copies under `assets/remotion-template/`. Run `scripts/sync_template_mirrors.py --write` after changing a mirrored source and require `scripts/sync_template_mirrors.py` to pass before committing.
 - Every important visual event must be chosen from its spoken meaning first. `semanticRole` routes the effect; `type` only describes the broad event family.
 - Visual events must come from `semanticBeats` whenever the project is generated or rebuilt. The required pipeline is: real transcript/timecoded `captionCues` -> `semanticBeats` -> `visualEvents`. Do not jump directly from script text to arbitrary cards.
 - Each semantic beat must record `semanticIntent`, `visualForm`, `beatGroupId`, and `requiredChecks`. Each generated visual event must keep `sourceBeatId` so QA can prove the spoken meaning was fulfilled.
@@ -151,6 +153,7 @@ Produce these unless the user asks for a smaller scope:
 - V4 Portrait Remotion project or composition files
 - `06_remotion/qa/contact_sheet.*` or sampled stills
 - `06_remotion/qa/qa_report.md`
+- `06_remotion/qa/final_media_qa.md` and `final_media_qa.json`
 - final 9:16 MP4
 
 ## Implementation Defaults
@@ -186,3 +189,5 @@ For semantic routing revisions, run `python scripts/semantic_router_regression.p
 For visual scheduling or density revisions, run `python scripts/visual_density_regression.py` and require dense, light/precomposed, proof-focus, and lane-buffer cases to pass before committing.
 
 For component-level style or motion revisions, run `assets/component-gallery/render_gallery.ps1 -SkipVideo` first and inspect `assets/component-gallery/renders/contact_sheet.png` plus the component keyframes. Render `component_gallery.mp4` when motion timing needs review.
+
+For media, FPS, template, or QA revisions, run `python scripts/sync_template_mirrors.py`, `python scripts/presenter_media_regression.py`, `python scripts/motion_preview_regression.py`, and `python scripts/final_media_qa_regression.py`. Require every check to pass before committing.

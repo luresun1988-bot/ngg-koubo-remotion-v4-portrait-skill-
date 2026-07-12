@@ -27,6 +27,14 @@ For template or Skill changes that touch visual scheduling, also run:
 python scripts/visual_density_regression.py
 ```
 
+After the final render, run:
+
+```text
+python scripts/final_media_qa.py --video 06_remotion/final.mp4 --visual-script 06_remotion/visual_script.json --out 06_remotion/qa/final_media_qa.md
+```
+
+Do not deliver the final MP4 unless this check passes.
+
 ## Hard Failures
 
 Any hard failure requires revision:
@@ -52,6 +60,8 @@ Any hard failure requires revision:
 - Presenter repositioning creates a hard jump.
 - SFX or BGM masks narration.
 - Final output has missing or truncated expected audio.
+- Final output FPS, resolution, or decoded frame count differs from `visual_script.json.composition`.
+- Final output is not H.264 + AAC, `yuv420p`, TV-range BT.709 matrix/transfer/primaries, or cannot be decoded from beginning to end.
 - Talking-head footage visibly jitters because browser `<Video>` was used instead of `OffthreadVideo`.
 - A fake proof screenshot, fake metric, or unsourced online asset is presented as real.
 
@@ -206,3 +216,4 @@ Create `06_remotion/qa/qa_report.md` with:
 - Fixed issues.
 - Remaining known limitations.
 - Final audio status.
+- Passing `final_media_qa.md` / JSON evidence with actual FPS, decoded frame count, codecs, color metadata, audio duration, and full-decode result.

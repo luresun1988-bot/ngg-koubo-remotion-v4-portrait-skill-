@@ -19,13 +19,15 @@ from v4_utf8 import configure_utf8  # noqa: E402
 configure_utf8()
 
 
-def load_frames(path: Path) -> list[int]:
+def load_qa_selection(path: Path) -> tuple[list[int], int]:
     data = json.loads(path.read_text(encoding="utf-8"))
     frames = []
     for item in data.get("qaFrames", []):
         if isinstance(item, dict) and isinstance(item.get("frame"), int):
             frames.append(max(0, item["frame"]))
-    return sorted(set(frames))
+    composition = data.get("composition", {}) if isinstance(data.get("composition"), dict) else {}
+    fps = max(1, int(composition.get("fps") or 25))
+    return sorted(set(frames)), fps
 
 
 def extract_frame(video: Path, frame: int, fps: int, out: Path) -> None:
@@ -80,7 +82,7 @@ def main() -> int:
     parser.add_argument("--video", required=True, type=Path)
     parser.add_argument("--visual-script", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
-    parser.add_argument("--fps", type=int, default=25)
+    parser.add_argument("--fps", type=int, help="Optional override; defaults to visual_script composition.fps.")
     parser.add_argument("--columns", type=int, default=4)
     args = parser.parse_args()
 
@@ -89,9 +91,12 @@ def main() -> int:
     if not args.visual_script.exists():
         raise SystemExit(f"missing visual script: {args.visual_script}")
 
-    frames = load_frames(args.visual_script)
+    frames, script_fps = load_qa_selection(args.visual_script)
     if not frames:
         raise SystemExit("visual script has no qaFrames")
+    fps = args.fps or script_fps
+    if fps <= 0:
+        raise SystemExit("fps must be positive")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
@@ -99,11 +104,11 @@ def main() -> int:
         images = []
         for idx, frame in enumerate(frames):
             image = tmp_path / f"frame_{idx:03d}_{frame}.png"
-            extract_frame(args.video, frame, args.fps, image)
+            extract_frame(args.video, frame, fps, image)
             images.append(image)
         make_sheet(images, args.out, args.columns)
 
-    print(f"contact sheet written to {args.out}")
+    print(f"contact sheet written to {args.out} (fps={fps})")
     return 0
 
 

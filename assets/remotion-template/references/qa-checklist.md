@@ -27,6 +27,14 @@ For template or Skill changes that touch visual scheduling, also run:
 python scripts/visual_density_regression.py
 ```
 
+After the final render, run:
+
+```text
+python scripts/final_media_qa.py --video 06_remotion/final.mp4 --visual-script 06_remotion/visual_script.json --out 06_remotion/qa/final_media_qa.md
+```
+
+Do not deliver the final MP4 unless this check passes.
+
 ## Hard Failures
 
 Any hard failure requires revision:
@@ -52,6 +60,8 @@ Any hard failure requires revision:
 - Presenter repositioning creates a hard jump.
 - SFX or BGM masks narration.
 - Final output has missing or truncated expected audio.
+- Final output FPS, resolution, or decoded frame count differs from `visual_script.json.composition`.
+- Final output is not H.264 + AAC, `yuv420p`, TV-range BT.709 matrix/transfer/primaries, or cannot be decoded from beginning to end.
 - Talking-head footage visibly jitters because browser `<Video>` was used instead of `OffthreadVideo`.
 - A fake proof screenshot, fake metric, or unsourced online asset is presented as real.
 
@@ -68,8 +78,10 @@ Check:
 - `captionTimeline` records the timing source. Missing timing metadata is a warning; forbidden methods such as proportional scene split are a failure.
 - `captionRenderMode=none` still requires complete authoritative `captionCues` and `captionTimeline`; inspect the render to confirm that no bottom caption layer appears.
 - Verify the primary presenter source is mounted once and remains continuous across fullscreen/PiP/material transitions. Check lip sync immediately before and after every layout boundary.
+- Verify `composition.fps` matches the probed primary presenter nominal FPS unless an explicit override is documented. Confirm captions, scenes, visual events, SFX, and duration frames were quantized at that same FPS; 25 fps is only the missing-probe fallback.
+- For mixed-FPS presenter segments, verify every segment was normalized to the selected composition FPS and `project_config.json.frameRate.mixedPresenterFps` is recorded. Never approve frame numbers copied directly from a timeline authored at another FPS.
 - Verify segmented presenter projects contain `combined_presenter_video_only.mp4`, `presenter_narration_48k.wav`, and a passing `qa/media/presenter_normalization.json`; decoded frames and WAV samples must match the report exactly.
-- Verify every `presenter-impact-punch` is source-bound, 18–28 frames at 30 fps, reaches peak in 4–6 frames, rebounds in another 4–6, returns in 6–10, peaks at 1.06–1.10, stays about eight seconds from the next punch, and occurs no more than three times in a rolling minute.
+- Verify every `presenter-impact-punch` is source-bound and scaled from composition FPS: 18–28 frames at 30 fps or about 15–23 at 25 fps, with proportionally scaled push/rebound/return phases, a 1.06–1.10 peak, about eight seconds between punches, and no more than three in a rolling minute.
 - Behind-presenter keywords belong to the first eligible theme thesis, not necessarily frame 0. Opening result/proof material may defer the effect; greetings, filler, ordinary steps, and tool names must not satisfy it.
 - A theme-thesis candidate must remain a proposal. `depthKeyword` requires explicit approval, 1-6 white characters, and a transparent composition-aligned `foregroundAssetPath`.
 - Unknown explanation copy may use the strongest scene-level `claimStrip`, a source-bound short `statusSticker`, or an audited intentionally clean hold; it must never use a fabricated `flowPath`.
@@ -204,3 +216,4 @@ Create `06_remotion/qa/qa_report.md` with:
 - Fixed issues.
 - Remaining known limitations.
 - Final audio status.
+- Passing `final_media_qa.md` / JSON evidence with actual FPS, decoded frame count, codecs, color metadata, audio duration, and full-decode result.
