@@ -50,7 +50,7 @@ python scripts/sfx_semantic_routing_regression.py
 | `positive-confirm` | finished, completed, automated, solved | `greenConfirmCard` | `captionHighlight` |
 | `result-promise` | opening promise, contrarian hook, result claim | `bigJudgement` | `kineticTitle` |
 | `topic-intro` | this episode discusses/introduces one subject | `topicKeyword` | `topicKeyword` |
-| `explanation-claim` | ordinary explanation, definition, or low-confidence claim | `claimStrip` | `claimStrip` |
+| `explanation-claim` | ordinary explanation, definition, or low-confidence claim | `claimStrip`, `sourceBoundSticker`, or `intentionalCleanHold` | strongest readable claim uses `claimStrip`; short claims use `statusSticker`; lower-priority repeats stay clean |
 
 ## Routing Priority
 
@@ -65,7 +65,9 @@ python scripts/sfx_semantic_routing_regression.py
 - CTA words must be action-specific: "评论区", "领取", "自提", "告诉我", "私信", "关键词", "关注", "点赞", or "收藏". Do not route every "需要" to CTA.
 - Future episode previews such as "下一期会介绍", "下期将拆解", or "下一条讲" are `explanation-claim` unless the same source text contains an explicit CTA action. Words such as "自动剪辑" inside a future preview do not mean completed automation or a present-tense handoff.
 - Do not route a broad token alone. `从官网下载` is not transformation, `发布前检查` is not platform fan-out, and `模型文件` is not capability/share.
-- Unknown or low-confidence spoken copy defaults to `explanation-claim -> claimStrip`, never to a fabricated workflow diagram.
+- Unknown or low-confidence spoken copy defaults to `explanation-claim`, never to a fabricated workflow diagram. Keep only the strongest readable claim in one scene as `claimStrip`; route a short claim to a source-bound `statusSticker`; mark lower-priority repeated claims as `intentionalCleanHold`.
+- Treat clean holds as audited semantic decisions, not missing work. They are valid only for low-confidence `explanation-claim` beats with `requiredChecks` containing `intentional-clean-hold`; high-confidence numeric, process, contrast, proof, completion, or CTA beats must still render their matching semantic component.
+- Do not use component roulette to break repetition. Keep at most two consecutive `claimStrip` main HUDs, then reduce/suppress lower-priority ordinary claims until a more specific semantic event resets the run.
 - Record compound meaning in `semanticModifiers` and `entities`. For example, `10 张高清详情图已经自动生成好了` keeps `numeric-metric` as the primary intent plus `numeric`, `completed`, and `automated` modifiers.
 - Component data must come from transcript entities, provided assets, or explicit user input. Do not invent platform names, brands, percentages, state labels, or transformation drivers.
 - Preserve complete numeric entities and suffixes. `2K`, `1k`, `30%`, and `3倍` must keep their suffix in `entities` and the generated numeric fields; normalize lowercase `k/m/g` to uppercase for display without dropping it.
@@ -119,4 +121,4 @@ Every generated `visualEvent` that fulfills a semantic beat must keep:
 }
 ```
 
-The regression suite currently covers 108 positive, compound, adversarial, future-preview, numeric-suffix, real-project, and short-tail intent-preservation examples. `semantic_component_contract_regression.py` additionally checks canonical event types, no invented platforms/brands/states/ratios, CTA provenance and scheduling priority, approval-gated theme-thesis candidates, and schema/renderer type parity. The SFX regression suite covers the six confirmed semantic audio suggestions and requires `status: "suggested"`. A route change should update the tests and this document in the same commit.
+The regression suite currently covers 108 positive, compound, adversarial, future-preview, numeric-suffix, real-project, and short-tail intent-preservation examples. `semantic_component_contract_regression.py` additionally checks canonical event types, source-bound short-claim downgrade, same-scene claim selection, the two-claim run limit, no invented platforms/brands/states/ratios, CTA provenance and scheduling priority, approval-gated theme-thesis candidates, and schema/renderer type parity. The SFX regression suite covers the six confirmed semantic audio suggestions and requires `status: "suggested"`. A route change should update the tests and this document in the same commit.

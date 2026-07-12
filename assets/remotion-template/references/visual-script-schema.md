@@ -206,8 +206,9 @@ Required fields:
 - `beatGroupId`: group id used for icon uniqueness, card ratio checks, and staged internal motion.
 - `text`: original spoken text or a direct concatenation of caption cue text.
 - `semanticIntent`: the primary meaning class, such as `result-promise`, `negative-friction`, `negative-to-positive`, `numeric-metric`, `workflow-fields`, `manual-field`, `capability-share`, `scene-lock`, `transformation-stack`, `asset-variants`, `platform-fanout`, `proof-material`, `positive-confirm`, `topic-intro`, `explanation-claim`, or `cta-resolve`.
-- `visualForm`: the required visual grammar, such as `redWarningCard`, `dataPunch`, `flowPath`, `ratioGallery`, `platformFanout`, or `materialMain`.
+- `visualForm`: the required visual grammar, such as `redWarningCard`, `dataPunch`, `flowPath`, `ratioGallery`, `platformFanout`, or `materialMain`. Low-confidence ordinary explanations may use `sourceBoundSticker` for a short sourced label or `intentionalCleanHold` for an audited no-main-HUD decision.
 - `requiredChecks`: QA obligations that must be satisfied by the generated visual event.
+- `routingDecision`: optional builder audit reason such as `short-claim-source-sticker`, `lower-priority-claim-in-same-scene`, `scene-tail-after-specific-event`, or `claim-strip-run-limit`.
 - `semanticModifiers`: optional compound meanings such as `numeric`, `completed`, `automated`, `negative`, or `proof-bound`.
 - `entities`: source-bound numbers, products, platforms, brands, assets, or topic nouns used to populate components.
 - `themeThesisCandidate`, `suggestedDepthKeyword`, and `requiresApproval`: optional proposal metadata. These fields never create a behind-presenter effect without approval.

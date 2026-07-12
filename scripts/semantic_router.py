@@ -487,9 +487,11 @@ def build_semantic_beats(data: dict[str, Any]) -> list[dict[str, Any]]:
             scene_end = int(scene.get("endFrame", end) or end)
             visual_end = max(end, min(scene_end, start + MIN_BEAT_FRAMES))
             info = scene_fallback_info(scene, classify_text(text, (start + visual_end) // 2, visual_end - start), start)
+            beat_id = f"beat-{beat_index:03d}"
             beat = {
-                "id": f"beat-{beat_index:03d}",
+                "id": beat_id,
                 "sceneId": scene_id,
+                "beatGroupId": f"{scene_id}-{beat_id}",
                 "startFrame": max(scene_start, start),
                 "endFrame": min(scene_end, visual_end),
                 "text": text,

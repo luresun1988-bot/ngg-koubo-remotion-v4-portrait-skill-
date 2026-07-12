@@ -58,14 +58,36 @@ def main() -> int:
         event = next(item for item in data["visualEvents"] if item.get("type") != "cornerChapterLabel")
         if beat.get("semanticIntent") != intent or event.get("type") != event_type:
             failures.append(f"route mismatch: {text} -> {beat.get('semanticIntent')}/{event.get('type')}")
+        if beat.get("beatGroupId") != f"{beat.get('sceneId')}-{beat.get('id')}":
+            failures.append(f"semantic beat missing stable beatGroupId: {beat}")
 
     numeric_2k = sample("生成时把分辨率调到 2K，画面会更清晰")
     numeric_2k_beat = numeric_2k["semanticBeats"][0]
     numeric_2k_event = next(item for item in numeric_2k["visualEvents"] if item.get("type") == "dataPunch")
-    if "2K" not in numeric_2k_beat.get("entities", []) or numeric_2k_event.get("numericSuffix") != "K":
+    if (
+        "2K" not in numeric_2k_beat.get("entities", [])
+        or numeric_2k_event.get("numericSuffix") != "K"
+        or not str(numeric_2k_event.get("text") or "").startswith("2K")
+    ):
         failures.append(
             f"numeric entity lost K suffix: entities={numeric_2k_beat.get('entities')} event={numeric_2k_event}"
         )
+
+    numeric_1k = sample("我更推荐先生成 1K 视频啊")
+    numeric_1k_event = next(item for item in numeric_1k["visualEvents"] if item.get("type") == "dataPunch")
+    if numeric_1k_event.get("numericSuffix") != "K" or numeric_1k_event.get("text") != "1K视频":
+        failures.append(f"numeric HUD copy is not entity-bound or left a spoken filler tail: {numeric_1k_event}")
+
+    core_clause_cases = {
+        "差别不大，真正影响效果的往往是素材质量和参数设置": "素材质量和参数设置",
+        "缺点也很明显，耗时更久、成本更高，有没有更划算的方案": "耗时更久成本更高",
+        "成片之后再用剪映或视频增强软件进行高清放大": "剪映或视频增强软件",
+        "救不了错误口型，所以原视频一定要先做好": "原视频一定要先做好",
+    }
+    for source, expected in core_clause_cases.items():
+        actual = visual_event_builder.source_bound_core_clause(source)
+        if actual != expected:
+            failures.append(f"source-bound core clause mismatch: {source!r} -> {actual!r}, expected {expected!r}")
 
     cta = sample("点个关注，我们下期见", "CTA")
     cta_event = next((item for item in cta["visualEvents"] if item.get("type") == "ctaTitle"), None)
@@ -143,6 +165,55 @@ def main() -> int:
     )
     if len(priority_ctas) != 1 or same_lane_overlap:
         failures.append(f"priority CTA scheduling failed: events={priority_events}")
+
+    rhythm_data = {
+        "schemaVersion": "ngg-koubo-remotion-v4-portrait",
+        "composition": {"format": "9:16", "width": 1080, "height": 1920, "fps": 25, "durationFrames": 540},
+        "media": [],
+        "scenes": [
+            {"id": "scene-short", "type": "Explanation", "startFrame": 0, "endFrame": 90, "semanticRole": "explanation-claim", "presenterLayout": "large", "materialLayout": "none", "sourceVideo": "input/presenter.mp4", "narrationText": "这句话很短"},
+            {"id": "scene-a", "type": "Explanation", "startFrame": 90, "endFrame": 240, "semanticRole": "explanation-claim", "presenterLayout": "large", "materialLayout": "none", "sourceVideo": "input/presenter.mp4", "narrationText": "第一条普通说明"},
+            {"id": "scene-b", "type": "Explanation", "startFrame": 240, "endFrame": 390, "semanticRole": "explanation-claim", "presenterLayout": "large", "materialLayout": "none", "sourceVideo": "input/presenter.mp4", "narrationText": "第二条普通说明"},
+            {"id": "scene-c", "type": "Explanation", "startFrame": 390, "endFrame": 540, "semanticRole": "explanation-claim", "presenterLayout": "large", "materialLayout": "none", "sourceVideo": "input/presenter.mp4", "narrationText": "第三条普通说明"},
+        ],
+        "captionCues": [],
+        "semanticBeats": [
+            {"id": "beat-short", "sceneId": "scene-short", "startFrame": 0, "endFrame": 70, "text": "这句话很短", "semanticIntent": "explanation-claim", "visualForm": "claimStrip", "confidence": 0.55, "requiredChecks": ["lightweight-claim-treatment"]},
+            {"id": "beat-a", "sceneId": "scene-a", "startFrame": 90, "endFrame": 220, "text": "第一条普通说明", "semanticIntent": "explanation-claim", "visualForm": "claimStrip", "confidence": 0.55, "requiredChecks": ["lightweight-claim-treatment"]},
+            {"id": "beat-b", "sceneId": "scene-b", "startFrame": 240, "endFrame": 370, "text": "第二条普通说明", "semanticIntent": "explanation-claim", "visualForm": "claimStrip", "confidence": 0.55, "requiredChecks": ["lightweight-claim-treatment"]},
+            {"id": "beat-c", "sceneId": "scene-c", "startFrame": 390, "endFrame": 520, "text": "第三条普通说明", "semanticIntent": "explanation-claim", "visualForm": "claimStrip", "confidence": 0.55, "requiredChecks": ["lightweight-claim-treatment"]},
+        ],
+        "visualEvents": [], "audioCues": [], "qaFrames": [],
+    }
+    visual_event_builder.apply_visual_events(rhythm_data)
+    rhythm_beats = {str(item.get("id") or ""): item for item in rhythm_data["semanticBeats"]}
+    rhythm_events = [item for item in rhythm_data["visualEvents"] if item.get("type") != "cornerChapterLabel"]
+    rhythm_claims = [item for item in rhythm_events if item.get("type") == "claimStrip"]
+    short_sticker = next((item for item in rhythm_events if item.get("sourceBeatId") == "beat-short"), None)
+    if not short_sticker or short_sticker.get("type") != "statusSticker" or rhythm_beats["beat-short"].get("visualForm") != "sourceBoundSticker":
+        failures.append(f"short claim did not downgrade to a source-bound sticker: beats={rhythm_beats} events={rhythm_events}")
+    if len(rhythm_claims) != 2 or rhythm_beats["beat-c"].get("visualForm") != "intentionalCleanHold":
+        failures.append(f"claim-strip run was not capped at two: beats={rhythm_beats} events={rhythm_events}")
+    if any(item.get("sourceBeatId") == "beat-c" for item in rhythm_events):
+        failures.append(f"intentional clean hold unexpectedly rendered a HUD: {rhythm_events}")
+
+    same_scene_data = {
+        "schemaVersion": "ngg-koubo-remotion-v4-portrait",
+        "composition": {"format": "9:16", "width": 1080, "height": 1920, "fps": 25, "durationFrames": 300},
+        "media": [],
+        "scenes": [{"id": "scene-multi", "type": "Explanation", "startFrame": 0, "endFrame": 300, "semanticRole": "explanation-claim", "presenterLayout": "large", "materialLayout": "none", "sourceVideo": "input/presenter.mp4", "narrationText": "普通铺垫，真正影响效果的是素材质量"}],
+        "captionCues": [],
+        "semanticBeats": [
+            {"id": "beat-setup", "sceneId": "scene-multi", "startFrame": 0, "endFrame": 130, "text": "这是普通铺垫", "semanticIntent": "explanation-claim", "visualForm": "claimStrip", "confidence": 0.55, "requiredChecks": ["lightweight-claim-treatment"]},
+            {"id": "beat-core", "sceneId": "scene-multi", "startFrame": 140, "endFrame": 290, "text": "真正影响效果的是素材质量", "semanticIntent": "explanation-claim", "visualForm": "claimStrip", "confidence": 0.55, "requiredChecks": ["lightweight-claim-treatment"]},
+        ],
+        "visualEvents": [], "audioCues": [], "qaFrames": [],
+    }
+    visual_event_builder.apply_visual_events(same_scene_data)
+    same_scene_events = [item for item in same_scene_data["visualEvents"] if item.get("type") == "claimStrip"]
+    same_scene_beats = {str(item.get("id") or ""): item for item in same_scene_data["semanticBeats"]}
+    if len(same_scene_events) != 1 or same_scene_events[0].get("sourceBeatId") != "beat-core":
+        failures.append(f"same-scene claim curation did not keep the strongest claim: beats={same_scene_beats} events={same_scene_events}")
 
     platform = sample("只分发到抖音和B站")
     platform_event = next(item for item in platform["visualEvents"] if item.get("type") == "platformFanout")

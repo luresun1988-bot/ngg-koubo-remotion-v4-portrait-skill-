@@ -57,6 +57,8 @@ export type SemanticBeat = {
   themeThesisCandidate?: boolean;
   suggestedDepthKeyword?: string;
   requiresApproval?: boolean;
+  timingClass?: 'short-lightweight' | 'intentional-clean' | string;
+  routingDecision?: string;
 };
 
 export type VisualEvent = {

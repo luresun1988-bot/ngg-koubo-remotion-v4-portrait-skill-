@@ -127,7 +127,7 @@ SEMANTIC_ALLOWED_EVENT_TYPES = {
     "cta-resolve": {"ctaTitle", "ctaRecommend"},
     "workflow-step": {"flowPath", "statusStack", "captionHighlight"},
     "topic-intro": {"topicKeyword"},
-    "explanation-claim": {"claimStrip", "quoteSource"},
+    "explanation-claim": {"claimStrip", "quoteSource", "statusSticker"},
 }
 
 
@@ -741,7 +741,22 @@ def semantic_beat_fulfillment_checks(data: dict[str, Any]) -> tuple[list[str], l
         visual_form = str(beat.get("visualForm") or "")
         required_checks = beat.get("requiredChecks")
         matched_events = events_by_beat.get(beat_id, [])
+        intentional_clean = intent == "explanation-claim" and visual_form == "intentionalCleanHold"
         if not matched_events:
+            if intentional_clean:
+                checks = [str(item) for item in required_checks or [] if str(item)]
+                confidence = float(beat.get("confidence", 0.0) or 0.0)
+                if "intentional-clean-hold" not in checks:
+                    errors.append(
+                        "intentional-clean-hold failed: "
+                        f"{beat_id} has visualForm=intentionalCleanHold without the required audit check"
+                    )
+                elif confidence > 0.65:
+                    errors.append(
+                        "intentional-clean-hold failed: "
+                        f"{beat_id} confidence={confidence:.2f}; do not suppress a high-confidence semantic beat"
+                    )
+                continue
             errors.append(
                 "semantic-intent-fulfilled failed: "
                 f"{beat_id} ({intent}/{visual_form}) has no visualEvent with sourceBeatId={beat_id}"

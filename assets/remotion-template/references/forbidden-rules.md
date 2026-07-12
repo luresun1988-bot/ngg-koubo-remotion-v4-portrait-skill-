@@ -9,6 +9,7 @@ Use this reference before finalizing any V4 visual script, template change, or Q
 - In 9:16 fullscreen talking-head scenes, do not place large HUD panels, dashboards, workflow boards, network fan-out diagrams, or CTA summary bars over the center face area. Use portrait compact layouts unless the scene is proof/material-main/PiP.
 - Do not use horizontal platform fan-out diagrams in fullscreen portrait presenter scenes; use a vertical distribution chain or another compact rail form.
 - Do not place automation handoff as a large lower-left card in fullscreen portrait presenter scenes; it must become a compact side rail unless the presenter is PiP.
+- Do not place `claimStrip` in the portrait mid-right eye band. Keep it in the top-safe band or downgrade it to a top-right sourced sticker.
 - Do not truncate bottom captions with ellipsis or hide the tail text. Captions must stay complete, readable, and within the portrait two-line maximum.
 - Do not make every explanatory beat look like the same compact card group. Rotate between title blocks, red warning cards, numbered rows, icon tiles, data panels, poster stacks, material proof, and transformation stacks.
 - Do not use a compact generic card layout for reference-style process or list beats when a vertical numbered list, layered data panel, or source-driver-result layout better matches the meaning.
@@ -34,7 +35,7 @@ Use this reference before finalizing any V4 visual script, template change, or Q
 - Do not use slow symmetric presenter zooms, continuous scale drift, or repeated breathing camera motion. Do not count presenter zoom as a semantic-density refresh. `presenter-impact-punch` must stay within 18–28 frames at 30 fps, remain about eight seconds from the next punch, and occur at most three times in any rolling minute.
 - Do not force behind-presenter text at frame 0 when the opening is result/proof material or before the presenter states the theme thesis.
 - Do not auto-create `depthKeyword` from a theme-thesis candidate. Require explicit approval and a transparent, composition-aligned foreground cutout asset.
-- Do not map unknown or low-confidence explanation copy to a fabricated workflow diagram. Use `explanation-claim -> claimStrip` or keep the scene intentionally clean.
+- Do not map unknown or low-confidence explanation copy to a fabricated workflow diagram. Keep the strongest scene claim as `claimStrip`, downgrade a short sourced claim to a lightweight sticker, or record an audited `intentionalCleanHold`.
 - Do not infer a heavy semantic route from one broad token such as `从`, `发布`, `模型`, or `想要` without the required relation and entities.
 - Do not ship component demo defaults as project facts. Never add unspoken platforms, brands, percentages, ratios, fields, transformation states, drivers, or results.
 - Do not treat poster assets as generic decoration. Poster assets may enter the video only when the narration or project topic is about covers, thumbnails, posters, or publishing assets.
@@ -46,6 +47,7 @@ Use this reference before finalizing any V4 visual script, template change, or Q
 - Do not let a HUD disappear while its own animation is still entering, drawing, counting, or revealing internal steps.
 - Do not reveal top, middle, and bottom layers of a reference-style HUD in the same frame. Layered HUDs must build in semantic order.
 - Do not repeat the same component family three times in a row, even if the script has several adjacent process beats.
+- Do not solve repeated `claimStrip` events by randomly cycling unrelated components. Reduce lower-priority ordinary claims or leave them intentionally clean after the second consecutive main claim.
 - Do not stack main HUD effects in the same lane. Use internal steps or leave a handoff buffer.
 - Do not use CSS animation, CSS transition, timers, runtime randomness, strong flash whites, face-covering transitions, or full-screen glitch noise.
 

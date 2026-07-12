@@ -14,6 +14,7 @@ from validate_visual_script import validate
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE = ROOT / "assets" / "remotion-template" / "config" / "visual_script.example.json"
 COMPOSITION = ROOT / "assets" / "remotion-template" / "src" / "V4Composition.tsx"
+PRIMITIVES = ROOT / "assets" / "remotion-template" / "src" / "components" / "V4Primitives.tsx"
 
 
 def validate_data(data: dict) -> list[str]:
@@ -51,6 +52,12 @@ def main() -> int:
         raise AssertionError("portrait template lost the confirmed 0.8-second layout transition")
     if "preExitStart" not in source or "presenterMotionStateFor" not in source:
         raise AssertionError("portrait PiP return is not pre-animated to land on the scene boundary")
+
+    primitives = PRIMITIVES.read_text(encoding="utf-8")
+    if "isTopRight" not in primitives or "right: isTopRight ? 46 : undefined" not in primitives:
+        raise AssertionError("source-bound top-right status stickers must not collide with the top-left chapter label")
+    if "top: isPortrait ? 150 : 420" not in primitives:
+        raise AssertionError("portrait claim strips must stay above the center eye/face band")
 
     print("portrait runtime contract regression: PASS")
     return 0

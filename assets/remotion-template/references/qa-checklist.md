@@ -72,7 +72,7 @@ Check:
 - Verify every `presenter-impact-punch` is source-bound, 18–28 frames at 30 fps, reaches peak in 4–6 frames, rebounds in another 4–6, returns in 6–10, peaks at 1.06–1.10, stays about eight seconds from the next punch, and occurs no more than three times in a rolling minute.
 - Behind-presenter keywords belong to the first eligible theme thesis, not necessarily frame 0. Opening result/proof material may defer the effect; greetings, filler, ordinary steps, and tool names must not satisfy it.
 - A theme-thesis candidate must remain a proposal. `depthKeyword` requires explicit approval, 1-6 white characters, and a transparent composition-aligned `foregroundAssetPath`.
-- Unknown explanation copy must use `claimStrip` or an intentionally clean hold, never a fabricated `flowPath`.
+- Unknown explanation copy may use the strongest scene-level `claimStrip`, a source-bound short `statusSticker`, or an audited intentionally clean hold; it must never use a fabricated `flowPath`.
 - Inspect every component's `internalSteps`: platform names, companies/models, ratios, percentages, fields, transformation states, drivers, and results must be source-bound.
 - Require schema/renderer event-type parity; an accepted event type that produces no visible renderer path is a hard failure.
 - Run the dynamic motion-preview plan and inspect every generated clip. A contact sheet alone cannot approve punch speed, rebound, PiP geometry, or lip sync.
@@ -102,8 +102,11 @@ Check:
 - `main-card-ratio-warning`: card/panel-like main events should stay near or below 35% of all main events.
 - `component-family-repetition`: three consecutive main visual events must not use the same rendered component family, such as three flow-list/status panels in a row.
 - `semantic-beats-present`: `visual_script.json` must include non-empty `semanticBeats` for generated/rebuilt V4 edits.
-- `semantic-intent-fulfilled`: every semantic beat must have at least one visual event with matching `sourceBeatId`.
+- `semantic-intent-fulfilled`: every semantic beat must have at least one visual event with matching `sourceBeatId`, except a low-confidence `explanation-claim` explicitly marked `visualForm=intentionalCleanHold` with the `intentional-clean-hold` audit check.
 - `timingClass=short-lightweight` events may be shorter than main HUDs, but they still need enough time for their lightweight animation to finish and hold briefly.
+- `intentional-clean-hold`: allow no main HUD only for low-confidence ordinary explanations. Reject the suppression when confidence is above `0.65` or when the beat has a more specific numeric, process, contrast, proof, completion, or CTA intent.
+- `claim-strip-run-limit`: keep at most one low-confidence `claimStrip` per scene and at most two consecutive `claimStrip` main HUDs. Confirm that omitted repeats became source-bound stickers or audited clean holds, not unrelated templates.
+- `portrait-claim-face-safe`: fullscreen portrait `claimStrip` must remain above the eye band; sample a real presenter frame and reject any card covering an eye.
 - `negative-red-treatment`: negative, denial, wrong-path, or friction beats must use red warning, strike/delete, or red contrast treatment.
 - `positive-confirm-treatment`: confirmation/resolution beats must use a green/confirm treatment, not only neutral white text.
 - `numeric-countup-required`: numeric beats must use `dataPunch` / `metricSpotlight` with animated numeric value, bar, chart, or progress.

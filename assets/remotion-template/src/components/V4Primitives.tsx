@@ -1174,9 +1174,11 @@ export const StatusSticker: React.FC<{event: VisualEvent}> = ({event}) => {
   const opacity = clampFade(local, event.endFrame - event.startFrame);
   const Icon = iconForEvent(event, 'BadgeCheck');
   const isHudLabel = event.motionType === 'hud-slide-fade' || event.semanticRole === 'chapter-label' || event.semanticRole === 'proof-focus';
+  const placement = `${event.safeArea ?? ''} ${event.style ?? ''}`.toLowerCase();
+  const isTopRight = placement.includes('top-right');
 
   if (isHudLabel) {
-    const x = interpolate(local, [0, 12], [-18, 0], {
+    const x = interpolate(local, [0, 12], [isTopRight ? 18 : -18, 0], {
       extrapolateLeft: 'clamp',
       extrapolateRight: 'clamp',
     });
@@ -1184,16 +1186,19 @@ export const StatusSticker: React.FC<{event: VisualEvent}> = ({event}) => {
       <div
         style={{
           position: 'absolute',
-          left: 46,
+          left: isTopRight ? undefined : 46,
+          right: isTopRight ? 46 : undefined,
           top: 34,
+          maxWidth: isPortrait ? 440 : 520,
           opacity,
           transform: `translateX(${x}px)`,
           fontFamily: fontStack,
           letterSpacing: 0,
           textShadow: hudTextHighlight,
+          textAlign: isTopRight ? 'right' : 'left',
         }}
       >
-        <div style={{display: 'flex', alignItems: 'center', gap: 8, color: colors.blue, fontSize: 19, fontWeight: 950, textShadow: hudTextHighlight}}>
+        <div style={{display: 'flex', alignItems: 'center', justifyContent: isTopRight ? 'flex-end' : 'flex-start', gap: 8, color: colors.blue, fontSize: 19, fontWeight: 950, textShadow: hudTextHighlight}}>
           <Icon size={18} strokeWidth={2.5} />
           {event.text}
         </div>
@@ -2460,7 +2465,8 @@ export const TopicKeyword: React.FC<{event: VisualEvent}> = ({event}) => {
 
 export const ClaimStrip: React.FC<{event: VisualEvent}> = ({event}) => {
   const frame = useCurrentFrame();
-  const {fps} = useVideoConfig();
+  const {fps, width: canvasWidth, height: canvasHeight} = useVideoConfig();
+  const isPortrait = canvasHeight > canvasWidth;
   const local = frame - event.startFrame;
   const duration = event.endFrame - event.startFrame;
   const enter = spring({frame: local, fps, config: {damping: 22, stiffness: 135}});
@@ -2469,7 +2475,7 @@ export const ClaimStrip: React.FC<{event: VisualEvent}> = ({event}) => {
       style={{
         position: 'absolute',
         right: 42,
-        top: 420,
+        top: isPortrait ? 150 : 420,
         width: 390,
         minHeight: 96,
         padding: '22px 24px 22px 30px',

@@ -20,6 +20,13 @@ MIN_MAIN_HUD_FRAMES = 95
 PREFERRED_MAIN_HUD_FRAMES = 125
 LANE_BUFFER_FRAMES = 10
 DEFAULT_FPS = 25
+LOW_CONFIDENCE_CLAIM_MAX = 0.65
+INTENTIONAL_CLEAN_HOLD = "intentionalCleanHold"
+SOURCE_BOUND_STICKER = "sourceBoundSticker"
+STRONG_CLAIM_TERMS = [
+    "关键", "本质", "真正", "核心", "重点", "重要", "原因", "结论",
+    "缺点", "优点", "只能", "救不了", "一定要", "推荐", "更划算",
+]
 SFX_SUGGESTIONS: dict[str, dict[str, Any]] = {
     "title_impact": {
         "sfxId": "title_impact_whoosh_01",
@@ -163,10 +170,15 @@ def anchor_event_to_caption_cue(event: dict[str, Any], beat: dict[str, Any], dat
     current_end = int(event.get("endFrame", current_start + MIN_MAIN_HUD_FRAMES) or current_start + MIN_MAIN_HUD_FRAMES)
     if abs(start - current_start) < 2:
         return event
+    minimum = (
+        round(composition_fps(data) * 1.8)
+        if str(event.get("timingClass") or "") == "short-lightweight"
+        else MIN_MAIN_HUD_FRAMES
+    )
     return {
         **event,
         "startFrame": start,
-        "endFrame": start + max(MIN_MAIN_HUD_FRAMES, current_end - current_start),
+        "endFrame": start + max(minimum, current_end - current_start),
         "timingAnchor": "captionCueKeyword",
         "anchorCueId": cue_id,
     }
@@ -216,9 +228,15 @@ def key_message(text: str, max_chars: int = 16, preferred_terms: list[str] | Non
         return "52 道题"
     for term in preferred_terms or []:
         if term and term in clean:
-            start = max(0, clean.find(term) - 2)
-            return clean[start : start + max_chars]
-    return shorten_hud_copy(clean, max_chars)
+            start = clean.find(term)
+            candidate = clean[start : start + max_chars]
+            if start + max_chars < len(clean):
+                candidate = candidate.rstrip("有没进再和与把的是也更但所因如用")
+            return candidate.rstrip("啊呀吧呢")
+    candidate = shorten_hud_copy(clean, max_chars)
+    if len(candidate) < len(clean):
+        candidate = candidate.rstrip("有没进再和与把的是也更但所因如用")
+    return candidate.rstrip("啊呀吧呢")
 
 
 def focus_words(text: str, terms: list[str], limit: int = 2) -> list[str]:
@@ -407,6 +425,10 @@ def lane_for_event(event: dict[str, Any]) -> str | None:
     safe_area = str(event.get("safeArea") or "").lower()
     if event_type == "cornerChapterLabel":
         return None
+    if event_type == "statusSticker":
+        return "right" if "top-right" in safe_area or "right" in safe_area else None
+    if event_type in {"claimStrip", "quoteSource"}:
+        return "right"
     if event_type in {"ctaTitle", "ctaRecommend"}:
         return "left"
     if event_type == "materialMain":
@@ -459,6 +481,10 @@ def desired_duration_for_event(event: dict[str, Any], scene: dict[str, Any] | No
     event_type = str(event.get("type") or "")
     density_mode = str(event.get("densityMode") or "")
     scene_type = str((scene or {}).get("type") or "")
+    current = int(event.get("endFrame", 0) or 0) - int(event.get("startFrame", 0) or 0)
+    if str(event.get("timingClass") or "") == "short-lightweight":
+        fps = composition_fps(data or {})
+        return max(current, round(fps * 1.8))
     base = PREFERRED_MAIN_HUD_FRAMES
     if event_type in {"highlightBox", "captionHighlight", "flowPath", "statusStack", "capabilityShare", "sceneLockGrid", "transformationStack"}:
         base = 135
@@ -477,7 +503,6 @@ def desired_duration_for_event(event: dict[str, Any], scene: dict[str, Any] | No
     steps = event.get("internalSteps")
     if isinstance(steps, list) and steps:
         base = max(base, 58 + len(steps) * 22)
-    current = int(event.get("endFrame", 0) or 0) - int(event.get("startFrame", 0) or 0)
     return max(base, current, MIN_MAIN_HUD_FRAMES)
 
 
@@ -635,6 +660,162 @@ def topic_keyword(text: str, beat: dict[str, Any]) -> str:
     return key_message(text, 8, ["数字人", "自动化", "工作流", "主图", "详情图", "大模型", "效率"]) or "本期主题"
 
 
+def append_required_check(beat: dict[str, Any], check: str) -> None:
+    checks = [str(item) for item in beat.get("requiredChecks", []) if str(item)]
+    if check not in checks:
+        checks.append(check)
+    beat["requiredChecks"] = checks
+
+
+def claim_priority(beat: dict[str, Any]) -> float:
+    text = str(beat.get("text") or "")
+    score = float(beat.get("confidence", 0.0) or 0.0) * 100
+    score += sum(18 for term in STRONG_CLAIM_TERMS if term in text)
+    if any(mark in text for mark in ["？", "?", "为什么", "有没有"]):
+        score += 8
+    if beat.get("themeThesisCandidate"):
+        score += 40
+    return score
+
+
+def source_bound_sticker_copy(text: str) -> str:
+    product = re.search(r"\b[A-Z][A-Za-z0-9.+-]*(?:\s+[A-Z][A-Za-z0-9.+-]*){0,3}\s+AI\b", text)
+    if product:
+        return product.group(0)
+    core_clause = source_bound_core_clause(text)
+    if core_clause:
+        return core_clause
+    clean = normalize_hud_source(text)
+    for phrase in [
+        "速度更快成本更低",
+        "素材质量和参数设置",
+        "音色情绪和语速",
+        "只能改善画质",
+        "参考音频",
+        "数字人模型",
+    ]:
+        if phrase in clean:
+            return phrase
+    return key_message(text, 16, STRONG_CLAIM_TERMS)
+
+
+def source_bound_core_clause(text: str) -> str:
+    clean = normalize_for_match(normalize_hud_source(text))
+    for marker in [
+        "真正影响效果的往往是",
+        "真正影响效果的是",
+        "缺点也很明显",
+        "成片之后再用",
+        "所以",
+    ]:
+        if marker not in clean:
+            continue
+        candidate = clean.split(marker, 1)[1]
+        for stop in ["有没有", "进行", "但是", "不过"]:
+            if stop in candidate:
+                candidate = candidate.split(stop, 1)[0]
+        return candidate[:18].rstrip("有没进再和与把的是也更但所因如用啊呀吧呢")
+    return ""
+
+
+def mark_claim_clean(beat: dict[str, Any], reason: str) -> None:
+    beat["visualForm"] = INTENTIONAL_CLEAN_HOLD
+    beat["timingClass"] = "intentional-clean"
+    beat["routingDecision"] = reason
+    append_required_check(beat, "intentional-clean-hold")
+
+
+def mark_claim_lightweight(beat: dict[str, Any], reason: str) -> None:
+    beat["visualForm"] = SOURCE_BOUND_STICKER
+    beat["timingClass"] = "short-lightweight"
+    beat["routingDecision"] = reason
+    append_required_check(beat, "source-bound-lightweight")
+
+
+def curate_explanation_claim_beats(data: dict[str, Any]) -> None:
+    """Keep ordinary explanation semantic without forcing repetitive main HUD panels."""
+    beats = [beat for beat in data.get("semanticBeats", []) if isinstance(beat, dict)]
+    scenes = scene_by_id(data)
+    for beat in beats:
+        beat_id = str(beat.get("id") or "")
+        scene_id = str(beat.get("sceneId") or "")
+        if beat_id and scene_id and not beat.get("beatGroupId"):
+            beat["beatGroupId"] = f"{scene_id}-{beat_id}"
+
+    # First pass: short claims and tool recommendations use a sourced lightweight sticker.
+    for beat in beats:
+        if str(beat.get("semanticIntent") or "") != "explanation-claim":
+            continue
+        if str(beat.get("visualForm") or "") != "claimStrip":
+            continue
+        start = int(beat.get("startFrame", 0) or 0)
+        end = int(beat.get("endFrame", start) or start)
+        scene = scenes.get(str(beat.get("sceneId") or ""), {})
+        scene_role = str(scene.get("semanticRole") or "")
+        if end - start < MIN_MAIN_HUD_FRAMES:
+            mark_claim_lightweight(beat, "short-claim-source-sticker")
+        elif scene_role == "tool-recommendation":
+            mark_claim_lightweight(beat, "tool-recommendation-source-sticker")
+
+    # A claim at the tail of a scene that already has a stronger semantic event
+    # should not compete for a full panel when the remaining scene budget is short.
+    beats_by_scene: dict[str, list[dict[str, Any]]] = {}
+    for beat in beats:
+        beats_by_scene.setdefault(str(beat.get("sceneId") or ""), []).append(beat)
+    for scene_id, scene_beats in beats_by_scene.items():
+        scene = scenes.get(scene_id, {})
+        scene_end = int(scene.get("endFrame", 0) or 0)
+        ordered = sorted(scene_beats, key=lambda item: int(item.get("startFrame", 0) or 0))
+        for index, beat in enumerate(ordered):
+            if (
+                str(beat.get("semanticIntent") or "") != "explanation-claim"
+                or str(beat.get("visualForm") or "") != "claimStrip"
+            ):
+                continue
+            start = int(beat.get("startFrame", 0) or 0)
+            has_prior_specific = any(
+                str(item.get("semanticIntent") or "") != "explanation-claim"
+                for item in ordered[:index]
+            )
+            if has_prior_specific and scene_end - start < PREFERRED_MAIN_HUD_FRAMES:
+                mark_claim_lightweight(beat, "scene-tail-after-specific-event")
+
+    # Second pass: within one scene, keep only the strongest low-confidence claim as main HUD.
+    claims_by_scene: dict[str, list[dict[str, Any]]] = {}
+    for beat in beats:
+        if (
+            str(beat.get("semanticIntent") or "") == "explanation-claim"
+            and str(beat.get("visualForm") or "") == "claimStrip"
+            and float(beat.get("confidence", 0.0) or 0.0) <= LOW_CONFIDENCE_CLAIM_MAX
+        ):
+            claims_by_scene.setdefault(str(beat.get("sceneId") or ""), []).append(beat)
+    for scene_claims in claims_by_scene.values():
+        if len(scene_claims) <= 1:
+            continue
+        winner = max(scene_claims, key=claim_priority)
+        for beat in scene_claims:
+            if beat is not winner:
+                mark_claim_clean(beat, "lower-priority-claim-in-same-scene")
+
+    # Third pass: never allow more than two consecutive low-confidence claim-strip main HUDs.
+    claim_run = 0
+    for beat in sorted(beats, key=lambda item: (int(item.get("startFrame", 0) or 0), str(item.get("id") or ""))):
+        intent = str(beat.get("semanticIntent") or "")
+        visual_form = str(beat.get("visualForm") or "")
+        if intent != "explanation-claim":
+            claim_run = 0
+            continue
+        if visual_form != "claimStrip":
+            continue
+        if float(beat.get("confidence", 0.0) or 0.0) > LOW_CONFIDENCE_CLAIM_MAX:
+            claim_run = 0
+            continue
+        if claim_run >= 2:
+            mark_claim_clean(beat, "claim-strip-run-limit")
+            continue
+        claim_run += 1
+
+
 def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any] | None:
     beat_id = str(beat.get("id") or "beat")
     text = str(beat.get("text") or "")
@@ -672,6 +853,22 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
                 "style": "recording-proof" if Path(asset_path).suffix.lower() in {".mp4", ".mov", ".m4v", ".webm"} else "single-proof",
                 "motionType": "screen-recording-proof",
             }
+
+    if intent == "explanation-claim" and str(beat.get("visualForm") or "") == INTENTIONAL_CLEAN_HOLD:
+        return None
+
+    if intent == "explanation-claim" and str(beat.get("visualForm") or "") == SOURCE_BOUND_STICKER:
+        claim = source_bound_sticker_copy(text)
+        return {
+            **base,
+            "type": "statusSticker",
+            "text": claim or normalize_hud_source(text)[:16] or "观点提示",
+            "status": "重点",
+            "iconName": "Sparkles",
+            "motionType": "hud-slide-fade",
+            "safeArea": "top-right-no-shade",
+            "timingClass": "short-lightweight",
+        }
 
     if intent in {"negative-to-positive", "negative-friction"}:
         negative, positive, emphasis_words = compact_negative_positive(text)
@@ -743,7 +940,11 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
         }
 
     if intent == "numeric-metric":
-        metric_copy = key_message(text, 16, ["分辨率", "清晰", "提升", "增长", "比例", "指标", "%", "倍", "万", "亿", "K", "k", "分钟", "秒"])
+        numeric_entities = [
+            str(item) for item in beat.get("entities", [])
+            if NUMERIC_VALUE_RE.search(str(item))
+        ]
+        metric_copy = key_message(text, 16, numeric_entities + ["分辨率", "清晰", "提升", "增长", "比例", "指标", "%", "倍", "万", "亿", "K", "k", "分钟", "秒"])
         modifiers = [str(item) for item in beat.get("semanticModifiers", [])]
         return {
             **base,
@@ -874,7 +1075,7 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
         }
 
     if intent == "explanation-claim":
-        claim = key_message(text, 16, ["关键", "本质", "真正", "核心", "重点", "原因", "方法"])
+        claim = source_bound_core_clause(text) or key_message(text, 16, ["关键", "本质", "真正", "核心", "重点", "原因", "方法", "一定要", "救不了", "只能", "缺点", "推荐"])
         return {
             **base,
             "type": "claimStrip",
@@ -941,6 +1142,11 @@ def schedule_events(events: list[dict[str, Any]], data: dict[str, Any]) -> list[
         next_scene_start[str(scene.get("id") or "")] = int(ordered_scenes[index + 1].get("startFrame", 0) or 0)
     lane_end: dict[str, int] = {}
     scheduled: list[dict[str, Any]] = []
+    beats = {
+        str(beat.get("id") or ""): beat
+        for beat in data.get("semanticBeats", [])
+        if isinstance(beat, dict)
+    }
     for event in sorted(events, key=lambda item: (int(item.get("startFrame", 0) or 0), str(item.get("sceneId") or ""))):
         lane = lane_for_event(event)
         if not lane:
@@ -978,6 +1184,21 @@ def schedule_events(events: list[dict[str, Any]], data: dict[str, Any]) -> list[
             if previous_end is not None and start < previous_end + LANE_BUFFER_FRAMES:
                 start = previous_end + LANE_BUFFER_FRAMES
             end = min(composition_end, start + duration)
+        if str(annotated.get("type") or "") in {"claimStrip", "quoteSource"} and end - start < MIN_MAIN_HUD_FRAMES:
+            source_beat = beats.get(str(annotated.get("sourceBeatId") or ""))
+            if source_beat and str(source_beat.get("semanticIntent") or "") == "explanation-claim":
+                mark_claim_lightweight(source_beat, "scheduled-space-source-sticker")
+                copy = source_bound_sticker_copy(str(source_beat.get("text") or ""))
+                annotated = {
+                    **annotated,
+                    "type": "statusSticker",
+                    "text": copy or "观点提示",
+                    "status": "重点",
+                    "iconName": "Sparkles",
+                    "motionType": "hud-slide-fade",
+                    "safeArea": "top-right-no-shade",
+                    "timingClass": "short-lightweight",
+                }
         if end - start < 24:
             continue
         event = {**annotated, "startFrame": start, "endFrame": end}
@@ -1084,6 +1305,7 @@ def apply_density_refreshes(events: list[dict[str, Any]], data: dict[str, Any]) 
 
 
 def build_visual_events(data: dict[str, Any]) -> list[dict[str, Any]]:
+    curate_explanation_claim_beats(data)
     scenes = [scene for scene in data.get("scenes", []) if isinstance(scene, dict)]
     beats = [beat for beat in data.get("semanticBeats", []) if isinstance(beat, dict)]
     events: list[dict[str, Any]] = [corner_label(scene) for scene in scenes]

@@ -77,7 +77,9 @@ Use these defaults when creating `visualEvents`:
 | One content package splits to several platforms/channels | `platform-fanout` | `platformFanout` | `hub-to-platform-flow` |
 | Manual/repeated work becomes AI/system execution | `automation-handoff` | `automationHandoff` | `field-collapse-to-action` |
 | Episode/topic introduction | `topic-intro` | `topicKeyword` | `word-by-word-topic-reveal` |
-| Ordinary explanation or low-confidence claim | `explanation-claim` | `claimStrip` | `lightweight-claim-slide` |
+| Strongest ordinary explanation claim in a scene | `explanation-claim` | `claimStrip` | `lightweight-claim-slide` |
+| Short source-bound explanation claim | `explanation-claim` | `statusSticker` | `hud-slide-fade` |
+| Lower-priority repeated explanation claim | `explanation-claim` | `intentionalCleanHold` (no main HUD) | clean presenter hold |
 | Readable screenshot, screen recording, proof asset | `proof-focus` or `proof-material` | `materialMain` / `materialZoom` | `material-push-in` / `material-zoom-highlight` |
 | Thumbnail/poster subject with 2-3 provided poster exports | `poster-stack-preview` | `materialZoom` / `materialMain` | `right-poster-stack-pop` |
 | CTA or final action | `cta-resolve` | `ctaTitle` | `cta-result-keyword` |
