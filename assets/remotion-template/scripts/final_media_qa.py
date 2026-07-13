@@ -49,6 +49,13 @@ def stream_duration(stream: dict[str, Any]) -> float:
         return 0.0
 
 
+def stream_start_time(stream: dict[str, Any]) -> float:
+    try:
+        return float(stream.get("start_time") or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def decoded_frame_count(stream: dict[str, Any]) -> int:
     value = stream.get("nb_read_frames") or stream.get("nb_frames") or 0
     try:
@@ -99,6 +106,9 @@ def analyze(
     format_duration = float(raw.get("format", {}).get("duration") or 0)
     expected_duration = expected["durationFrames"] / expected["fps"] if expected["fps"] else 0
     audio_duration = stream_duration(audio_stream)
+    video_duration = stream_duration(video_stream)
+    video_start = stream_start_time(video_stream)
+    audio_start = stream_start_time(audio_stream)
 
     if (int(video_stream.get("width") or 0), int(video_stream.get("height") or 0)) != (
         expected["width"],
@@ -134,12 +144,23 @@ def analyze(
     if audio_stream and audio_stream.get("codec_name") != "aac":
         errors.append(f"audio codec must be aac, got {audio_stream.get('codec_name') or 'missing'}")
     duration_tolerance = max(0.12, 3 / expected["fps"]) if expected["fps"] else 0.12
+    start_tolerance = max(0.04, 1.5 / expected["fps"]) if expected["fps"] else 0.06
+    if abs(video_start) > start_tolerance:
+        errors.append(f"video stream must start at PTS zero: got {video_start:.6f}s")
+    if audio_stream and abs(audio_start - video_start) > start_tolerance:
+        errors.append(
+            f"audio/video start mismatch: video {video_start:.6f}s, audio {audio_start:.6f}s"
+        )
     if format_duration + duration_tolerance < expected_duration:
         errors.append(
             f"container duration is truncated: expected {expected_duration:.3f}s, got {format_duration:.3f}s"
         )
     if require_audio and audio_stream and audio_duration and audio_duration + duration_tolerance < expected_duration:
         errors.append(f"audio is truncated: expected {expected_duration:.3f}s, got {audio_duration:.3f}s")
+    if audio_stream and audio_duration and video_duration and abs(audio_duration - video_duration) > duration_tolerance:
+        errors.append(
+            f"audio/video duration mismatch: video {video_duration:.3f}s, audio {audio_duration:.3f}s"
+        )
 
     passed_decode, decode_error = decode_ok(video)
     if not passed_decode:
@@ -160,6 +181,10 @@ def analyze(
             "videoCodec": video_stream.get("codec_name"),
             "pixelFormat": video_stream.get("pix_fmt"),
             "audioCodec": audio_stream.get("codec_name") if audio_stream else None,
+            "videoStartSec": video_start,
+            "audioStartSec": audio_start if audio_stream else None,
+            "audioVideoStartDeltaSec": (audio_start - video_start) if audio_stream else None,
+            "videoDurationSec": video_duration,
             "audioDurationSec": audio_duration,
             "formatDurationSec": format_duration,
             "color": color_actual,
@@ -188,6 +213,7 @@ def markdown_report(report: dict[str, Any], video: Path, visual_script: Path) ->
         f"- {report['actual']['fpsText']} fps",
         f"- {report['actual']['decodedFrames']} decoded frames",
         f"- {report['actual']['videoCodec']} / {report['actual']['audioCodec']}",
+        f"- A/V start: {report['actual']['videoStartSec']:.6f}s / {report['actual']['audioStartSec'] if report['actual']['audioStartSec'] is not None else 'none'}s (delta {report['actual']['audioVideoStartDeltaSec'] if report['actual']['audioVideoStartDeltaSec'] is not None else 'n/a'}s)",
         f"- Full decode: {'PASS' if report['actual']['fullDecodePassed'] else 'FAIL'}",
     ]
     if report["errors"]:

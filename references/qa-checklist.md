@@ -194,6 +194,9 @@ Check:
 Check:
 
 - Voice remains primary.
+- The primary presenter source stays mounted once across fullscreen/PiP scene changes; layout boundaries must not restart video or narration.
+- For segmented presenters, inspect a sync marker near the start, immediately before/after at least one segment boundary, and near the end. Also inspect every fullscreen/PiP transition preview for continuous mouth sync.
+- Final media QA must report video/audio start PTS and reject an A/V start delta above roughly 1.5 composition frames or a duration delta above the final-media tolerance. This structural gate does not replace rendered mouth-sync review.
 - SFX is short and tied to semantic events.
 - No SFX is attached to every minor visual change.
 - Active SFX has a real `path` under Remotion `public/`; pending SFX uses `status: pending-selection`.

@@ -1,7 +1,8 @@
 param(
   [switch]$SkipVideo,
   [switch]$SkipStills,
-  [switch]$Clean
+  [switch]$Clean,
+  [switch]$Smoke
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,6 +27,7 @@ $RemotionRoot = Join-Path $WorkRoot "remotion"
 $RenderRoot = Join-Path $GalleryRoot "renders"
 $KeyframeRoot = Join-Path $RenderRoot "keyframes"
 $VisualScript = Join-Path $GalleryRoot "visual_script.gallery.json"
+$GallerySpec = Get-Content -LiteralPath $VisualScript -Raw -Encoding utf8 | ConvertFrom-Json
 
 if (-not (Test-Path -LiteralPath $VisualScript)) {
   throw "Missing gallery visual script: $VisualScript"
@@ -95,10 +97,27 @@ try {
     @{Name="015_ratio_gallery_hold.png"; Frame=2175}
   )
 
+  if ($Smoke) {
+    $SmokeNames = @(
+      "002_negative_hold.png",
+      "003_data_punch_hold.png",
+      "010_automation_handoff_hold.png",
+      "011_material_pip_hold.png",
+      "012_cta_hold.png",
+      "014_claim_strip_hold.png"
+    )
+    $Frames = @($Frames | Where-Object { $_.Name -in $SmokeNames })
+  }
+
   if (-not $SkipStills) {
     foreach ($FrameSpec in $Frames) {
       $OutPath = Join-Path $KeyframeRoot $FrameSpec.Name
       Invoke-Checked { npx remotion still src/index.ts NGGKouboV4Portrait $OutPath --frame=$($FrameSpec.Frame) --gl=angle } "remotion still $($FrameSpec.Name)"
+      $RenderedFile = Get-Item -LiteralPath $OutPath
+      if ($RenderedFile.Length -lt 4096) { throw "Still render is unexpectedly small: $OutPath" }
+      $Dimensions = (& ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 $OutPath).Trim()
+      $ExpectedDimensions = "$($GallerySpec.composition.width)x$($GallerySpec.composition.height)"
+      if ($Dimensions -ne $ExpectedDimensions) { throw "Still dimensions mismatch for $($FrameSpec.Name): $Dimensions != $ExpectedDimensions" }
     }
   }
 
@@ -111,7 +130,10 @@ try {
       } |
       Set-Content -LiteralPath $ConcatList -Encoding ascii
 
-    & ffmpeg -hide_banner -loglevel error -y -f concat -safe 0 -i $ConcatList -vf "scale=480:-1,tile=3x5:padding=8:margin=8:color=0x101010" -frames:v 1 -update 1 (Join-Path $RenderRoot "contact_sheet.png") | Out-Null
+    $Columns = 3
+    $Rows = [math]::Ceiling($Frames.Count / [double]$Columns)
+    $TileFilter = "scale=480:-1,tile=${Columns}x${Rows}:padding=8:margin=8:color=0x101010"
+    & ffmpeg -hide_banner -loglevel error -y -f concat -safe 0 -i $ConcatList -vf $TileFilter -frames:v 1 -update 1 (Join-Path $RenderRoot "contact_sheet.png") | Out-Null
   }
 
   if (-not $SkipVideo) {

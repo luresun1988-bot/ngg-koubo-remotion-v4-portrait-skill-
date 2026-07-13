@@ -18,6 +18,7 @@ REGRESSIONS = [
     "sync_template_mirrors.py",
     "caption_reference_regression.py",
     "semantic_router_regression.py",
+    "semantic_contract_regression.py",
     "semantic_guardrails_regression.py",
     "semantic_component_contract_regression.py",
     "sfx_semantic_routing_regression.py",
@@ -78,10 +79,10 @@ def main() -> int:
             raise SystemExit("npm is required for Portrait template typecheck")
         run_check("template-typecheck", [npm, "run", "typecheck", "--silent"], cwd=TEMPLATE_ROOT)
 
+    powershell = shutil.which("powershell")
+    if not powershell:
+        raise SystemExit("powershell is required for Portrait component render smoke")
     if args.gallery:
-        powershell = shutil.which("powershell")
-        if not powershell:
-            raise SystemExit("powershell is required for Portrait component gallery")
         run_check(
             "component-gallery",
             [
@@ -92,6 +93,12 @@ def main() -> int:
                 str(SKILL_ROOT / "assets" / "component-gallery" / "render_gallery.ps1"),
                 "-SkipVideo",
             ],
+            cwd=SKILL_ROOT,
+        )
+    else:
+        run_check(
+            "component-render-smoke",
+            [powershell, "-ExecutionPolicy", "Bypass", "-File", str(SKILL_ROOT / "assets" / "component-gallery" / "render_gallery.ps1"), "-SkipVideo", "-Smoke"],
             cwd=SKILL_ROOT,
         )
 

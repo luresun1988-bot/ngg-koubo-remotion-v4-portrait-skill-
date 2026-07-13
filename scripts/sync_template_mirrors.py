@@ -18,6 +18,7 @@ TEMPLATE_REFERENCES = TEMPLATE_ROOT / "references"
 REQUIRED_TEMPLATE_SCRIPTS = {
     "final_media_qa.py",
     "render_final_and_qa.ps1",
+    "semantic_contract_cases.json",
     "semantic_guardrails.py",
     "upgrade_existing_project.py",
 }
@@ -28,7 +29,7 @@ def mirror_pairs() -> list[tuple[Path, Path]]:
     script_names = {
         path.name
         for path in TEMPLATE_SCRIPTS.iterdir()
-        if path.is_file() and path.suffix.lower() in {".py", ".ps1"}
+        if path.is_file() and path.suffix.lower() in {".py", ".ps1", ".json"}
     } | REQUIRED_TEMPLATE_SCRIPTS
     for name in sorted(script_names):
         pairs.append((ROOT_SCRIPTS / name, TEMPLATE_SCRIPTS / name))

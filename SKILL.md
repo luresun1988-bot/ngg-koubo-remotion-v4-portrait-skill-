@@ -189,11 +189,11 @@ Produce these unless the user asks for a smaller scope:
 
 For nontrivial revisions to this skill, forward-test on at least one realistic prompt: "Use `$ngg-koubo-remotion-v4-portrait` to cut a 9:16 Chinese vertical talking-head video from a source video, script, screenshots, and no prebuilt timeline." Check whether the agent creates a timeline plan, `project_config.json`, `visual_script.json`, V4 template implementation plan, and QA plan before rendering.
 
-For semantic routing revisions, run `python scripts/semantic_router_regression.py`, `python scripts/semantic_component_contract_regression.py`, and `python scripts/sfx_semantic_routing_regression.py`. Require positive, adversarial, compound-semantic, renderer-contract, and confirmed SFX examples to pass before committing.
+For semantic routing revisions, run `python scripts/semantic_router_regression.py`, `python scripts/semantic_contract_regression.py`, `python scripts/semantic_component_contract_regression.py`, and `python scripts/sfx_semantic_routing_regression.py`. Require the shared landscape/portrait corpus, positive, adversarial, compound-semantic, renderer-contract, and confirmed SFX examples to pass before committing.
 
 For visual scheduling or density revisions, run `python scripts/visual_density_regression.py` and require dense, light/precomposed, proof-focus, and lane-buffer cases to pass before committing.
 
-For component-level style or motion revisions, run `assets/component-gallery/render_gallery.ps1 -SkipVideo` first and inspect `assets/component-gallery/renders/contact_sheet.png` plus the component keyframes. Render `component_gallery.mp4` when motion timing needs review.
+The default unified regression must render the six-keyframe real Remotion smoke. For component-level style or motion revisions, run `assets/component-gallery/render_gallery.ps1 -SkipVideo` and inspect `assets/component-gallery/renders/contact_sheet.png` plus the component keyframes. Render `component_gallery.mp4` when motion timing needs review.
 
 For media, FPS, template, or QA revisions, run `python scripts/sync_template_mirrors.py`, `python scripts/presenter_media_regression.py`, `python scripts/motion_preview_regression.py`, and `python scripts/final_media_qa_regression.py`. Require every check to pass before committing.
 

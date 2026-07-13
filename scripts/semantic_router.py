@@ -20,8 +20,8 @@ from semantic_guardrails import (  # noqa: E402
     is_explanation_claim,
     is_process_context,
     is_proof_context,
+    parse_cta_provenance,
     topic_intro,
-    viewer_cta_signal,
 )
 
 configure_utf8()
@@ -166,14 +166,17 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
     solution_hits = list(matched.get("positive-confirm", [])) + list(matched.get("automation-handoff", []))
     completion_state = completion_polarity(text)
     handoff = handoff_state(text)
-    cta_signal = viewer_cta_signal(text)
+    cta_signal = parse_cta_provenance(text)
 
     if cta_signal:
-        result = rule_result("cta-resolve", [str(cta_signal.get("action") or "")], 0.94)
+        actions = [item for item in cta_signal.get("actions", []) if isinstance(item, dict)]
+        first_action = actions[0] if actions else {}
+        action_text = str(first_action.get("sourceText") or "").strip()
+        result = rule_result("cta-resolve", [action_text], 0.94)
         provenance: dict[str, str] = {
             "kind": "keyword" if cta_signal.get("keyword") else "action",
-            "sourceText": str(cta_signal.get("sourceText") or text).strip(),
-            "action": str(cta_signal.get("action") or "").strip(),
+            "sourceText": text.strip(),
+            "action": action_text,
         }
         if cta_signal.get("keyword"):
             provenance["keyword"] = str(cta_signal["keyword"])
@@ -261,13 +264,13 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
     if "asset-variants" in matched and any(term in text for term in ["横屏", "竖屏", "方图", "多尺寸", "三尺寸", "多规格", "16:9", "4:3", "3:4", "比例", "横版", "竖版", "方形"]):
         return rule_result("asset-variants", matched["asset-variants"], 0.9)
 
-    if is_proof_context(text):
-        return rule_result("proof-material", contains_any(text, RULES["proof-material"]["terms"]) or ["页面展示"], 0.88)
-
     numeric_match = NUMERIC_RE.search(text)
     if numeric_match and any(term in text for term in ["提升", "增长", "比例", "指标", "数据", "分辨率", "清晰", "%", "倍", "万", "亿", "K", "k", "道题", "题", "张", "数量", "规模", "分钟", "秒", "小于", "省下", "批量", "处理", "账号", "扩到", "生成"]):
         checks = ["numeric-countup-required", "no-generic-card-fallback"]
         modifiers = ["numeric"]
+        if is_proof_context(text):
+            modifiers.append("proof-bound")
+            checks.append("material-main-or-proof")
         if completion_state == "asserted":
             checks.append("positive-confirm-treatment")
             modifiers.append("completed")
@@ -282,6 +285,9 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
             "semanticModifiers": modifiers,
             "confidence": 0.92,
         }
+
+    if is_proof_context(text):
+        return rule_result("proof-material", contains_any(text, RULES["proof-material"]["terms"]) or ["页面展示"], 0.88)
 
     if completion_state == "negated":
         return {
@@ -423,7 +429,7 @@ def semantic_metadata(text: str) -> dict[str, Any]:
         modifiers.append("incomplete")
     if any(term in text for term in AUTOMATED_TERMS):
         modifiers.append("automated")
-    if any(term in text for term in PROOF_STRONG_TERMS):
+    if is_proof_context(text) or any(term in text for term in PROOF_STRONG_TERMS):
         modifiers.append("proof-bound")
     if any(term in text for term in ["不是", "别再", "风险", "手动", "低效", "麻烦"]):
         modifiers.append("negative")

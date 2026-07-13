@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "ngg-v4-semantic-contract-v1",
+  "cases": [
+    {"id":"numeric-complete","text":"10张详情图已经全部生成好了","intent":"numeric-metric","modifiersContain":["numeric","completed"],"checksContain":["positive-confirm-treatment"],"adapters":{"landscape":{"visualForm":"dataPunch","eventType":"dataPunch","eventStatus":"已完成"},"portrait":{"visualForm":"dataPunch","eventType":"dataPunch","eventStatus":"已生成"}}},
+    {"id":"numeric-incomplete","text":"10张详情图还没生成完","intent":"numeric-metric","modifiersContain":["numeric","incomplete"],"checksContain":["negative-incomplete-treatment"],"adapters":{"landscape":{"visualForm":"dataPunch","eventType":"dataPunch","eventStatus":"未完成"},"portrait":{"visualForm":"dataPunch","eventType":"dataPunch","eventStatus":"未完成"}}},
+    {"id":"negated-completion","text":"现在还没有生成完成","intent":"negative-friction","adapters":{"landscape":{"visualForm":"redWarningCard","eventType":"highlightBox"},"portrait":{"visualForm":"redWarningCard","eventType":"semanticProblemMap"}}},
+    {"id":"conditional-process","text":"如果完成设置，就可以导出","intent":"workflow-step","adapters":{"landscape":{"visualForm":"flowPath","eventType":"flowPath"},"portrait":{"visualForm":"flowPath","eventType":"flowPath"}}},
+    {"id":"nominal-completion","text":"完成按钮在右上角","intent":"explanation-claim","adapters":{"landscape":{"visualForm":"infoCard","eventType":"infoCard"},"portrait":{"visualForm":"claimStrip","eventType":"claimStrip"}}},
+    {"id":"automation-handoff","text":"把素材交给 Codex 自动完成","intent":"automation-handoff","adapters":{"landscape":{"visualForm":"automationHandoff","eventType":"captionHighlight"},"portrait":{"visualForm":"automationHandoff","eventType":"automationHandoff"}}},
+    {"id":"negated-handoff","text":"Codex 还没有接管这一步","intent":"negative-friction","adapters":{"landscape":{"visualForm":"redWarningCard","eventType":"highlightBox"},"portrait":{"visualForm":"redWarningCard","eventType":"semanticProblemMap"}}},
+    {"id":"future-preview","text":"下一期介绍 Codex 自动剪辑","intent":"explanation-claim","checksContain":["future-preview-not-complete"],"adapters":{"landscape":{"visualForm":"infoCard","eventType":"infoCard"},"portrait":{"visualForm":"claimStrip","eventType":"claimStrip"}}},
+    {"id":"explicit-cta","text":"评论区回复数字人领取模板","intent":"cta-resolve","ctaKeyword":"数字人","adapters":{"landscape":{"visualForm":"ctaTitle","eventType":"ctaTitle"},"portrait":{"visualForm":"ctaTitle","eventType":"ctaTitle"}}},
+    {"id":"comment-proof","text":"页面展示了评论区互动数据","intent":"proof-material","adapters":{"landscape":{"visualForm":"materialMain","eventType":"statusSticker"},"portrait":{"visualForm":"materialMain","eventType":"statusSticker"}}},
+    {"id":"keyword-process","text":"输入关键词生成标题","intent":"workflow-step","adapters":{"landscape":{"visualForm":"flowPath","eventType":"flowPath"},"portrait":{"visualForm":"flowPath","eventType":"flowPath"}}},
+    {"id":"pickup-explanation","text":"这家门店支持到店自提","intent":"explanation-claim","adapters":{"landscape":{"visualForm":"infoCard","eventType":"infoCard"},"portrait":{"visualForm":"claimStrip","eventType":"claimStrip"}}},
+    {"id":"tool-explanation","text":"Topaz Video AI 是高清修复工具","intent":"explanation-claim","adapters":{"landscape":{"visualForm":"infoCard","eventType":"infoCard"},"portrait":{"visualForm":"claimStrip","eventType":"claimStrip"}}},
+    {"id":"topic-intro","text":"这一期聊聊数字人为什么模糊","intent":"topic-intro","adapters":{"landscape":{"visualForm":"bigJudgement","eventType":"kineticTitle"},"portrait":{"visualForm":"topicKeyword","eventType":"topicKeyword"}}},
+    {"id":"proof-numeric-completion-rate","text":"页面显示生成完成率是80%","intent":"numeric-metric","modifiersContain":["numeric","proof-bound"],"checksContain":["material-main-or-proof"],"adapters":{"landscape":{"visualForm":"dataPunch","eventType":"dataPunch"},"portrait":{"visualForm":"dataPunch","eventType":"dataPunch"}}},
+    {"id":"past-follow-not-cta","text":"我刚刚关注你了","intent":"explanation-claim","adapters":{"landscape":{"visualForm":"infoCard","eventType":"infoCard"},"portrait":{"visualForm":"claimStrip","eventType":"claimStrip"}}},
+    {"id":"conditional-completion-not-result","text":"如果系统生成好了再通知我","intent":"workflow-step","adapters":{"landscape":{"visualForm":"flowPath","eventType":"flowPath"},"portrait":{"visualForm":"flowPath","eventType":"flowPath"}}},
+    {"id":"future-comment-topic-not-cta","text":"下一期讲评论区运营","intent":"explanation-claim","checksContain":["future-preview-not-complete"],"adapters":{"landscape":{"visualForm":"infoCard","eventType":"infoCard"},"portrait":{"visualForm":"claimStrip","eventType":"claimStrip"}}}
+  ]
+}

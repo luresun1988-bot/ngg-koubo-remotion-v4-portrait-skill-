@@ -36,7 +36,7 @@ def upgrade(remotion_root: Path, *, write: bool) -> dict[str, Any]:
     operations: list[dict[str, Any]] = []
 
     source_files = [
-        *sorted(path for path in source_scripts.iterdir() if path.is_file() and path.suffix.lower() in {".py", ".ps1"}),
+        *sorted(path for path in source_scripts.iterdir() if path.is_file() and path.suffix.lower() in {".py", ".ps1", ".json"}),
         *sorted(source_references.glob("*.md")),
     ]
     for source in source_files:

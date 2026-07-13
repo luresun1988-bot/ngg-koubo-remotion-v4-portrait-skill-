@@ -44,11 +44,13 @@ Optional:
 .\render_gallery.ps1 -SkipVideo
 .\render_gallery.ps1 -SkipStills
 .\render_gallery.ps1 -Clean
+.\render_gallery.ps1 -SkipVideo -Smoke
 ```
 
 - `-SkipVideo`: render keyframes and contact sheet only.
 - `-SkipStills`: render MP4 only, reusing existing keyframes/contact sheet.
 - `-Clean`: rebuild the temporary Remotion workspace from scratch.
+- `-Smoke`: render the six mandatory semantic/layout keyframes used by the default Skill regression.
 
 ## Outputs
 

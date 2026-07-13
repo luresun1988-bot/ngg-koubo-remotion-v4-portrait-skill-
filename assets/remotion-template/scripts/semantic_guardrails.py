@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Format-agnostic semantic guards shared by the V4 landscape/portrait routers."""
+"""Format-agnostic semantic guards shared by V4 landscape and portrait."""
 
 from __future__ import annotations
 
@@ -39,59 +39,6 @@ PROOF_CONTEXT_RE = re.compile(
     r"|(?:展示|显示|查看)[^，。！？]{0,16}(?:页面|后台|互动数据|生成结果)"
 )
 
-COMPLETION_TERMS = (
-    "生成完成",
-    "生成好了",
-    "生成完",
-    "全部完成",
-    "全都完成",
-    "已经完成",
-    "已完成",
-    "完成了",
-    "完成",
-    "全部做好",
-    "全都做好",
-    "已经做好",
-    "做好了",
-    "做完",
-    "输出完成",
-    "流程跑完",
-    "自动跑完",
-    "跑完",
-    "搞定",
-    "已经交付",
-    "已交付",
-)
-COMPLETION_NEGATION_RE = re.compile(
-    r"(?:还没有|还没|尚未|还未|并未|并非|没有|不是|不算|未|没)"
-    r"(?:真正|彻底|完全|全部|全都|都|已经|已|自动)?$"
-)
-COMPLETION_PROSPECTIVE_RE = re.compile(
-    r"(?:如果|只要|一旦|稍后|随后|预计|计划|将会|即将|会|将|等到|等|待|需要|可以|能够|能|可|必须|应该|准备|请|务必|确保)"
-    r"[^，。；！？!?\n]{0,18}$"
-    r"|(?:交给|丢给|交由|让|由)[^，。；！？!?\n]{0,18}(?:自动)?$"
-)
-COMPLETION_NOMINAL_SUFFIXES = (
-    "按钮",
-    "状态",
-    "字段",
-    "标识",
-    "文案",
-    "选项",
-    "页面",
-    "率",
-    "度",
-    "时间",
-    "时长",
-    "条件",
-)
-COMPLETION_PROSPECTIVE_SUFFIXES = ("之后", "以后", "后", "之前", "前")
-COMPLETION_PARTIAL_RE = re.compile(
-    r"(?:只|仅|部分|一部分|一半|基本|大体|差不多|接近|几乎|快|还差|还剩|还需|尚需)"
-    r"[^，。！？]{0,10}(?:完成|做完|做好|生成完|跑完|交付|输出)"
-    r"|(?:完成|做完|做好|生成完|跑完|交付|输出)[^，。！？]{0,8}(?:一半|一部分|部分|大半|过半|差不多|\d+%)"
-)
-
 
 def future_preview(text: str) -> str:
     match = FUTURE_PREVIEW_RE.search(text)
@@ -124,124 +71,265 @@ def is_proof_context(text: str) -> bool:
     return PROOF_CONTEXT_RE.search(text) is not None
 
 
+# This is the single completion vocabulary used by both routers. Keep longer
+# phrases before the broad word "完成" when reading/debugging this list.
+WORKFLOW_COMPLETION_TERMS = [
+    "生成完成", "生成好了", "生成完", "全部完成", "全都完成", "已经完成", "已完成",
+    "明确完成", "任务完成", "交付完成", "完成了", "完成", "全部做好", "全都做好",
+    "都做好", "已经做好", "做好了", "做完", "输出完成", "流程跑完", "自动跑完", "跑完",
+    "搞定", "全部交付", "都已输出", "已经输出", "已经交付", "已交付", "现在都齐了",
+    "全都齐了", "都齐了",
+]
+COMPLETION_PROSPECTIVE_SUFFIXES = ["之后", "以后", "后", "之前", "前"]
+COMPLETION_QUESTION_PREFIXES = ["是否", "有没有", "能否", "可否", "是不是"]
+COMPLETION_NOMINAL_SUFFIXES = ["按钮", "状态", "字段", "标识", "文案", "选项", "页面", "率", "度", "时间", "时长", "条件"]
+COMPLETION_HARD_FAILURE_TERMS = ["未交付", "没交付", "未输出", "没输出", "不完整", "没有成功"]
+COMPLETION_SOFT_FAILURE_TERMS = ["失败", "出错", "报错", "异常", "缺失"]
+COMPLETION_META_TERMS = ["这两个字", "这个词", "该词", "字样", "文案", "术语", "说法", "不要出现"]
+COMPLETION_NEGATION_RE = re.compile(
+    r"(?:尚未|还未|还没|没有|并未|并非|不是|不算|未|没)(?:真正|彻底|完全|全部|全都|都|已经|已)?$"
+)
+COMPLETION_LOCAL_PROSPECTIVE_PATTERNS = [
+    re.compile(r"(?:稍后|随后|预计|计划|等到|需要|必须|应该|应当|准备|尽快|为了|争取|力争|请|务必|确保)[^，。；！？!?\n]{0,10}$"),
+    re.compile(r"(?:将会|即将|将|会)(?:自动|很快|马上|随后|最终)?$"),
+    re.compile(r"(?:等|待)(?:到)?[^，。；！？!?\n]{0,6}$"),
+    re.compile(r"(?:可以|能够)(?:自动|直接|一键|轻松|很快)?$"),
+    re.compile(r"(?:交给|丢给|交由|让|由)(?:(?!已经|已|终于|现在)[^，。；！？!?\n]){0,16}(?:自动)?$"),
+    re.compile(r"(?:^|这(?:一)?步|系统|流程|任务|工具|用户|平台|服务|程序|模型|他|她|它|我们|你|我|AI|Codex|现在|就|也|都)(?:能|可)(?:自动|直接|一键|轻松|很快)?$"),
+]
+COMPLETION_REPORT_NEGATION_RE = re.compile(
+    r"(?:没有|并未|未|没)(?:明确)?(?:说|表示|说明|确认|宣布|声称|证明|显示|提到)[^，。；！？!?\n]{0,10}$"
+)
+COMPLETION_PARTIAL_PATTERNS = [
+    re.compile(r"(?:只|仅|部分|局部|一部分|一半|半数).{0,6}(?:完成|做完|做好|交付|输出)"),
+    re.compile(r"(?:完成|做完|做好|交付|输出).{0,6}(?:\d+%|[一二两三四五六七八九十\d]+成|一半|一部分|部分|半数|大半|过半|得?差不多)"),
+    re.compile(r"(?:基本|大体|差不多|接近|几乎|快|快要|马上就|就要|将要|眼看就要).{0,5}(?:完成|做完|做好|交付|输出)"),
+    re.compile(r"(?:距离|离).{0,6}(?:完成|做完|做好|交付|输出).{0,8}(?:还有|还差)"),
+    re.compile(r"(?:还剩|还差).{0,8}(?:完成|做完|做好|交付|输出)"),
+    re.compile(r"(?:尚|还|仍)?差.{0,8}(?:才|才能)?(?:完成|做完|做好|交付|输出)"),
+    re.compile(r"(?:还需|仍需|尚需).{0,8}(?:才|才能)?(?:完成|做完|做好|交付|输出)"),
+    re.compile(r"(?:完成|做完|做好|交付|输出)(?:进度)?.{0,5}(?:过半|不足|未满)"),
+    re.compile(r"(?:还|尚|目前)?(?:不能|无法|未能).{0,8}(?:算|说|确认)?.{0,6}(?:完成|做完|做好|交付|输出)"),
+    re.compile(r"(?:已经|已)?完成第[一二两三四五六七八九十\d]+项"),
+    re.compile(r"(?:其中)?[一二两三四五六七八九十\d]+项(?:已经|已)?完成"),
+]
+
+
+def _completion_is_partial_or_unresolved(clause: str, start: int, end: int) -> bool:
+    scope = clause[max(0, start - 18):min(len(clause), end + 18)]
+    if not any(pattern.search(scope) is not None for pattern in COMPLETION_PARTIAL_PATTERNS):
+        return False
+    if any(
+        term in scope
+        for term in ["只", "仅", "部分", "局部", "一部分", "一半", "半数", "其中", "距离", "还剩", "还差", "尚差", "还需", "仍需", "尚需", "不能", "无法", "未能", "差不多", "基本", "大体", "接近", "几乎", "快", "马上", "就要", "眼看", "大半", "过半", "八成"]
+    ):
+        return True
+    full_scope = re.search(r"(?:全部|全都|所有|整套|全流程).{0,8}(?:完成|做好|交付|输出|已完成)", scope)
+    return full_scope is None
+
+
+def _has_unresolved_completion_failure(text: str) -> bool:
+    if any(term in text for term in COMPLETION_HARD_FAILURE_TERMS):
+        return True
+    for term in COMPLETION_SOFT_FAILURE_TERMS:
+        for match in re.finditer(re.escape(term), text):
+            prefix = text[max(0, match.start() - 10):match.start()]
+            suffix = text[match.end():match.end() + 10]
+            if re.search(r"(?:没有|并无|无(?:任何)?|未发现|不存在|不再)\s*$", prefix):
+                continue
+            if re.match(r"(?:项|数|数量)?\s*(?:为|是|[:：])?\s*(?:0|零)(?:\D|$)", suffix):
+                continue
+            return True
+    return False
+
+
 def completion_polarity(text: str) -> str:
     """Return asserted, negated, prospective, or none for completion language."""
-    latest: tuple[int, str] | None = None
-    ordered_terms = sorted(set(COMPLETION_TERMS), key=len, reverse=True)
+    ordered_terms = sorted(set(WORKFLOW_COMPLETION_TERMS), key=len, reverse=True)
+    last_state = "none"
+    last_end = -1
     for clause_match in CLAUSE_RE.finditer(text):
         clause = clause_match.group(0)
         mentions: list[tuple[int, int, str]] = []
         for term in ordered_terms:
             mentions.extend((match.start(), match.end(), term) for match in re.finditer(re.escape(term), clause))
         mentions = [
-            mention
-            for mention in mentions
+            mention for mention in mentions
             if not any(
-                other_start <= mention[0]
-                and mention[1] <= other_end
+                other_start <= mention[0] and mention[1] <= other_end
                 and (other_end - other_start) > (mention[1] - mention[0])
                 for other_start, other_end, _other_term in mentions
             )
         ]
-        for start, end, _term in sorted(mentions, key=lambda item: (item[1], item[0])):
-            global_start = clause_match.start() + start
-            global_end = clause_match.start() + end
-            prefix = clause[max(0, start - 28):start]
-            suffix = clause[end:end + 14]
-            sentence_prefix = re.split(r"[。；！？!?\n]", text[:global_start])[-1][-56:]
-            if any(suffix.startswith(marker) for marker in COMPLETION_NOMINAL_SUFFIXES):
-                state = "none"
-            elif any(marker in suffix for marker in ["吗", "么", "没有", "没", "是否"]):
-                state = "none"
-            elif COMPLETION_PARTIAL_RE.search(clause[max(0, start - 18):min(len(clause), end + 18)]):
-                state = "prospective"
-            elif COMPLETION_NEGATION_RE.search(prefix):
-                state = "negated"
-            elif (
-                COMPLETION_PROSPECTIVE_RE.search(prefix)
-                or any(marker in sentence_prefix for marker in ["如果", "只要", "一旦"])
-                or any(suffix.startswith(marker) for marker in COMPLETION_PROSPECTIVE_SUFFIXES)
-            ):
-                state = "prospective"
+        for local_start, local_end, term in sorted(mentions, key=lambda item: (item[1], item[0])):
+            global_start = clause_match.start() + local_start
+            global_end = clause_match.start() + local_end
+            local_prefix = clause[max(0, local_start - 24):local_start]
+            local_suffix = clause[local_end:local_end + 12]
+            sentence_prefix = re.split(r"[。；！？!?\n]", text[:global_start])[-1][-48:]
+            clause_prefix = clause[:local_start]
+            quoted_term = local_start > 0 and clause[local_start - 1] in "“\"‘'" and local_suffix.startswith(("”", "\"", "’", "'"))
+            if any(marker in sentence_prefix for marker in COMPLETION_QUESTION_PREFIXES) or any(marker in local_suffix for marker in ["吗", "么", "没有", "没", "是否"]):
+                last_state = "none"
+            elif quoted_term or any(local_suffix.startswith(marker) for marker in COMPLETION_NOMINAL_SUFFIXES) or any(marker in local_suffix[:12] for marker in COMPLETION_META_TERMS):
+                last_state = "none"
+            elif COMPLETION_REPORT_NEGATION_RE.search(local_prefix):
+                last_state = "none"
+            elif _completion_is_partial_or_unresolved(clause, local_start, local_end):
+                last_state = "prospective"
+            elif COMPLETION_NEGATION_RE.search(local_prefix):
+                last_state = "negated"
             else:
-                state = "asserted"
-            latest = (global_end, state)
-    return latest[1] if latest else "none"
+                explicit_asserted = any(marker in f"{local_prefix[-10:]}{term}" for marker in ["已经", "已", "现在", "如今", "终于"])
+                conditional_in_clause = any(marker in clause_prefix for marker in ["如果", "只要", "一旦"])
+                conditional_before_clause = any(marker in sentence_prefix for marker in ["如果", "只要", "一旦"])
+                conditional_scope = conditional_in_clause or (conditional_before_clause and not explicit_asserted)
+                prospective_prefix = any(pattern.search(local_prefix) is not None for pattern in COMPLETION_LOCAL_PROSPECTIVE_PATTERNS)
+                prospective_suffix = any(local_suffix.startswith(marker) for marker in COMPLETION_PROSPECTIVE_SUFFIXES)
+                last_state = "prospective" if conditional_scope or prospective_prefix or prospective_suffix else "asserted"
+            last_end = global_end
+    if last_state == "asserted" and last_end >= 0 and _has_unresolved_completion_failure(text[last_end:]):
+        return "negated"
+    return last_state
 
 
-CTA_ACTION_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
-    ("reply", re.compile(r"(?:评论区|评论里|评论中|下方)\s*回复|回复关键词")),
-    ("comment", re.compile(r"(?:在)?(?:评论区|评论里|评论中|下方)(?:里|中)?\s*(?:扣|留言|告诉我|输入|打(?:个)?|发)")),
-    ("direct-message", re.compile(r"(?:可以|欢迎|直接|就)?\s*私信我|私信领取")),
-    ("follow", re.compile(r"关注(?:我|一下|账号)|点个关注|点一下关注|(?:记得|别忘了|不要忘记)\s*关注(?:我|一下)?")),
-    ("save", re.compile(r"收藏(?:这一条|这条)|(?:记得|别忘了|不要忘记|建议|可以)\s*收藏(?:这一条|这条)?")),
-    ("like", re.compile(r"点赞(?:这条|这一条)|点个赞|(?:记得|别忘了|不要忘记|帮我)\s*点赞")),
-    ("share", re.compile(r"(?:转发|分享)给(?:需要的)?(?:朋友|同事|家人|团队)")),
-    ("claim", re.compile(r"(?:直接|点击)领取|领取(?:这套|这个|模板|流程|规则)")),
-    ("claim", re.compile(r"(?:想要|需要)[^，。！？]{0,12}(?:可以|就|可)?\s*(?:自提|自行提取)")),
-)
-CTA_DESCRIPTION_RE = re.compile(
-    r"(?:页面|后台|数据|报表)[^，。！？]{0,16}(?:评论区|互动|回复|留言)"
-    r"|(?:评论区|互动|回复|留言)[^，。！？]{0,16}(?:数据|数量|功能|速度|内容|质量|由客服|已经上线)"
-    r"|(?:门店|商家|商品)[^，。！？]{0,12}(?:支持|提供)[^，。！？]{0,8}(?:到店)?自提"
-    r"|(?:输入|搜索|填写|设置|使用)关键词[^，。！？]{0,18}(?:生成|分析|检索|标题|竞品|搜索引擎)"
-)
-CTA_META_TERMS = ("脚本", "测试", "示例", "反例", "按钮文案", "违禁词", "词库", "功能名称")
-CTA_NON_DIRECTIVE_PREFIX_RE = re.compile(
-    r"(?:不要|别|无需|不必|没有|尚未|并未|不是|并不是|从未|并没有|还没有|没必要|没打算|从来没)"
-    r"[^，。！？]{0,10}$"
-    r"|(?:已经|刚刚|刚才|一直|正在|知道|因为|感谢|看到|都)[^，。！？]{0,8}$"
-)
-CTA_DESCRIPTION_SUFFIX_RE = re.compile(
-    r"^(?:率|功能|数量|速度|内容|质量|按钮|输入框|框|由客服|已经上线|太多|很多|很及时|得很及时|了一条公告|了很多用户|会自动保存|是这个功能|在右上角|在右侧)"
-)
+CTA_META_TERMS = ["按钮文案", "反例", "违禁词", "词库", "写成", "不要写", "加入", "作为"]
+CTA_SOFT_META_TERMS = ["脚本", "测试", "示例"]
+CTA_NEGATION_TERMS = ["别", "不要", "不用", "不必", "禁止", "不能", "避免", "无需", "并非", "不是", "不需要", "可以不", "不想", "不打算", "不建议", "没必要", "没打算", "从未", "还没有", "尚未", "并没有", "从来没"]
+CTA_FOLLOW_OBJECT_TERMS = ["模型", "输出", "指标", "结果", "成本", "差异", "稳定", "质量", "数据", "能力"]
+CTA_VIEWER_CONTEXT_TERMS = ["你", "大家", "想要", "需要", "可以", "欢迎", "记得", "别忘", "不要忘记", "请", "直接", "就", "来", "也可以"]
+CTA_DIRECTIVE_CONTEXT_TERMS = ["想要", "需要", "可以", "欢迎", "记得", "别忘", "不要忘记", "请", "直接", "就", "来", "也可以"]
+CTA_NON_DIRECTIVE_PREFIX_TERMS = ["已经", "刚刚", "刚才", "曾经", "之前", "感谢", "谢谢", "从未", "没必要", "没打算", "不需要", "可以不", "一直", "正在", "知道", "因为", "都", "看到", "还没有", "尚未", "并没有", "从来没"]
+CTA_DESCRIPTION_SUFFIX_RE = re.compile(r"^(?:了|过|得|很|由|太|需|的|框|速度|内容|质量|率|功能|数量|数(?!字人)|是|按钮|名称|字段|入口|页面|选项|文案|公告|作为)")
+CTA_FREEFORM_KEYWORD_PREFIXES = ["你的", "您", "告诉我", "一下", "问题", "看法", "案例", "想法", "意见", "内容", "答案"]
+CTA_ACTION_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
+    ("reply", re.compile(r"(?:评论区|评论里|评论下|下方)\s*回复(?:关键词)?(?!率|功能|数量|数(?!字人)|是|按钮|名称)|回复关键词(?!率|功能|数量|数(?!字人)|是|按钮|名称)|^回复(?=[“\"‘'])")),
+    ("comment", re.compile(r"(?:在)?(?:评论区|评论里|评论下|下方)(?:里|中)?\s*(?:留言(?!率|功能|数量|数|是|按钮|名称)|告诉我(?!们)|打个?\s*\d+|扣(?:下|个)?|输入|发)")),
+    ("comment", re.compile(r"评论区见(?=$|[吧哦哈啦呀]|下期|明天|下一条)")),
+    ("comment", re.compile(r"(?<!不要)(?<!禁止)(?<!避免)留言(?=[“\"‘']|[^，。；！？!?]{0,10}(?:我把|我发|发给))")),
+    ("direct-message", re.compile(r"私信我(?!功能|入口|按钮|页面|记录|消息)|私信(?!我|功能|入口|按钮|页面|记录|消息)")),
+    ("follow", re.compile(r"关注我|关注账号|点个关注|关注一下|点一下关注|(?:记得|别忘了?|不要忘记|别忘记)关注")),
+    ("save", re.compile(r"(?:(?:记得|别忘了?|不要忘记|别忘记|建议|可以)\s*)?收藏(?:这一条|这条|一下)?(?!夹|功能|数量|数|率|是|按钮)")),
+    ("like", re.compile(r"点赞这|点个赞|帮我点赞|记得点赞|点赞关注")),
+    ("share", re.compile(r"(?:转发|分享)给(?:需要的)?(?:朋友|同事|家人|身边的人|他|她|他们)")),
+    ("claim", re.compile(r"评论区领取|直接领取|点击领取|领取(?:这|模板|流程|规则)|自提")),
+    ("respond", re.compile(r"告诉我(?!们)")),
+]
 
 
-def _cta_keyword(text: str, action_kind: str, action_end: int) -> str:
-    if action_kind not in {"reply", "comment"}:
+def _cta_clause_is_meta(clause: str) -> bool:
+    return any(term in clause for term in CTA_META_TERMS) or (
+        any(term in clause for term in CTA_SOFT_META_TERMS)
+        and any(term in clause for term in ["用作", "用来", "写", "文案", "词", "反例", "作为"])
+    )
+
+
+def _cta_action_is_negated(clause: str, start: int) -> bool:
+    prefix = clause[:start]
+    if re.search(r"(?:别忘了?|不要忘记|别忘记)\s*$", prefix):
+        return False
+    for term in CTA_NEGATION_TERMS:
+        position = prefix.rfind(term)
+        if position >= 0 and len(prefix[position + len(term):]) <= 24 and not re.search(r"(?:但|不过|而是|可是|只是)", prefix[position + len(term):]):
+            return True
+    return False
+
+
+def _cta_action_has_viewer_context(clause: str, kind: str, start: int, source_text: str) -> bool:
+    if kind in {"reply", "comment"} and any(term in source_text for term in ["评论", "下方", "回复关键词"]):
+        return True
+    if any(term in source_text for term in CTA_DIRECTIVE_CONTEXT_TERMS):
+        return True
+    prefix = clause[:start].strip()
+    if not prefix:
+        return True
+    tail = prefix[-18:]
+    last_non_directive = max((tail.rfind(term) for term in CTA_NON_DIRECTIVE_PREFIX_TERMS), default=-1)
+    last_directive = max((tail.rfind(term) for term in CTA_DIRECTIVE_CONTEXT_TERMS), default=-1)
+    if last_non_directive >= 0 and last_non_directive > last_directive:
+        return False
+    return any(term in tail for term in CTA_VIEWER_CONTEXT_TERMS)
+
+
+def _cta_keyword(text: str, actions: list[dict[str, str]]) -> str:
+    if not any(action.get("kind") in {"reply", "comment"} for action in actions):
         return ""
-    tail = text[action_end:]
-    tail = re.sub(r"^(?:关键词)?\s*[:：]?\s*", "", tail)
-    quoted = re.match(r"[“\"‘']([^”\"’']{1,16})[”\"’']", tail)
-    if quoted:
-        return quoted.group(1).strip()
-    value = re.split(r"(?:领取|获取|拿到|我把|我发|发你|发给|，|。|；|！|？)", tail, maxsplit=1)[0].strip()
-    value = re.sub(r"^(?:个|一个)\s*", "", value)
-    if 1 <= len(value) <= 12 and value not in {"我", "你的看法", "你的问题", "你的案例"}:
-        return value
-    return ""
+    match = re.search(
+        r"(?:回复(?:关键词)?|留言|打个?|扣(?:下|个)?|输入|发)\s*[:：]?\s*(?:[“\"‘']([^”\"’']{1,16})[”\"’']|([A-Za-z0-9_\-\u4e00-\u9fff]+(?:\s+[A-Za-z0-9_\-\u4e00-\u9fff]+){0,2}))",
+        text,
+    )
+    if not match:
+        return ""
+    value = (match.group(1) or match.group(2) or "").strip()
+    value = re.split(r"(?:我把|我发|发你|发给|领取|可以|，|。|；)", value)[0].strip()
+    if value in {"", "我", "我把", "我发", "一下", "告诉我"} or len(value) > 12:
+        return ""
+    return "" if any(value.startswith(prefix) for prefix in CTA_FREEFORM_KEYWORD_PREFIXES) else value
+
+
+def parse_cta_provenance(text: str) -> dict[str, Any] | None:
+    """Parse at most two explicit viewer actions; descriptions and past actions are not CTA."""
+    actions_with_pos: list[tuple[int, dict[str, str]]] = []
+    for clause_match in CLAUSE_RE.finditer(text):
+        clause = clause_match.group(0)
+        if _cta_clause_is_meta(clause):
+            continue
+        for kind, pattern in CTA_ACTION_PATTERNS:
+            for match in pattern.finditer(clause):
+                source_text = match.group(0).strip()
+                if not source_text or _cta_action_is_negated(clause, match.start()):
+                    continue
+                if CTA_DESCRIPTION_SUFFIX_RE.search(clause[match.end():].lstrip()):
+                    continue
+                if not _cta_action_has_viewer_context(clause, kind, match.start(), source_text):
+                    continue
+                if kind == "follow" and any(clause[match.end():].lstrip().startswith(term) for term in CTA_FOLLOW_OBJECT_TERMS):
+                    continue
+                actions_with_pos.append((clause_match.start() + match.start(), {"kind": kind, "sourceText": source_text}))
+    actions: list[dict[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for _position, action in sorted(actions_with_pos, key=lambda item: item[0]):
+        key = (action["kind"], action["sourceText"])
+        if key in seen:
+            continue
+        seen.add(key)
+        actions.append(action)
+        if len(actions) == 2:
+            break
+    if not actions:
+        return None
+    provenance: dict[str, Any] = {"actions": actions}
+    keyword = _cta_keyword(text, actions)
+    if keyword:
+        provenance["keyword"] = keyword
+    return provenance
 
 
 def viewer_cta_signal(text: str) -> dict[str, Any] | None:
-    """Parse one explicit viewer action; bare CTA nouns and descriptions return None."""
-    if CTA_DESCRIPTION_RE.search(text):
+    """Portrait adapter for the shared multi-action CTA provenance."""
+    provenance = parse_cta_provenance(text)
+    if not provenance:
         return None
-    candidates: list[tuple[int, str, re.Match[str]]] = []
-    for action_kind, pattern in CTA_ACTION_PATTERNS:
-        for match in pattern.finditer(text):
-            clause_start = max(text.rfind(mark, 0, match.start()) for mark in "，。；！？!?") + 1
-            following_marks = [position for mark in "，。；！？!?" if (position := text.find(mark, match.end())) >= 0]
-            clause_end = min(following_marks) if following_marks else len(text)
-            clause = text[clause_start:clause_end]
-            if any(term in clause for term in CTA_META_TERMS):
-                continue
-            prefix = text[max(0, match.start() - 14):match.start()]
-            if CTA_NON_DIRECTIVE_PREFIX_RE.search(prefix):
-                continue
-            suffix = text[match.end():match.end() + 16].lstrip()
-            if CTA_DESCRIPTION_SUFFIX_RE.search(suffix):
-                continue
-            candidates.append((match.start(), action_kind, match))
-    if not candidates:
-        return None
-    _start, action_kind, match = sorted(candidates, key=lambda item: item[0])[0]
-    action = match.group(0).strip()
-    keyword = _cta_keyword(text, action_kind, match.end())
+    action = provenance["actions"][0]
     result: dict[str, Any] = {
-        "actionKind": action_kind,
-        "action": action,
+        "actionKind": action["kind"],
+        "action": action["sourceText"],
         "sourceText": text.strip(),
     }
-    if keyword:
-        result["keyword"] = keyword
+    if provenance.get("keyword"):
+        result["keyword"] = provenance["keyword"]
     return result
+
+
+def has_cta_action_signal(text: str) -> bool:
+    return parse_cta_provenance(text) is not None
+
+
+def cta_action_keywords(text: str) -> list[str]:
+    provenance = parse_cta_provenance(text)
+    if not provenance:
+        return []
+    values = [str(action.get("sourceText") or "") for action in provenance.get("actions", []) if isinstance(action, dict)]
+    if provenance.get("keyword"):
+        values.append(str(provenance["keyword"]))
+    return [value for value in values if value][:4]

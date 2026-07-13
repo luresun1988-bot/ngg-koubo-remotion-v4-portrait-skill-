@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -28,6 +30,9 @@ def main() -> int:
         dry_run = upgrade(root, write=False)
         if not any(item["name"] == "final_media_qa.py" and item["action"] == "update" for item in dry_run["operations"]):
             raise AssertionError(dry_run)
+        for required_name in ["semantic_guardrails.py", "semantic_contract_cases.json"]:
+            if not any(item["name"] == required_name and item["action"] == "add" for item in dry_run["operations"]):
+                raise AssertionError(f"dry-run omitted shared semantic dependency: {required_name}")
         if stale.read_text(encoding="utf-8") != "old runtime":
             raise AssertionError("dry-run modified the project")
 
@@ -35,6 +40,20 @@ def main() -> int:
         source_scripts, _ = source_directories()
         if stale.read_bytes() != (source_scripts / "final_media_qa.py").read_bytes():
             raise AssertionError("runtime file was not upgraded")
+        for required_name in ["semantic_guardrails.py", "semantic_contract_cases.json"]:
+            copied = root / "scripts" / required_name
+            if copied.read_bytes() != (source_scripts / required_name).read_bytes():
+                raise AssertionError(f"shared semantic dependency was not upgraded: {required_name}")
+        imported = subprocess.run(
+            [sys.executable, "-c", "import semantic_router; print(semantic_router.classify_text('我刚刚关注你了', 75, 150)['semanticIntent'])"],
+            cwd=root / "scripts",
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=False,
+        )
+        if imported.returncode != 0 or "explanation-claim" not in imported.stdout:
+            raise AssertionError(f"upgraded semantic router import failed: {imported.stdout} {imported.stderr}")
         updated = next(item for item in report["operations"] if item["name"] == "final_media_qa.py")
         backup = Path(str(updated.get("backup") or ""))
         if not backup.is_file() or backup.read_text(encoding="utf-8") != "old runtime":
