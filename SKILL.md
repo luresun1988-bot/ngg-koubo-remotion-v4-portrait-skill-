@@ -72,7 +72,7 @@ Produce or modify 9:16 Chinese vertical talking-head Remotion edits in the NGG V
 - Bind behind-presenter keyword typography to the first eligible source-bound theme thesis, not mechanically to frame 0. Preserve a proof-first opening and defer the effect until a strong fullscreen/large-presenter question, judgement, contrast, transformation, or result promise states the topic.
 - Create only an approval-required theme-thesis candidate automatically. Promote `depthKeyword` only after explicit user approval and approval of a transparent, composition-aligned presenter foreground cutout.
 - Use one sourced white keyword of at most six Chinese characters on one line behind the presenter. Do not split it around the head or add semantic colors or a numeric subline.
-- Keep the base camera stable. Reserve `presenter-impact-punch` for strong source-bound questions, judgements, reversals, warnings, or asserted results; keep it short, fast, FPS-scaled, sparse, and separate from fullscreen/PiP geometry transitions.
+- Keep the base camera stable. Reserve `presenter-impact-punch` for strong source-bound questions, judgements, reversals, warnings, or asserted results. Prefer lifecycle sync: match one visible semantic companion by scene, `sourceBeatId`, and exact half-open range; push to peak in 4–6 FPS-scaled frames, hold at peak with no rebound, then return during the companion's exit and finish on the same frame. Use the short standalone fallback only when no companion can be synchronized. Keep starts about eight seconds apart, at most three in a rolling minute, and separate from fullscreen/PiP geometry transitions, material focus, CTA, and ordinary explanation.
 
 ### Audio and Output
 

@@ -587,7 +587,8 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
     if presenter_impacts:
         fps = int(composition.get("fps") or 25)
         min_duration = max(1, round(18 * fps / 30))
-        max_duration = max(min_duration, round(28 * fps / 30))
+        max_standalone_duration = max(min_duration, round(28 * fps / 30))
+        max_synced_duration = round(6 * fps)
         min_gap = round(8 * fps)
         allowed_roles = {
             "result-promise",
@@ -595,9 +596,10 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
             "negative-to-positive",
             "semantic-problem-map",
             "positive-confirm",
-            "cta-resolve",
+            "pain-question",
             "theme-thesis",
         }
+        non_sync_types = {"presenterReposition", "cornerChapterLabel", "iconPulse"}
         forbidden_overlap_types = {
             "materialMain",
             "materialZoom",
@@ -608,9 +610,28 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
             start = int(impact.get("startFrame", 0) or 0)
             end = int(impact.get("endFrame", start) or start)
             duration = end - start
-            if duration < min_duration or duration > max_duration:
+            source_beat_id = str(impact.get("sourceBeatId") or "")
+            sync_events = [
+                other
+                for other in visual_events
+                if other is not impact
+                and isinstance(other, dict)
+                and str(other.get("type") or "") not in non_sync_types
+                and str(other.get("sceneId") or "") == str(impact.get("sceneId") or "")
+                and str(other.get("sourceBeatId") or "") == source_beat_id
+                and int(other.get("startFrame", 0) or 0) == start
+                and int(other.get("endFrame", 0) or 0) == end
+            ]
+            is_lifecycle_synced = bool(source_beat_id and sync_events)
+            if duration < min_duration or (
+                is_lifecycle_synced and duration > max_synced_duration
+            ) or (
+                not is_lifecycle_synced and duration > max_standalone_duration
+            ):
                 errors.append(
-                    f"presenter impact {impact_id} lasts {duration}f; require {min_duration}-{max_duration}f"
+                    f"presenter impact {impact_id} lasts {duration}f; standalone requires "
+                    f"{min_duration}-{max_standalone_duration}f, while lifecycle sync requires an exact "
+                    f"same-scene/sourceBeatId/range semantic companion and at most {max_synced_duration}f"
                 )
             if str(impact.get("semanticRole") or "") not in allowed_roles:
                 errors.append(
@@ -619,11 +640,8 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
             if not impact.get("sourceBeatId"):
                 errors.append(f"presenter impact {impact_id} requires sourceBeatId")
             peak = impact.get("presenterPeakScale", 1.08)
-            settle = impact.get("presenterSettleScale", 1.04)
             if not isinstance(peak, (int, float)) or not 1.06 <= float(peak) <= 1.10:
                 errors.append(f"presenter impact {impact_id} peak scale must be 1.06-1.10 in portrait")
-            if not isinstance(settle, (int, float)) or not 1.03 <= float(settle) <= 1.05:
-                errors.append(f"presenter impact {impact_id} settle scale must be 1.03-1.05 in portrait")
             scene = scene_by_id.get(str(impact.get("sceneId") or ""), {})
             if str(scene.get("presenterLayout") or "") not in {"fullscreen", "large"}:
                 errors.append(f"presenter impact {impact_id} requires fullscreen/large presenter")
@@ -642,10 +660,10 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
                         f"presenter impact {impact_id} overlaps forbidden {other.get('type')} event {other.get('id')}"
                     )
         for previous, current in zip(presenter_impacts, presenter_impacts[1:]):
-            gap = int(current.get("startFrame", 0) or 0) - int(previous.get("endFrame", 0) or 0)
+            gap = int(current.get("startFrame", 0) or 0) - int(previous.get("startFrame", 0) or 0)
             if gap < min_gap:
                 errors.append(
-                    f"presenter impacts {previous.get('id')} and {current.get('id')} are only {gap}f apart; require {min_gap}f"
+                    f"presenter impact starts {previous.get('id')} and {current.get('id')} are only {gap}f apart; require {min_gap}f"
                 )
         for index, current in enumerate(presenter_impacts):
             window_start = int(current.get("startFrame", 0) or 0) - 60 * fps

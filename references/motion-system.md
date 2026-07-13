@@ -97,7 +97,7 @@ The V4 template currently implements these concrete presets:
 - `word-pop`: staged word entrance for pain/question hooks.
 - `crash-rebound-keyword-pop`: title scale-in, rebound, and short keyword emphasis for results, routes, and CTA.
 - `keyword-second-pop`: emphasized title words scale up briefly once after the primary entrance, then settle back; no continuous pulsing.
-- `presenter-impact-punch`: reserve for a strong source-bound question, core judgement, reversal, warning, or asserted result. Scale timing from composition FPS: at 30 fps use 18–28 frames total with 4–6-frame push/rebound phases and a 6–10-frame return; at 25 fps use about 15–23 frames total with proportionally scaled phases. Push to 1.06–1.10 and rebound to 1.03–1.05. Keep a face-safe origin near `50% 37%`, at most three punches in a rolling minute, and about eight seconds between punches. Do not overlap proof/material focus, PiP transitions, or another major camera move.
+- `presenter-impact-punch`: reserve for a strong source-bound question, core judgement, reversal, warning, or asserted result. The default is semantic-lifecycle sync: pair it with one visible non-reposition semantic event in the same scene using the same `sourceBeatId` and exact `[startFrame,endFrame)` range. Push to 1.06–1.10 in 4–6 FPS-scaled frames, do not rebound, hold at peak through the companion's readable phase, and return during that companion's standard exit window so both finish on the same frame. A lifecycle-synced event may last up to six seconds; an unpaired standalone fallback remains 18–28 frames at 30 fps or about 15–23 at 25 fps. Keep a face-safe origin near `50% 37%`, starts about eight seconds apart, and at most three punches in a rolling minute. Do not overlap proof/material focus, PiP transitions, CTA, ordinary explanation, or another major camera move.
 - `contrast-swap-scan`: pain contrast board with state highlight and "not A / but B" layout.
 - `hub-to-platform-flow`: center package fans out to platform nodes with staggered line reveal.
 - `field-collapse-to-action`: repeated fields expand, check, and hand off into Codex/system execution.
@@ -198,7 +198,7 @@ Movement style:
 
 ## Dynamic Motion QA
 
-Run `scripts/render_motion_previews.ps1` after still/contact-sheet approval. It renders short H.264 previews around every `presenter-impact-punch`, behind-presenter depth event/candidate, and presenter-layout boundary. Review these clips for speed, rebound, geometry continuity, lip sync, and accidental camera drift before the full render.
+Run `scripts/render_motion_previews.ps1` after still/contact-sheet approval. It renders short H.264 previews around every `presenter-impact-punch`, behind-presenter depth event/candidate, and presenter-layout boundary. Review these clips for fast push, stable peak hold, synchronized semantic exit, geometry continuity, lip sync, and accidental camera drift before the full render.
 - No hard jumps.
 - Sample frames before and after repositioning.
 - Segment boundaries must not create face/body jumps.

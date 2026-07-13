@@ -33,8 +33,8 @@ FPS = 25
 DURATION_FRAMES = 300
 DURATION_SECONDS = DURATION_FRAMES / FPS
 SCENE_BOUNDARIES = (0, 75, 150, 225, DURATION_FRAMES)
-PUNCH_START = 176
-PUNCH_END = 196
+PUNCH_START = 155
+PUNCH_END = 215
 
 
 def format_config() -> dict[str, Any]:
@@ -46,7 +46,6 @@ def format_config() -> dict[str, Any]:
         "height": 1920 if portrait else 1080,
         "compositionId": "NGGKouboV4Portrait" if portrait else "NGGKouboV4",
         "peakScale": 1.08 if portrait else 1.10,
-        "settleScale": 1.04 if portrait else 1.05,
     }
 
 
@@ -181,7 +180,6 @@ def build_visual_script() -> dict[str, Any]:
             "semanticRole": "positive-confirm",
             "motionType": "presenter-impact-punch",
             "presenterPeakScale": config["peakScale"],
-            "presenterSettleScale": config["settleScale"],
         },
         {
             "id": "confirm-continuity",
@@ -835,12 +833,15 @@ def main() -> int:
             149,
             150,
             160,
-            176,
-            180,
-            184,
-            190,
-            195,
-            196,
+            154,
+            155,
+            159,
+            170,
+            185,
+            199,
+            205,
+            214,
+            215,
             250,
         }
     )
@@ -883,16 +884,20 @@ def main() -> int:
     if min(proof_differences) < 0.02:
         raise AssertionError(f"proof video appears static: {proof_differences}")
 
-    impact_widths = {frame: green_box_width(stills[frame]) for frame in (176, 180, 184, 190, 195, 196)}
-    baseline_width = impact_widths[176]
+    impact_frames = (154, 155, 159, 170, 185, 199, 205, 214, 215)
+    impact_widths = {frame: green_box_width(stills[frame]) for frame in impact_frames}
+    baseline_width = impact_widths[154]
     minimum_peak_ratio = 1.055 if FORMAT == "portrait" else 1.07
-    if impact_widths[180] < baseline_width * minimum_peak_ratio:
+    if impact_widths[159] < baseline_width * minimum_peak_ratio:
         raise AssertionError(f"presenter impact peak is too weak: {impact_widths}")
-    if not (baseline_width * 1.015 <= impact_widths[184] < impact_widths[180]):
-        raise AssertionError(f"presenter impact rebound is missing: {impact_widths}")
-    if abs(impact_widths[195] - baseline_width) / baseline_width > 0.035:
+    held_widths = [impact_widths[frame] for frame in (159, 170, 185, 199)]
+    if max(held_widths) - min(held_widths) > baseline_width * 0.02:
+        raise AssertionError(f"presenter impact did not hold its peak scale: {impact_widths}")
+    if not (baseline_width * 1.015 < impact_widths[205] < impact_widths[199]):
+        raise AssertionError(f"presenter impact did not return during the semantic exit: {impact_widths}")
+    if abs(impact_widths[214] - baseline_width) / baseline_width > 0.035:
         raise AssertionError(f"presenter impact did not return by its final frame: {impact_widths}")
-    if abs(impact_widths[196] - baseline_width) / baseline_width > 0.035:
+    if abs(impact_widths[215] - baseline_width) / baseline_width > 0.035:
         raise AssertionError(f"presenter scale drifted after the impact event: {impact_widths}")
 
     audio_report = analyze_audio(ffmpeg, final_path, output_root)
@@ -932,7 +937,7 @@ def main() -> int:
         f"- Composition: `{config['width']}x{config['height']} / {FPS}fps / {DURATION_FRAMES} frames`",
         "- Timeline: fullscreen presenter → proof material + PiP → fullscreen return → CTA",
         "- Audio: one 48 kHz stereo WAV with four unique frequency sections; no dropout at 3s/6s/9s boundaries",
-        "- Motion: 20-frame presenter impact with 4-frame push, rebound, hold, and return",
+        "- Motion: 60-frame presenter impact with a 4-frame push, peak hold, and return synchronized to the companion semantic exit",
         f"- Final video SHA-256: `{report['artifacts']['videoSha256']}`",
         "",
         f"Contact sheet: `{report['artifacts']['contactSheet']}`",

@@ -53,6 +53,13 @@ python scripts/sfx_semantic_routing_regression.py
 | `topic-intro` | this episode discusses/introduces one subject | `topicKeyword` | `topicKeyword` |
 | `explanation-claim` | ordinary explanation, definition, or low-confidence claim | `claimStrip`, `sourceBoundSticker`, or `intentionalCleanHold` | strongest readable claim uses `claimStrip`; short claims use `statusSticker`; lower-priority repeats stay clean |
 
+## Presenter-impact semantic binding
+
+- Add `presenter-impact-punch` only as a sparse camera companion to a selected high-priority visible semantic event: `pain-question`, `theme-thesis`, `negative-friction`, `negative-to-positive`, `result-promise`, or asserted `positive-confirm`.
+- Numeric data alone, workflow/enumeration, automation handoff, ordinary explanation, proof/material focus, topic/tool naming, and `cta-resolve` do not qualify. A numeric event may be the visible companion only when the same sourced beat independently carries an approved strong judgement/result role on the camera event.
+- In the default lifecycle-synced form, copy the companion's `sceneId`, `sourceBeatId`, `startFrame`, and `endFrame` exactly onto the `presenterReposition` event. The semantic event is the master clock: camera entry starts with it, peak holds through its readable phase, and camera return uses its exit window.
+- Do not add camera impact to every eligible beat. Preserve about eight seconds between impact starts and at most three in a rolling minute; choose the strongest beats after material/PiP and other camera conflicts are removed.
+
 ## Routing Priority
 
 - Negative plus an asserted solution becomes `negative-to-positive`; pure negative and prospective completion stay red-only.

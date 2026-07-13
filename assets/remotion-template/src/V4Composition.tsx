@@ -187,24 +187,53 @@ export const presenterMotionStateFor = ({
   };
 };
 
-const presenterImpactScaleFor = (event: VisualEvent | undefined, frame: number): number => {
+const presenterImpactSyncEventFor = (
+  events: VisualEvent[],
+  impactEvent: VisualEvent | undefined,
+): VisualEvent | undefined => {
+  if (!impactEvent?.sourceBeatId) return undefined;
+  return events.find(
+    (event) =>
+      event.id !== impactEvent.id &&
+      !['presenterReposition', 'cornerChapterLabel', 'iconPulse'].includes(event.type) &&
+      event.sceneId === impactEvent.sceneId &&
+      event.sourceBeatId === impactEvent.sourceBeatId &&
+      event.startFrame === impactEvent.startFrame &&
+      event.endFrame === impactEvent.endFrame,
+  );
+};
+
+const presenterImpactScaleFor = (
+  event: VisualEvent | undefined,
+  syncEvent: VisualEvent | undefined,
+  frame: number,
+  fps: number,
+): number => {
   if (!event || event.motionType !== 'presenter-impact-punch') return 1;
   const duration = Math.max(2, event.endFrame - event.startFrame);
-  const local = frame - event.startFrame;
-  const pushEnd = Math.min(duration - 1, Math.max(4, Math.round(duration * 0.2)));
-  const reboundEnd = Math.min(duration - 1, pushEnd + Math.max(4, Math.round(duration * 0.2)));
-  const returnStart = Math.max(reboundEnd + 1, duration - Math.max(6, Math.round(duration * 0.32)));
-  const lastFrame = Math.max(returnStart + 1, duration - 1);
-  return interpolate(
-    local,
-    [0, pushEnd, reboundEnd, returnStart, lastFrame],
-    [1, event.presenterPeakScale ?? 1.08, event.presenterSettleScale ?? 1.04, event.presenterSettleScale ?? 1.04, 1],
-    {
-      easing: Easing.bezier(0.16, 1, 0.3, 1),
+  const lastFrame = Math.max(event.startFrame + 1, event.endFrame - 1);
+  const pushFrames = Math.max(3, Math.round((4 * fps) / 25));
+  const pushEnd = Math.min(lastFrame - 1, event.startFrame + pushFrames);
+  const syncDuration = syncEvent ? Math.max(1, syncEvent.endFrame - syncEvent.startFrame) : duration;
+  const exitFrames = syncEvent
+    ? Math.min(22, Math.max(12, Math.floor(syncDuration / 4)))
+    : Math.max(4, Math.round((8 * fps) / 30));
+  const returnStart = Math.max(pushEnd + 1, event.endFrame - exitFrames);
+  const peakScale = event.presenterPeakScale ?? 1.08;
+
+  if (frame <= pushEnd) {
+    return interpolate(frame, [event.startFrame, pushEnd], [1, peakScale], {
+      easing: Easing.out(Easing.cubic),
       extrapolateLeft: 'clamp',
       extrapolateRight: 'clamp',
-    },
-  );
+    });
+  }
+  if (frame < returnStart) return peakScale;
+  return interpolate(frame, [returnStart, lastFrame], [peakScale, 1], {
+    easing: Easing.inOut(Easing.cubic),
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
 };
 
 const ContinuousPresenter: React.FC<{
@@ -522,7 +551,13 @@ export const V4Composition: React.FC<{visualScript: VisualScript}> = ({visualScr
   const presenterImpactEvent = rawEvents.find(
     (event) => event.type === 'presenterReposition' && event.motionType === 'presenter-impact-punch',
   );
-  const presenterImpactScale = presenterImpactScaleFor(presenterImpactEvent, frame);
+  const presenterImpactSyncEvent = presenterImpactSyncEventFor(visualScript.visualEvents, presenterImpactEvent);
+  const presenterImpactScale = presenterImpactScaleFor(
+    presenterImpactEvent,
+    presenterImpactSyncEvent,
+    frame,
+    visualScript.composition.fps,
+  );
   const presenterAboveMaterial =
     currentScene.presenterLayout === 'pip' ||
     presenterMotion.currentLayout === 'pip' ||

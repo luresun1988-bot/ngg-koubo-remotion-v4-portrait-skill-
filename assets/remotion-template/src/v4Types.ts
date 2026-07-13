@@ -117,6 +117,7 @@ export type VisualEvent = {
   densityMode?: 'dense' | 'dense-strong' | 'light' | 'proof-focus' | string;
   densityReason?: string;
   presenterPeakScale?: number;
+  /** Legacy compatibility only; presenter-impact-punch now holds presenterPeakScale until semantic exit. */
   presenterSettleScale?: number;
   internalSteps?: Array<{
     id?: string;
