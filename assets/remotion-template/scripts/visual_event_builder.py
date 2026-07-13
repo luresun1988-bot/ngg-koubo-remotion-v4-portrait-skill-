@@ -280,6 +280,8 @@ def confirm_copy(text: str) -> tuple[str, str, list[str]]:
 def cta_copy(text: str, sourced_provenance: dict[str, Any] | None = None) -> tuple[str, str, str, list[str], dict[str, str]]:
     clean = normalize_hud_source(text)
     provenance_action = str((sourced_provenance or {}).get("action") or "").strip()
+    normalized_provenance_action = normalize_hud_source(provenance_action)
+    sourced_action = normalized_provenance_action if normalized_provenance_action in clean else ""
     action = provenance_action or next(
         (term for term in ["评论区", "关注", "点赞", "收藏", "私信", "领取", "自提", "告诉我"] if term in clean),
         "",
@@ -302,6 +304,8 @@ def cta_copy(text: str, sourced_provenance: dict[str, Any] | None = None) -> tup
 
     if future_topic and action:
         title = f"下期：{future_topic}"[:14]
+    elif sourced_action:
+        title = sourced_action[:14]
     elif "评论区" in clean and "告诉我" in clean:
         title = "评论区告诉我"
     elif "点个关注" in clean:
@@ -326,6 +330,12 @@ def cta_copy(text: str, sourced_provenance: dict[str, Any] | None = None) -> tup
     if future_topic and action:
         action_copy = "点个关注" if "点个关注" in clean else title if action in title else action
         subtext = f"{action_copy} · 下期见" if "下期见" in clean else action_copy
+    elif sourced_action:
+        subtext = clean.replace(sourced_action, "", 1)
+        normalized_keyword = normalize_hud_source(keyword)
+        if normalized_keyword:
+            subtext = subtext.replace(normalized_keyword, "", 1)
+        subtext = subtext.strip(PUNCTUATION)[:18]
     else:
         subtext = key_message(text, 18, ["Codex", "流程", "模板", "下期", "下一条", "自动化"])
     if normalize_for_match(subtext) == normalize_for_match(title):

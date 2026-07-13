@@ -19,6 +19,7 @@ REGRESSIONS = [
     "caption_reference_regression.py",
     "semantic_router_regression.py",
     "semantic_contract_regression.py",
+    "semantic_render_regression.py",
     "semantic_guardrails_regression.py",
     "semantic_component_contract_regression.py",
     "sfx_semantic_routing_regression.py",

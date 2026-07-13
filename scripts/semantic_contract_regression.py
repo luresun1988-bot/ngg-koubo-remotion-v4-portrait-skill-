@@ -54,6 +54,8 @@ def run_case(case: dict[str, Any]) -> dict[str, Any]:
         "requiredChecks": all(item in actual_checks for item in expected_checks),
         "ctaKeyword": not expected_keyword or provenance.get("keyword") == expected_keyword,
         "eventStatus": not adapter.get("eventStatus") or event.get("status") == adapter["eventStatus"],
+        "eventText": not adapter.get("eventText") or event.get("text") == adapter["eventText"],
+        "eventSubtext": not adapter.get("eventSubtext") or event.get("subtext") == adapter["eventSubtext"],
     }
     return {"id":case["id"],"format":FORMAT,"expectedIntent":case["intent"],"actualIntent":beat.get("semanticIntent"),"expectedEventType":adapter["eventType"],"actualEventType":event.get("type"),"checks":checks,"ok":all(checks.values())}
 
