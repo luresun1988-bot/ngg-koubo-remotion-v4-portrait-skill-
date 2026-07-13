@@ -40,8 +40,7 @@ def main() -> int:
                 "-f",
                 "lavfi",
                 "-i",
-                "sine=frequency=550:sample_rate=48000:duration=1",
-                "-shortest",
+                "sine=frequency=550:sample_rate=48000:duration=1.4",
                 "-c:v",
                 "libx264",
                 "-pix_fmt",
@@ -56,6 +55,13 @@ def main() -> int:
             json.dumps({"composition": {"width": 270, "height": 480, "fps": 25, "durationFrames": 25}}),
             encoding="utf-8",
         )
+        raw_report = analyze(raw, visual_script, strict_color=False)
+        raw_actual = raw_report.get("actual", {})
+        raw_tail = float(raw_actual.get("audioDurationSec") or 0) - float(
+            raw_actual.get("videoDurationSec") or 0
+        )
+        if raw_tail < 0.3:
+            raise AssertionError(f"regression fixture must contain a long audio tail: {raw_actual}")
         completed = subprocess.run(
             [
                 powershell,
@@ -85,6 +91,11 @@ def main() -> int:
         report = analyze(final, visual_script)
         if not report.get("passed"):
             raise AssertionError(report)
+        actual = report.get("actual", {})
+        expected_duration = 1.0
+        for key in ("videoDurationSec", "audioDurationSec", "formatDurationSec"):
+            if abs(float(actual.get(key) or 0) - expected_duration) > 1e-6:
+                raise AssertionError(f"pipeline must trim {key} to {expected_duration:.6f}s: {actual}")
     print("portrait render pipeline regression: PASS")
     return 0
 

@@ -34,6 +34,20 @@ $outputPath = Resolve-ProjectPath $Output
 if (-not (Test-Path -LiteralPath $visualScriptPath -PathType Leaf)) {
   throw "Missing visual script: $visualScriptPath"
 }
+$visualScriptData = [System.IO.File]::ReadAllText(
+  $visualScriptPath,
+  [System.Text.Encoding]::UTF8
+) | ConvertFrom-Json
+$expectedFps = [double]$visualScriptData.composition.fps
+$expectedFrames = [double]$visualScriptData.composition.durationFrames
+if ($expectedFps -le 0 -or $expectedFrames -le 0) {
+  throw "visual_script composition must define positive fps and durationFrames"
+}
+$expectedDuration = $expectedFrames / $expectedFps
+$expectedDurationText = $expectedDuration.ToString(
+  "0.############",
+  [System.Globalization.CultureInfo]::InvariantCulture
+)
 if ((Test-Path -LiteralPath $outputPath) -and -not $Force) {
   throw "Output exists; pass -Force to replace: $outputPath"
 }
@@ -96,7 +110,9 @@ try {
       -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p `
       -color_range tv -colorspace bt709 -color_trc bt709 -color_primaries bt709 `
       -x264-params "colorprim=bt709:transfer=bt709:colormatrix=bt709" `
-      -c:a aac -b:a 192k -ar 48000 -ac 2 -movflags +faststart $outputPath
+      -af "atrim=end=$expectedDurationText,asetpts=PTS-STARTPTS" `
+      -c:a aac -b:a 192k -ar 48000 -ac 2 `
+      -t $expectedDurationText -movflags +faststart $outputPath
   }
 
   Invoke-Step "final media QA" {
