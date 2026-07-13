@@ -25,6 +25,7 @@ REGRESSIONS = [
     "sfx_semantic_routing_regression.py",
     "visual_density_regression.py",
     "presenter_impact_regression.py",
+    "dynamic_continuity_regression.py",
     "presenter_media_regression.py",
     "fps_contract_regression.py",
     "final_media_qa_regression.py",

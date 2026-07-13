@@ -35,6 +35,20 @@ CASE_SCENE_TYPES = {
 }
 FRAMES_PER_CASE = 125
 FPS = 25
+ALLOWED_LINT_WARNING_PREFIXES = {
+    "landscape": (
+        "visualEvents[1] frame range",
+        "visualEvents[3] frame range",
+        "audio-sfx-duration warning: aud-sfx-beat-003-automation_handoff",
+        "main HUD duration is below preferred hold: ve-beat-003",
+        "card-heavy-sequence-warning:",
+        "main-card-ratio-warning:",
+    ),
+    "portrait": (
+        "audio-sfx-duration warning: aud-sfx-beat-003-automation_handoff",
+        "main HUD duration is below preferred hold: ve-beat-003",
+    ),
+}
 
 
 def format_config() -> dict[str, Any]:
@@ -176,7 +190,7 @@ def build_visual_script(cases: list[dict[str, Any]]) -> dict[str, Any]:
             "sourcePath": "scripts/semantic_contract_cases.json",
             "method": "fixed-semantic-regression-cue-timecodes",
             "generatedBy": "semantic_render_regression.py",
-            "notes": "Each shared contract sentence owns one fixed 125-frame scene; no proportional text timing is used.",
+            "notes": f"Each shared contract sentence owns one fixed {FRAMES_PER_CASE}-frame scene; no proportional text timing is used.",
         },
         "researchNotes": [
             {
@@ -200,7 +214,18 @@ def build_visual_script(cases: list[dict[str, Any]]) -> dict[str, Any]:
         "semanticBeats": [],
         "visualEvents": [],
         "audioCues": [],
-        "qaFrames": [],
+        "qaFrames": [
+            {
+                "frame": 40,
+                "reason": "Hook presenter semantic-render sample.",
+                "checks": ["Hook", "presenter", "semantic-route"],
+            },
+            {
+                "frame": duration_frames - 40,
+                "reason": "CTA presenter semantic-render sample.",
+                "checks": ["CTA", "presenter", "cta-provenance"],
+            },
+        ],
     }
 
 
@@ -255,6 +280,20 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def lint_warnings(path: Path) -> list[str]:
+    warnings: list[str] = []
+    in_warnings = False
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        if line == "## Warnings":
+            in_warnings = True
+            continue
+        if in_warnings and line.startswith("## "):
+            break
+        if in_warnings and line.startswith("- ") and line != "- None":
+            warnings.append(line[2:])
+    return warnings
+
+
 def probe_dimensions(ffprobe: str, path: Path) -> str:
     return run_checked(
         f"ffprobe {path.name}",
@@ -300,6 +339,7 @@ def write_markdown_report(report: dict[str, Any], path: Path) -> None:
         f"- Composition: `{report['composition']['width']}x{report['composition']['height']} / {report['composition']['fps']}fps / {report['composition']['durationFrames']} frames`",
         f"- Cases rendered: `{len(report['cases'])}`",
         f"- Unique PNG hashes: `{report['uniqueStillHashes']}`",
+        f"- Controlled lint warnings: `{len(report['controlledLintWarnings'])}` (unexpected warnings fail the regression)",
         "",
         "| Case | Intent | Event | Frame | PNG |",
         "|---|---|---|---:|---|",
@@ -350,6 +390,7 @@ def main() -> int:
         [sys.executable, str(SCRIPT_DIR / "validate_visual_script.py"), str(visual_script_path)],
         cwd=SKILL_ROOT,
     )
+    lint_path = output_root / "pre_render_lint.md"
     run_checked(
         "visual script QA lint",
         [
@@ -358,10 +399,19 @@ def main() -> int:
             "--visual-script",
             str(visual_script_path),
             "--out",
-            str(output_root / "pre_render_lint.md"),
+            str(lint_path),
         ],
         cwd=SKILL_ROOT,
     )
+    controlled_warnings = lint_warnings(lint_path)
+    allowed_prefixes = ALLOWED_LINT_WARNING_PREFIXES[FORMAT]
+    unexpected_warnings = [
+        warning
+        for warning in controlled_warnings
+        if not any(warning.startswith(prefix) for prefix in allowed_prefixes)
+    ]
+    if unexpected_warnings:
+        raise AssertionError(f"unexpected semantic render lint warnings: {unexpected_warnings}")
     run_checked(
         "generated TypeScript writer",
         [
@@ -532,6 +582,8 @@ def main() -> int:
         ],
         "cases": case_results,
         "uniqueStillHashes": len(set(hashes)),
+        "controlledLintWarnings": controlled_warnings,
+        "allowedLintWarningPrefixes": list(allowed_prefixes),
         "contactSheet": str(contact_sheet.relative_to(SKILL_ROOT)).replace("\\", "/"),
     }
     report_path = output_root / "report.json"

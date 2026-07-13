@@ -27,6 +27,14 @@ For template or Skill changes that touch visual scheduling, also run:
 python scripts/visual_density_regression.py
 ```
 
+For changes to presenter mounting, fullscreen/PiP geometry, corner-label filtering, caption rendering, normalized narration, or presenter-impact timing, run the rendered continuity gate:
+
+```text
+python scripts/dynamic_continuity_regression.py
+```
+
+It must pass the 12-second/25fps real Remotion render, keyframe pixel checks, four-section audio-continuity checks, final-media metadata checks, and full-file decode. Its synthetic audio gate detects restarts, dropouts, and cumulative timeline mistakes; it does not replace perceptual lip-sync review on the real presenter.
+
 After the final render, run:
 
 ```text
