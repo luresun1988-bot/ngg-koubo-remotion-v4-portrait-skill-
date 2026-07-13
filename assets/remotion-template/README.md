@@ -45,7 +45,6 @@ npm run render
 - `scripts/`: V4 generation, validation, QA, caption splitting, and media utilities.
 - `references/`: V4 workflow, visual system, motion system, semantic routing, QA, forbidden rules, and audio policy.
 - `component-gallery/`: fixed component sample gallery for reviewing V4 visual styles.
-- `docs_SKILL_SNAPSHOT.md`: snapshot of the Codex Skill rules that produced this template.
 
 ## Standard Workflow
 
@@ -112,4 +111,3 @@ git remote add origin https://github.com/<owner>/ngg-koubo-remotion-v4-portrait-
 git branch -M main
 git push -u origin main
 ```
-

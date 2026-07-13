@@ -29,7 +29,6 @@ def mirror_pairs() -> list[tuple[Path, Path]]:
         pairs.append((ROOT_SCRIPTS / name, TEMPLATE_SCRIPTS / name))
     for source in sorted(ROOT_REFERENCES.glob("*.md")):
         pairs.append((source, TEMPLATE_REFERENCES / source.name))
-    pairs.append((SKILL_ROOT / "SKILL.md", TEMPLATE_ROOT / "docs_SKILL_SNAPSHOT.md"))
     return pairs
 
 

@@ -513,8 +513,7 @@
       ],
       "sourceCueIds": [
         "cap-001-01",
-        "cap-001-02",
-        "cap-001-03"
+        "cap-001-02"
       ]
     },
     {
@@ -548,9 +547,7 @@
         "workflow-not-generic-card"
       ],
       "sourceCueIds": [
-        "cap-002-02",
-        "cap-002-03",
-        "cap-002-04"
+        "cap-002-02"
       ]
     },
     {
@@ -587,8 +584,7 @@
         "no-generic-card-fallback"
       ],
       "sourceCueIds": [
-        "cap-004-01",
-        "cap-004-02"
+        "cap-004-01"
       ]
     }
   ]

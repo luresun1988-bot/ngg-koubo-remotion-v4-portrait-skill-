@@ -1721,19 +1721,34 @@ def starter_visual_script(
         ],
         "qaFrames": qa_frames,
     }
-    apply_semantic_beats(visual_script)
-    apply_visual_events(visual_script)
-    assign_icons_to_visual_events(visual_script["visualEvents"])
-    visual_script["visualEvents"].sort(
+    return visual_script
+
+
+def finalize_visual_script(
+    visual_script: dict[str, Any],
+    *,
+    max_caption_chars: int = 30,
+    min_caption_frames: int = 12,
+) -> tuple[dict[str, Any], int]:
+    """Split authoritative cues before creating any cue-bound semantic references."""
+    finalized, split_count = split_cues(
+        visual_script,
+        max_chars=max_caption_chars,
+        min_frames=min_caption_frames,
+    )
+    apply_semantic_beats(finalized)
+    apply_visual_events(finalized)
+    assign_icons_to_visual_events(finalized["visualEvents"])
+    finalized["visualEvents"].sort(
         key=lambda item: (str(item.get("sceneId", "")), int(item.get("startFrame", 0)))
     )
-    return visual_script
+    return finalized, split_count
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--project-root", required=True, type=Path)
-    parser.add_argument("--output-dir", default="10_v4", type=Path)
+    parser.add_argument("--output-dir", default="06_remotion", type=Path)
     parser.add_argument("--template-root", default=DEFAULT_TEMPLATE, type=Path)
     parser.add_argument(
         "--fps",
@@ -1875,7 +1890,7 @@ def main() -> int:
         caption_render_mode=args.caption_render_mode,
         presenter_audio=presenter_audio,
     )
-    visual_script, split_count = split_cues(visual_script, max_chars=30, min_frames=12)
+    visual_script, split_count = finalize_visual_script(visual_script)
     visual_script_path.write_text(json.dumps(visual_script, ensure_ascii=True, indent=2), encoding="utf-8")
     print(f"starter caption split count: {split_count}")
 

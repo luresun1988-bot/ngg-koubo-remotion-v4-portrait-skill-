@@ -360,10 +360,18 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
             last_end = max(last_end, end)
 
     caption_text_by_scene: dict[str, list[str]] = {}
+    caption_cue_ids: set[str] = set()
     for idx, cue in enumerate(caption_cues):
         if not isinstance(cue, dict):
             errors.append(f"captionCues[{idx}] must be an object")
             continue
+        cue_id = str(cue.get("id") or "").strip()
+        if not cue_id:
+            errors.append(f"captionCues[{idx}] missing id")
+        elif cue_id in caption_cue_ids:
+            errors.append(f"captionCues[{idx}] duplicates id: {cue_id}")
+        else:
+            caption_cue_ids.add(cue_id)
         text = cue.get("text")
         scene_id = str(cue.get("sceneId") or "")
         if not isinstance(text, str) or not text:
@@ -423,6 +431,11 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
                 "captions must use complete transcript/ASR copy, not summaries or omitted text"
             )
 
+    semantic_beat_ids = {
+        str(beat.get("id") or "").strip()
+        for beat in semantic_beats
+        if isinstance(beat, dict) and str(beat.get("id") or "").strip()
+    }
     theme_thesis_candidates = 0
     for idx, beat in enumerate(semantic_beats):
         if not isinstance(beat, dict):
@@ -435,6 +448,16 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
             errors.append(f"semanticBeats[{idx}] missing semanticIntent")
         if not beat.get("visualForm"):
             errors.append(f"semanticBeats[{idx}] missing visualForm")
+        source_cue_ids = beat.get("sourceCueIds", [])
+        if not isinstance(source_cue_ids, list):
+            errors.append(f"semanticBeats[{idx}].sourceCueIds must be an array")
+        else:
+            for cue_id in source_cue_ids:
+                cue_ref = str(cue_id or "").strip()
+                if cue_ref and cue_ref not in caption_cue_ids:
+                    errors.append(
+                        f"semanticBeats[{idx}] references unknown caption cue: {cue_ref}"
+                    )
         checks = beat.get("requiredChecks")
         if not isinstance(checks, list) or not checks:
             errors.append(f"semanticBeats[{idx}] must define requiredChecks")
@@ -472,6 +495,27 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
             errors.append(f"visualEvents[{idx}] uses unsupported/unrendered type: {event_type!r}")
         if not role:
             warnings.append(f"visualEvents[{idx}] missing semanticRole")
+        anchor_cue_id = str(event.get("anchorCueId") or "").strip()
+        if anchor_cue_id and anchor_cue_id not in caption_cue_ids:
+            errors.append(
+                f"visualEvents[{idx}] references unknown anchorCueId: {anchor_cue_id}"
+            )
+        event_source_cue_ids = event.get("sourceCueIds")
+        if event_source_cue_ids is not None:
+            if not isinstance(event_source_cue_ids, list):
+                errors.append(f"visualEvents[{idx}].sourceCueIds must be an array")
+            else:
+                for cue_id in event_source_cue_ids:
+                    cue_ref = str(cue_id or "").strip()
+                    if cue_ref and cue_ref not in caption_cue_ids:
+                        errors.append(
+                            f"visualEvents[{idx}] references unknown caption cue: {cue_ref}"
+                        )
+        source_beat_id = str(event.get("sourceBeatId") or "").strip()
+        if source_beat_id and source_beat_id not in semantic_beat_ids:
+            errors.append(
+                f"visualEvents[{idx}] references unknown sourceBeatId: {source_beat_id}"
+            )
         if not event.get("motionType"):
             warnings.append(f"visualEvents[{idx}] missing motionType")
         if role == "platform-fanout" and event_type not in {"platformFanout", "transitionPushZoom"}:

@@ -9,7 +9,7 @@ New projects must use the V4 Remotion template. Copy `assets/remotion-template/`
 Preferred initialization:
 
 ```text
-python scripts/init_v4_project.py --project-root <project> --output-dir 10_v4 --presenter-video <main.mp4>
+python scripts/init_v4_project.py --project-root <project> --output-dir 06_remotion --presenter-video <main.mp4>
 ```
 
 Repeat `--presenter-video` in playback order for segmented presenters. The legacy `--source-video` alias remains accepted, but new work should use the role-specific option. When neither option is supplied, initialization may use `project_config.json.sourceMedia.talkingHeadVideos`; ambiguous multi-video discovery must stop instead of guessing.
@@ -187,15 +187,17 @@ Do not use online images, videos, charts, screenshots, logos, or data as final a
 4. Split narration into scenes: Hook, Explanation, Proof, Process, Contrast, Clean Material, CTA.
 5. Do semantic research and write research notes.
 6. Determine `posterTopicKeyword` for the publish package if cover/poster generation is in scope.
-7. Create `06_remotion/visual_script.json` with real `captionCues` first. Then run semantic routing:
+7. Create `06_remotion/visual_script.json` with real `captionCues` first. Split long cues before creating any semantic references:
+   - `python scripts/split_caption_cues.py --visual-script 06_remotion/visual_script.json --out 06_remotion/visual_script.json`
+   - The splitter may divide an existing real timed cue, but it must not invent timing for a whole scene from character proportions.
+   Then run semantic routing and event generation:
    - `python scripts/semantic_router.py --visual-script 06_remotion/visual_script.json`
    - `python scripts/visual_event_builder.py --visual-script 06_remotion/visual_script.json`
-   These steps convert timecoded speech into `semanticBeats`, then convert those beats into `visualEvents` with `sourceBeatId`. Do not hand-build a full edit from generic cards when transcript semantics are available.
+   These steps convert the final split cue IDs into `semanticBeats`, then convert those beats into `visualEvents` with valid `sourceCueIds`, `sourceBeatId`, and `anchorCueId`. Do not hand-build a full edit from generic cards when transcript semantics are available.
    Route transcript segments into semantic intents where possible: result promise, pain contrast, repeated manual fields, platform fan-out, automation handoff, workflow step, proof focus, and CTA. Include poster media or `cover-gallery` only when the spoken content needs the poster set on screen.
    - Add `audioCues` only for semantic audio beats. The visual-event builder may create SFX cues with `status: "suggested"` for review. Suggested cues document the recommended library sound but do not render until changed to `active`. Use active SFX paths only when the files exist under Remotion `public/`; otherwise keep them pending.
-8. Run `scripts/split_caption_cues.py` if any caption cue is long. Keep its default ASCII-escaped JSON output unless there is a specific reason to preserve literal UTF-8.
-   - `split_caption_cues.py` may split long cue text inside an existing timed cue, but it must not invent timing for a whole scene from character proportions unless the input cue itself already came from real SRT/ASR/alignment timing.
-9. Run `scripts/validate_visual_script.py` immediately. Stop if it reports text corruption, missing timing, invalid schema, overlong captions, invalid material focus mode, or more than three cards.
+8. Keep the splitter's default ASCII-escaped JSON output unless there is a specific reason to preserve literal UTF-8.
+9. Run `scripts/validate_visual_script.py` immediately. Stop if it reports text corruption, missing timing, dangling cue/beat references, invalid schema, overlong captions, invalid material focus mode, or more than three cards.
 10. Copy or initialize the V4 Remotion template.
     - Run initialization from the project root when possible.
     - If an output argument already points to `06_remotion`, treat it as the Remotion root or stop with a clear message; never silently create `06_remotion/06_remotion`.
@@ -203,7 +205,7 @@ Do not use online images, videos, charts, screenshots, logos, or data as final a
 12. Generate or update `src/generatedVisualScript.ts` from the project `visual_script.json` using `scripts/write_generated_visual_script.py`.
 13. Implement scene composition, captions, visual events, material layers, presenter layout, SFX/BGM slots, and QA frames.
 14. Use `OffthreadVideo` for real talking-head or source-video layers; do not use browser `<Video>` for rendered H.264 source clips.
-    - If a single source video is split into multiple scene `Sequence`s, set `startFrom={scene.startFrame}` so later scenes do not replay from the beginning.
+    - Mount one continuous primary presenter source once from composition frame 0 through the end. Do not split it into scene `Sequence`s or restart/seek its embedded audio; scenes only control layout and overlays.
 15. Render sampled stills/contact sheet.
     - On a fresh Remotion install, warm the Chrome Headless Shell cache with one still or render command before launching multiple Remotion still/render jobs in parallel. On Windows, parallel first-run stills can race the cache download/extract step and fail with a missing `chrome-headless-shell-win64.zip`.
 16. Fix hard QA failures.
