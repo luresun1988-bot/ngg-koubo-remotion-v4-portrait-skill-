@@ -15,7 +15,12 @@ TEMPLATE_ROOT = SKILL_ROOT / "assets" / "remotion-template"
 TEMPLATE_SCRIPTS = TEMPLATE_ROOT / "scripts"
 TEMPLATE_REFERENCES = TEMPLATE_ROOT / "references"
 
-REQUIRED_TEMPLATE_SCRIPTS = {"final_media_qa.py", "render_final_and_qa.ps1", "upgrade_existing_project.py"}
+REQUIRED_TEMPLATE_SCRIPTS = {
+    "final_media_qa.py",
+    "render_final_and_qa.ps1",
+    "semantic_guardrails.py",
+    "upgrade_existing_project.py",
+}
 
 
 def mirror_pairs() -> list[tuple[Path, Path]]:

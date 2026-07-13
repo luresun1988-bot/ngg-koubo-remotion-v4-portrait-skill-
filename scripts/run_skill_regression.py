@@ -18,6 +18,7 @@ REGRESSIONS = [
     "sync_template_mirrors.py",
     "caption_reference_regression.py",
     "semantic_router_regression.py",
+    "semantic_guardrails_regression.py",
     "semantic_component_contract_regression.py",
     "sfx_semantic_routing_regression.py",
     "visual_density_regression.py",

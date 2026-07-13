@@ -277,17 +277,18 @@ def confirm_copy(text: str) -> tuple[str, str, list[str]]:
     return "自动化交接", copy or "交给 Codex 自动执行", focus_words(copy, POSITIVE_TERMS, 1)
 
 
-def cta_copy(text: str) -> tuple[str, str, str, list[str], dict[str, str]]:
+def cta_copy(text: str, sourced_provenance: dict[str, Any] | None = None) -> tuple[str, str, str, list[str], dict[str, str]]:
     clean = normalize_hud_source(text)
-    action = next(
+    provenance_action = str((sourced_provenance or {}).get("action") or "").strip()
+    action = provenance_action or next(
         (term for term in ["评论区", "关注", "点赞", "收藏", "私信", "领取", "自提", "告诉我"] if term in clean),
         "",
     )
-    keyword = ""
+    keyword = str((sourced_provenance or {}).get("keyword") or "").strip()
     keyword_match = re.search(r"(?:扣|回复|发送)\s*([^，。！？]{1,12})", text)
-    if keyword_match:
+    if not keyword and keyword_match:
         keyword = keyword_match.group(1).strip()
-    else:
+    elif not keyword:
         keyword_match = re.search(r"关键词(?:是|叫|为|[:：])\s*([^，。！？]{1,12})", text)
         if keyword_match:
             keyword = keyword_match.group(1).strip()
@@ -331,10 +332,9 @@ def cta_copy(text: str) -> tuple[str, str, str, list[str], dict[str, str]]:
         subtext = ""
     status = f"关键词：{keyword}" if keyword else action
     emphasis = [item for item in [keyword, action, title] if item and item in f"{title}{subtext}{status}"][:2]
-    provenance = {
-        "kind": "keyword" if keyword else "action" if action else "claim",
-        "sourceText": text.strip(),
-    }
+    provenance = dict(sourced_provenance or {})
+    provenance["kind"] = "keyword" if keyword else "action" if action else "claim"
+    provenance["sourceText"] = str(provenance.get("sourceText") or text).strip()
     if action:
         provenance["action"] = action
     if keyword:
@@ -401,6 +401,9 @@ def semantic_role_for_beat(beat: dict[str, Any]) -> str:
         "negative-to-positive": "semantic-problem-map",
         "negative-friction": "semantic-problem-map",
         "result-promise": "result-promise",
+        "topic-intro": "topic-intro",
+        "explanation-claim": "explanation-claim",
+        "workflow-step": "workflow-step",
         "positive-confirm": "automation-handoff",
         "automation-handoff": "automation-handoff",
         "numeric-metric": "metric-growth",
@@ -946,22 +949,24 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
         ]
         metric_copy = key_message(text, 16, numeric_entities + ["分辨率", "清晰", "提升", "增长", "比例", "指标", "%", "倍", "万", "亿", "K", "k", "分钟", "秒"])
         modifiers = [str(item) for item in beat.get("semanticModifiers", [])]
+        incomplete = "incomplete" in modifiers
         return {
             **base,
             "type": "dataPunch",
             "text": metric_copy or "数字指标",
-            "subtext": "明确生成结果" if "completed" in modifiers else "数字指标变化",
-            "status": "已生成" if "completed" in modifiers else "数字结果",
-            "iconName": "TrendingUp",
+            "subtext": "明确生成结果" if "completed" in modifiers else "尚未生成完成" if incomplete else "数字指标变化",
+            "status": "已生成" if "completed" in modifiers else "未完成" if incomplete else "数字结果",
+            "style": f"{base['style']} positive-confirm" if "completed" in modifiers else f"{base['style']} negative-incomplete" if incomplete else base["style"],
+            "iconName": "AlertTriangle" if incomplete else "TrendingUp",
             "motionType": "count-up-chart",
             **numeric_fields(text),
         }
 
-    if intent in {"workflow-fields", "enumeration"}:
+    if intent in {"workflow-step", "workflow-fields", "enumeration"}:
         title_copy = key_message(text, 14, ["流程", "步骤", "指标", "规则", "发布", "主图", "字段"])
         return {
             **base,
-            "type": "flowPath" if intent == "workflow-fields" else "statusStack",
+            "type": "statusStack" if intent == "enumeration" else "flowPath",
             "text": "流程推进",
             "title": title_copy or "步骤列表",
             "status": "STEP BY STEP",
@@ -1050,7 +1055,8 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
         }
 
     if intent == "cta-resolve":
-        title_copy, subtext_copy, status_copy, emphasis_words, provenance = cta_copy(text)
+        sourced_provenance = beat.get("ctaProvenance") if isinstance(beat.get("ctaProvenance"), dict) else None
+        title_copy, subtext_copy, status_copy, emphasis_words, provenance = cta_copy(text, sourced_provenance)
         return {
             **base,
             "type": "ctaTitle",

@@ -47,6 +47,7 @@ python scripts/sfx_semantic_routing_regression.py
 | `proof-material` | screen recording, screenshot, backend, generated result | `materialMain` or proof sticker | `materialMain` / `statusSticker` |
 | `cta-resolve` | comment keyword, claim, self-pickup, follow-up action | `ctaTitle` | `ctaTitle` |
 | `enumeration` | first/second/third, steps, directions, numbered actions | `numberedList` | `statusStack` / `flowPath` |
+| `workflow-step` | sourced input, setting, conditional next action, or generation process | `flowPath` | `flowPath` |
 | `positive-confirm` | finished, completed, automated, solved | `greenConfirmCard` | `captionHighlight` |
 | `result-promise` | opening promise, contrarian hook, result claim | `bigJudgement` | `kineticTitle` |
 | `topic-intro` | this episode discusses/introduces one subject | `topicKeyword` | `topicKeyword` |
@@ -54,7 +55,8 @@ python scripts/sfx_semantic_routing_regression.py
 
 ## Routing Priority
 
-- Negative plus explicit automation/completion becomes `negative-to-positive`; pure negative stays red-only.
+- Negative plus an asserted solution becomes `negative-to-positive`; pure negative and prospective completion stay red-only.
+- Completion polarity is mandatory. Only asserted completion such as `已经完成`, `生成好了`, or `流程跑完` may route to green confirmation. `还没完成`, `如果完成设置`, `完成按钮`, future/planned completion, partial completion, and unresolved completion must not use `positive-confirm`.
 - Strong proof words such as screenshot, recording, backend, or result proof beat generic completion words such as "跑通".
 - Real-project opening guards: only the first strong hook sentence should use the Hook scene fallback as `result-promise`. Later setup lines in the same Hook scene must be routed by their own text, so an account-status warning can become `negative-friction` instead of a second or third big title.
 - Proof routing requires strong proof language such as recording, screenshot, backend demonstration, proof, measured result, or page result. Do not route ordinary page-reading or webpage-handoff text to `proof-material` unless real proof material is available.
@@ -62,13 +64,16 @@ python scripts/sfx_semantic_routing_regression.py
 - Multi-size asset signals require size/form words such as horizontal, vertical, square, multi-size, or three-size. A lone "cover" or "main image" is not enough.
 - Numbered words such as "第一/第二/第三" beat broad transformation words unless the sentence also contains a clear transformation relation such as "从", "变成", "到", "团队", "杠杆", or "护城河".
 - Capability, scene binding, and transformation routes must beat generic cards. Do not silently collapse them to `infoCard`.
-- CTA words must be action-specific: "评论区", "领取", "自提", "告诉我", "私信", "关键词", "关注", "点赞", or "收藏". Do not route every "需要" to CTA.
+- CTA routing requires an explicit viewer-directed action such as `评论区回复…`, `评论区扣…`, `私信我`, `关注我/关注一下`, `收藏这一条`, or `直接领取`. Bare `评论区`, `关键词`, `关注`, or `自提` nouns are not enough; `页面展示了评论区互动数据`, `输入关键词生成标题`, and `门店支持到店自提` are not CTA.
 - Future episode previews such as "下一期会介绍", "下期将拆解", or "下一条讲" are `explanation-claim` unless the same source text contains an explicit CTA action. Words such as "自动剪辑" inside a future preview do not mean completed automation or a present-tense handoff.
 - Do not route a broad token alone. `从官网下载` is not transformation, `发布前检查` is not platform fan-out, and `模型文件` is not capability/share.
 - Unknown or low-confidence spoken copy defaults to `explanation-claim`, never to a fabricated workflow diagram. Keep only the strongest readable claim in one scene as `claimStrip`; route a short claim to a source-bound `statusSticker`; mark lower-priority repeated claims as `intentionalCleanHold`.
 - Treat clean holds as audited semantic decisions, not missing work. They are valid only for low-confidence `explanation-claim` beats with `requiredChecks` containing `intentional-clean-hold`; high-confidence numeric, process, contrast, proof, completion, or CTA beats must still render their matching semantic component.
 - Do not use component roulette to break repetition. Keep at most two consecutive `claimStrip` main HUDs, then reduce/suppress lower-priority ordinary claims until a more specific semantic event resets the run.
 - Record compound meaning in `semanticModifiers` and `entities`. For example, `10 张高清详情图已经自动生成好了` keeps `numeric-metric` as the primary intent plus `numeric`, `completed`, and `automated` modifiers.
+- Numeric meaning remains primary across completion polarity. `10张详情图还没生成完` stays `numeric-metric`, adds `incomplete`, requires `negative-incomplete-treatment`, and renders `未完成` without green styling.
+- A handoff is separate from completion. `把素材交给 Codex 自动完成` is `automation-handoff` with processing treatment; `Codex 还没有接管这一步` is `negative-friction`.
+- The format-agnostic guards live in `scripts/semantic_guardrails.py` and are mirrored into every generated project. Landscape and portrait share polarity, future/topic, handoff, process, proof, explanation, and explicit-viewer-CTA predicates; only their component adapters differ.
 - Component data must come from transcript entities, provided assets, or explicit user input. Do not invent platform names, brands, percentages, state labels, or transformation drivers.
 - Preserve complete numeric entities and suffixes. `2K`, `1k`, `30%`, and `3倍` must keep their suffix in `entities` and the generated numeric fields; normalize lowercase `k/m/g` to uppercase for display without dropping it.
 - Build CTA title, subtext, status, action, and keyword only from the source beat. Generated CTA events must record `ctaProvenance.sourceText`; record `action` or `keyword` only when it appears in that source text.
@@ -121,4 +126,4 @@ Every generated `visualEvent` that fulfills a semantic beat must keep:
 }
 ```
 
-The regression suite currently covers 108 positive, compound, adversarial, future-preview, numeric-suffix, real-project, and short-tail intent-preservation examples. `semantic_component_contract_regression.py` additionally checks canonical event types, source-bound short-claim downgrade, same-scene claim selection, the two-claim run limit, no invented platforms/brands/states/ratios, CTA provenance and scheduling priority, approval-gated theme-thesis candidates, and schema/renderer type parity. The SFX regression suite covers the six confirmed semantic audio suggestions and requires `status: "suggested"`. A route change should update the tests and this document in the same commit.
+The regression suite currently covers 122 positive, compound, adversarial, future-preview, numeric-suffix, real-project, short-tail, and shared guard examples. `semantic_component_contract_regression.py` additionally checks canonical event types, source-bound short-claim downgrade, same-scene claim selection, the two-claim run limit, no invented platforms/brands/states/ratios, CTA provenance and scheduling priority, approval-gated theme-thesis candidates, and schema/renderer type parity. The SFX regression suite covers the six confirmed semantic audio suggestions and requires `status: "suggested"`. A route change should update the tests and this document in the same commit.

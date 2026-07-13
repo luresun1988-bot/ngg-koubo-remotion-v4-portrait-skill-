@@ -13,6 +13,16 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 from v4_utf8 import configure_utf8  # noqa: E402
+from semantic_guardrails import (  # noqa: E402
+    completion_polarity,
+    future_preview,
+    handoff_state,
+    is_explanation_claim,
+    is_process_context,
+    is_proof_context,
+    topic_intro,
+    viewer_cta_signal,
+)
 
 configure_utf8()
 
@@ -36,8 +46,13 @@ RULES: dict[str, dict[str, Any]] = {
     },
     "cta-resolve": {
         "visualForm": "ctaTitle",
-        "terms": ["评论区", "扣", "领取", "想要", "自提", "告诉我", "私信", "关注", "点赞", "收藏", "关键词"],
+        "terms": [],
         "checks": ["cta-visual-treatment", "no-generic-card-fallback"],
+    },
+    "workflow-step": {
+        "visualForm": "flowPath",
+        "terms": [],
+        "checks": ["workflow-not-generic-card"],
     },
     "negative-friction": {
         "visualForm": "redWarningCard",
@@ -52,7 +67,7 @@ RULES: dict[str, dict[str, Any]] = {
     "automation-handoff": {
         "visualForm": "automationHandoff",
         "terms": ["交给 Codex", "交给Codex", "丢给 Codex", "丢给Codex", "Codex 接管", "Codex接管", "接管", "系统执行", "自动接管", "交给系统", "交给自动化", "自动化流程"],
-        "checks": ["workflow-not-generic-card", "positive-confirm-treatment", "no-generic-card-fallback"],
+        "checks": ["automation-handoff-source-steps", "automation-handoff-processing-treatment", "no-generic-card-fallback"],
     },
     "manual-field": {
         "visualForm": "infoCard",
@@ -148,18 +163,58 @@ def rule_result(intent: str, keywords: list[str], confidence: float = 0.82) -> d
 def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[str, Any]:
     matched = {intent: contains_any(text, rule["terms"]) for intent, rule in RULES.items()}
     matched = {intent: hits for intent, hits in matched.items() if hits}
+    solution_hits = list(matched.get("positive-confirm", [])) + list(matched.get("automation-handoff", []))
+    completion_state = completion_polarity(text)
+    handoff = handoff_state(text)
+    cta_signal = viewer_cta_signal(text)
+
+    if cta_signal:
+        result = rule_result("cta-resolve", [str(cta_signal.get("action") or "")], 0.94)
+        provenance: dict[str, str] = {
+            "kind": "keyword" if cta_signal.get("keyword") else "action",
+            "sourceText": str(cta_signal.get("sourceText") or text).strip(),
+            "action": str(cta_signal.get("action") or "").strip(),
+        }
+        if cta_signal.get("keyword"):
+            provenance["keyword"] = str(cta_signal["keyword"])
+        result["ctaProvenance"] = provenance
+        return result
+    matched.pop("cta-resolve", None)
+    if completion_state != "asserted":
+        matched.pop("positive-confirm", None)
+    if completion_state == "prospective":
+        matched.pop("result-promise", None)
 
     # A future episode preview describes planned content. It is neither a
     # completed result nor an automation handoff, even when it contains words
     # such as "自动" or a tool name. Keep a source keyword so CTA scene fallback
     # cannot overwrite this decision.
-    future_preview = FUTURE_EPISODE_PREVIEW_RE.search(text)
-    if future_preview and not any(term in text for term in ["评论区", "领取", "自提", "告诉我", "私信", "关键词", "关注", "点赞", "收藏"]):
+    future_source = future_preview(text)
+    if future_source:
         return {
             "semanticIntent": "explanation-claim",
             "visualForm": "claimStrip",
-            "keywords": [future_preview.group(0).strip()],
+            "keywords": [future_source],
             "requiredChecks": ["future-preview-not-complete", "lightweight-claim-treatment"],
+            "confidence": 0.94,
+        }
+
+    topic_source = topic_intro(text)
+    if topic_source:
+        return {
+            "semanticIntent": "topic-intro",
+            "visualForm": "topicKeyword",
+            "keywords": [topic_source],
+            "requiredChecks": RULES["topic-intro"]["checks"],
+            "confidence": 0.9,
+        }
+
+    if handoff == "negated":
+        return {
+            "semanticIntent": "negative-friction",
+            "visualForm": "redWarningCard",
+            "keywords": ["未接管"],
+            "requiredChecks": RULES["negative-friction"]["checks"],
             "confidence": 0.94,
         }
 
@@ -191,6 +246,58 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
             "confidence": 0.92,
         }
 
+    if "negative-friction" in matched and completion_state == "prospective":
+        return rule_result("negative-friction", matched["negative-friction"], 0.92)
+
+    if "negative-friction" in matched and solution_hits and completion_state not in {"negated", "prospective"}:
+        return {
+            "semanticIntent": "negative-to-positive",
+            "visualForm": "negativeWarningThenConfirm",
+            "keywords": (matched["negative-friction"][:2] + solution_hits[:2])[:4],
+            "requiredChecks": ["negative-red-treatment", "positive-confirm-treatment", "no-generic-card-fallback"],
+            "confidence": 0.95,
+        }
+
+    if "asset-variants" in matched and any(term in text for term in ["横屏", "竖屏", "方图", "多尺寸", "三尺寸", "多规格", "16:9", "4:3", "3:4", "比例", "横版", "竖版", "方形"]):
+        return rule_result("asset-variants", matched["asset-variants"], 0.9)
+
+    if is_proof_context(text):
+        return rule_result("proof-material", contains_any(text, RULES["proof-material"]["terms"]) or ["页面展示"], 0.88)
+
+    numeric_match = NUMERIC_RE.search(text)
+    if numeric_match and any(term in text for term in ["提升", "增长", "比例", "指标", "数据", "分辨率", "清晰", "%", "倍", "万", "亿", "K", "k", "道题", "题", "张", "数量", "规模", "分钟", "秒", "小于", "省下", "批量", "处理", "账号", "扩到", "生成"]):
+        checks = ["numeric-countup-required", "no-generic-card-fallback"]
+        modifiers = ["numeric"]
+        if completion_state == "asserted":
+            checks.append("positive-confirm-treatment")
+            modifiers.append("completed")
+        elif completion_state in {"negated", "prospective"}:
+            checks.append("negative-incomplete-treatment")
+            modifiers.append("incomplete")
+        return {
+            "semanticIntent": "numeric-metric",
+            "visualForm": "dataPunch",
+            "keywords": [numeric_match.group(0).strip()],
+            "requiredChecks": checks,
+            "semanticModifiers": modifiers,
+            "confidence": 0.92,
+        }
+
+    if completion_state == "negated":
+        return {
+            "semanticIntent": "negative-friction",
+            "visualForm": "redWarningCard",
+            "keywords": ["未完成"],
+            "requiredChecks": RULES["negative-friction"]["checks"],
+            "confidence": 0.94,
+        }
+
+    if handoff == "asserted" and ENUMERATION_RE.search(text) is None:
+        return rule_result("automation-handoff", matched.get("automation-handoff", []) or ["自动交接"], 0.92)
+
+    if ("关键词" in text and is_process_context(text)) or completion_state == "prospective":
+        return rule_result("workflow-step", ["流程"], 0.86)
+
     if any(term in text for term in AUTOMATION_HANDOFF_ACTION_TERMS):
         return {
             "semanticIntent": "automation-handoff",
@@ -199,9 +306,6 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
             "requiredChecks": RULES["automation-handoff"]["checks"],
             "confidence": 0.9,
         }
-
-    if "cta-resolve" in matched and any(term in text for term in ["评论区", "领取", "自提", "告诉我", "私信", "关键词", "关注", "点赞", "收藏"]):
-        return rule_result("cta-resolve", matched["cta-resolve"], 0.9)
 
     if "negative-friction" in matched and ("positive-confirm" in matched or "automation-handoff" in matched):
         positive_hits = matched.get("positive-confirm", []) + matched.get("automation-handoff", [])
@@ -228,16 +332,6 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
 
     if "scene-lock" in matched and any(term in text for term in ["支付", "教育", "政务", "行业", "场景", "落地", "下沉市场", "本地生活", "餐饮", "零售", "基础设施"]):
         return rule_result("scene-lock", matched["scene-lock"], 0.88)
-
-    numeric_match = NUMERIC_RE.search(text)
-    if numeric_match and any(term in text for term in ["提升", "增长", "比例", "指标", "数据", "分辨率", "清晰", "%", "倍", "万", "亿", "K", "k", "道题", "题", "张", "数量", "规模", "分钟", "秒", "小于", "省下", "批量", "处理", "账号", "扩到", "生成"]):
-        return {
-            "semanticIntent": "numeric-metric",
-            "visualForm": "dataPunch",
-            "keywords": [numeric_match.group(0).strip()],
-            "requiredChecks": ["numeric-countup-required", "no-generic-card-fallback"],
-            "confidence": 0.9,
-        }
 
     has_transformation_relation = bool(re.search(r"从[^，。！？]{1,12}(?:到|变成|转化成)[^，。！？]{1,12}", text))
     if "transformation-stack" in matched and (has_transformation_relation or any(term in text for term in ["放大你的能力", "放大能力", "转化成", "变成", "团队", "第二大脑", "杠杆", "护城河"])):
@@ -303,6 +397,12 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
     if TOPIC_INTRO_RE.search(text) or any(term in text for term in RULES["topic-intro"]["terms"]):
         return rule_result("topic-intro", contains_any(text, RULES["topic-intro"]["terms"]), 0.78)
 
+    if is_process_context(text):
+        return rule_result("workflow-step", ["流程"], 0.8)
+
+    if is_explanation_claim(text):
+        return rule_result("explanation-claim", [], 0.8)
+
     return {
         "semanticIntent": "explanation-claim",
         "visualForm": "claimStrip",
@@ -314,10 +414,13 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
 
 def semantic_metadata(text: str) -> dict[str, Any]:
     modifiers: list[str] = []
+    completion_state = completion_polarity(text)
     if NUMERIC_RE.search(text):
         modifiers.append("numeric")
-    if any(term in text for term in COMPLETION_TERMS):
+    if completion_state == "asserted":
         modifiers.append("completed")
+    elif completion_state in {"negated", "prospective"}:
+        modifiers.append("incomplete")
     if any(term in text for term in AUTOMATED_TERMS):
         modifiers.append("automated")
     if any(term in text for term in PROOF_STRONG_TERMS):
@@ -502,6 +605,10 @@ def build_semantic_beats(data: dict[str, Any]) -> list[dict[str, Any]]:
                 "requiredChecks": info["requiredChecks"],
                 "sourceCueIds": [str(cue.get("id") or "") for cue in group if cue.get("id")],
             }
+            if isinstance(info.get("ctaProvenance"), dict):
+                beat["ctaProvenance"] = info["ctaProvenance"]
+            if isinstance(info.get("semanticModifiers"), list):
+                beat["semanticModifiers"] = info["semanticModifiers"]
             beats.append(beat)
             beat_index += 1
 

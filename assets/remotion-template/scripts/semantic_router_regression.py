@@ -28,7 +28,7 @@ CASES: list[dict[str, Any]] = [
     {"id": "contrast-01", "text": "不是你手动剪，而是交给 Codex 自动跑流程", "intent": "negative-to-positive", "eventType": "highlightBox"},
     {"id": "contrast-02", "text": "不是写代码，是把流程自动化", "intent": "negative-to-positive", "eventType": "highlightBox"},
     {"id": "contrast-03", "text": "不是让你多干活，而是让系统自动补齐", "intent": "negative-to-positive", "eventType": "highlightBox"},
-    {"id": "contrast-04", "text": "别再手动填表了，这一步可以一键完成", "intent": "negative-to-positive", "eventType": "highlightBox"},
+    {"id": "contrast-04", "text": "别再手动填表了，这一步可以一键完成", "intent": "negative-friction", "eventType": "highlightBox"},
     {"id": "contrast-05", "text": "不是主图难，是重复生成这件事该自动化", "intent": "negative-to-positive", "eventType": "highlightBox"},
     {"id": "contrast-06", "text": "不是靠人盯后台，而是 Codex 接管检查", "intent": "negative-to-positive", "eventType": "highlightBox"},
     {"id": "contrast-07", "text": "不是多做几个版本，是一次自动生成多尺寸", "intent": "negative-to-positive", "eventType": "highlightBox"},
@@ -104,9 +104,9 @@ CASES: list[dict[str, Any]] = [
     {"id": "enum-05", "text": "这里有五件事需要拆开讲", "intent": "enumeration", "eventType": "statusStack"},
     {"id": "enum-06", "text": "方向 01 是能力放大，方向 02 是市场下沉", "intent": "enumeration", "eventType": "statusStack"},
     {"id": "positive-01", "text": "流程已经跑完，输出完成", "intent": "positive-confirm", "eventType": "captionHighlight"},
-    {"id": "positive-02", "text": "这一步可以一键搞定", "intent": "positive-confirm", "eventType": "captionHighlight"},
-    {"id": "positive-03", "text": "系统会自动生成最终结果", "intent": "positive-confirm", "eventType": "captionHighlight"},
-    {"id": "positive-04", "text": "你只要确认一次，剩下自动完成", "intent": "positive-confirm", "eventType": "captionHighlight"},
+    {"id": "positive-02", "text": "这一步可以一键搞定", "intent": "workflow-step", "eventType": "flowPath"},
+    {"id": "positive-03", "text": "系统会自动生成最终结果", "intent": "workflow-step", "eventType": "flowPath"},
+    {"id": "positive-04", "text": "你只要确认一次，剩下自动完成", "intent": "workflow-step", "eventType": "flowPath"},
     {"id": "hook-01", "text": "AI 真正的大爆发，其实还没有开始", "intent": "result-promise", "eventType": "kineticTitle"},
     {"id": "hook-02", "text": "反直觉的是，最值钱的不是模型本身", "intent": "result-promise", "eventType": "kineticTitle"},
     {"id": "hook-03", "text": "接下来你会看到一个完全不同的用法", "intent": "result-promise", "eventType": "kineticTitle"},
@@ -131,6 +131,20 @@ CASES: list[dict[str, Any]] = [
         "eventType": "dataPunch",
         "modifiersContain": ["numeric", "completed", "automated"],
     },
+    {"id": "confirmed-numeric-complete", "text": "10张详情图已经全部生成好了", "intent": "numeric-metric", "eventType": "dataPunch", "modifiersContain": ["numeric", "completed"], "checksContain": ["positive-confirm-treatment"], "eventStatus": "已生成"},
+    {"id": "confirmed-numeric-incomplete", "text": "10张详情图还没生成完", "intent": "numeric-metric", "eventType": "dataPunch", "modifiersContain": ["numeric", "incomplete"], "checksContain": ["negative-incomplete-treatment"], "eventStatus": "未完成"},
+    {"id": "confirmed-negated-completion", "text": "现在还没有生成完成", "intent": "negative-friction", "eventType": "highlightBox"},
+    {"id": "confirmed-conditional-process", "text": "如果完成设置，就可以导出", "intent": "workflow-step", "eventType": "flowPath"},
+    {"id": "confirmed-nominal-completion", "text": "完成按钮在右上角", "intent": "explanation-claim", "eventType": "claimStrip"},
+    {"id": "confirmed-automation-handoff", "text": "把素材交给 Codex 自动完成", "intent": "automation-handoff", "eventType": "captionHighlight"},
+    {"id": "confirmed-negated-handoff", "text": "Codex 还没有接管这一步", "intent": "negative-friction", "eventType": "highlightBox"},
+    {"id": "confirmed-future-preview", "text": "下一期介绍 Codex 自动剪辑", "intent": "explanation-claim", "eventType": "claimStrip", "checksContain": ["future-preview-not-complete"]},
+    {"id": "confirmed-explicit-cta", "text": "评论区回复数字人领取模板", "intent": "cta-resolve", "eventType": "ctaTitle", "ctaKeyword": "数字人"},
+    {"id": "confirmed-comment-proof", "text": "页面展示了评论区互动数据", "intent": "proof-material", "eventType": "statusSticker"},
+    {"id": "confirmed-keyword-process", "text": "输入关键词生成标题", "intent": "workflow-step", "eventType": "flowPath"},
+    {"id": "confirmed-pickup-claim", "text": "这家门店支持到店自提", "intent": "explanation-claim", "eventType": "claimStrip"},
+    {"id": "confirmed-tool-explanation", "text": "Topaz Video AI 是高清修复工具", "intent": "explanation-claim", "eventType": "claimStrip"},
+    {"id": "confirmed-topic-intro", "text": "这一期聊聊数字人为什么模糊", "intent": "topic-intro", "eventType": "topicKeyword"},
 ]
 
 CANONICAL_EVENT_TYPES_BY_INTENT = {
@@ -193,7 +207,15 @@ def run_case(case: dict[str, Any], index: int) -> dict[str, Any]:
     required_modifiers = [str(item) for item in case.get("modifiersContain", [])]
     actual_modifiers = [str(item) for item in beat.get("semanticModifiers", [])]
     modifiers_ok = all(item in actual_modifiers for item in required_modifiers)
-    ok = beat.get("semanticIntent") == case["intent"] and event.get("type") == expected_type and text_ok and modifiers_ok
+    required_checks = [str(item) for item in case.get("checksContain", [])]
+    actual_checks = [str(item) for item in beat.get("requiredChecks", [])]
+    checks_ok = all(item in actual_checks for item in required_checks)
+    expected_cta_keyword = str(case.get("ctaKeyword") or "")
+    event_provenance = event.get("ctaProvenance") if isinstance(event.get("ctaProvenance"), dict) else {}
+    cta_ok = not expected_cta_keyword or event_provenance.get("keyword") == expected_cta_keyword
+    expected_status = str(case.get("eventStatus") or "")
+    status_ok = not expected_status or str(event.get("status") or "") == expected_status
+    ok = beat.get("semanticIntent") == case["intent"] and event.get("type") == expected_type and text_ok and modifiers_ok and checks_ok and cta_ok and status_ok
     return {
         "id": case["id"],
         "text": case["text"],
@@ -207,6 +229,12 @@ def run_case(case: dict[str, Any], index: int) -> dict[str, Any]:
         "timingAnchor": event.get("timingAnchor", ""),
         "expectedModifiers": required_modifiers,
         "actualModifiers": actual_modifiers,
+        "expectedChecks": required_checks,
+        "actualChecks": actual_checks,
+        "expectedCtaKeyword": expected_cta_keyword,
+        "actualCtaKeyword": str(event_provenance.get("keyword") or ""),
+        "expectedStatus": expected_status,
+        "actualStatus": str(event.get("status") or ""),
         "ok": ok,
     }
 
