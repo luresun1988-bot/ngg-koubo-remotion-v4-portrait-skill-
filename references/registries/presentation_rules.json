@@ -1,0 +1,27 @@
+{
+  "schema": "ngg-koubo-v4-presentation-rules",
+  "version": 1,
+  "format": "portrait",
+  "sourceOfTruth": "scripts/visual_event_builder.py",
+  "semanticToPresentation": [
+    {"semanticIntent": "topic-intro", "eventTypes": ["topicKeyword"], "semanticRole": "topic-intro", "primarySfxIntent": null},
+    {"semanticIntent": "explanation-claim", "eventTypes": ["claimStrip", "statusSticker"], "semanticRole": "explanation-claim", "primarySfxIntent": null},
+    {"semanticIntent": "result-promise", "eventTypes": ["kineticTitle"], "semanticRole": "result-promise", "primarySfxIntent": "title_impact"},
+    {"semanticIntent": "negative-friction", "eventTypes": ["semanticProblemMap"], "semanticRole": "semantic-problem-map", "primarySfxIntent": "negative_warning"},
+    {"semanticIntent": "negative-to-positive", "eventTypes": ["semanticProblemMap"], "semanticRole": "semantic-problem-map", "primarySfxIntent": "negative_warning"},
+    {"semanticIntent": "positive-confirm", "eventTypes": ["captionHighlight"], "semanticRole": "positive-confirm", "primarySfxIntent": "confirm"},
+    {"semanticIntent": "automation-handoff", "eventTypes": ["automationHandoff"], "semanticRole": "automation-handoff", "primarySfxIntent": "automation_handoff"},
+    {"semanticIntent": "numeric-metric", "eventTypes": ["statusSticker"], "semanticRole": "numeric-metric", "primarySfxIntent": "data_count"},
+    {"semanticIntent": "proof-material", "eventTypes": ["materialMain", "statusSticker"], "semanticRole": "proof-material", "primarySfxIntent": "proof_reveal"},
+    {"semanticIntent": "workflow-step", "eventTypes": ["flowPath", "statusStack"], "semanticRole": "workflow-step", "primarySfxIntent": null},
+    {"semanticIntent": "workflow-fields", "eventTypes": ["flowPath"], "semanticRole": "workflow-step", "primarySfxIntent": null},
+    {"semanticIntent": "enumeration", "eventTypes": ["statusStack"], "semanticRole": "workflow-step", "primarySfxIntent": null},
+    {"semanticIntent": "cta-resolve", "eventTypes": ["ctaTitle"], "semanticRole": "cta-resolve", "primarySfxIntent": null},
+    {"semanticIntent": "transformation-stack", "eventTypes": ["transformationStack", "captionHighlight"], "semanticRole": "transformation-stack", "primarySfxIntent": "automation_handoff"}
+  ],
+  "audioPolicy": {
+    "sfxManifestPath": "assets/remotion-template/public/input/audio/sfx_manifest.json",
+    "sfxSuggestionSource": "scripts/visual_event_builder.py:SFX_SUGGESTIONS",
+    "doNotChangeVolumesInRegistryRefactor": true
+  }
+}

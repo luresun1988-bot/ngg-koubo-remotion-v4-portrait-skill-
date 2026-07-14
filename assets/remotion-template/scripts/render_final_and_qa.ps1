@@ -82,6 +82,21 @@ if (-not $npxCommand) {
   $npxCommand = Get-Command npx -ErrorAction Stop
 }
 $npx = $npxCommand.Source
+$ffmpeg = (Get-Command ffmpeg -ErrorAction Stop).Source
+$localRemotion = Join-Path $root "node_modules\.bin\remotion.cmd"
+$remotion = if (Test-Path -LiteralPath $localRemotion -PathType Leaf) {
+  $localRemotion
+} else {
+  ""
+}
+
+function Invoke-Remotion([string[]]$Arguments) {
+  if ($remotion) {
+    & $remotion @Arguments
+  } else {
+    & $npx remotion @Arguments
+  }
+}
 
 Push-Location $root
 try {
@@ -102,12 +117,12 @@ try {
       & npm run typecheck --silent
     }
     Invoke-Step "Remotion render" {
-      & $npx remotion render src/index.ts $CompositionId $rawPath --codec=h264 --audio-codec=aac --pixel-format=yuv420p --concurrency=$Concurrency --gl=angle
+      Invoke-Remotion @("render", "src/index.ts", $CompositionId, $rawPath, "--codec=h264", "--audio-codec=aac", "--pixel-format=yuv420p", "--concurrency=$Concurrency", "--gl=angle")
     }
   }
 
   Invoke-Step "BT.709 postprocess" {
-    & $npx remotion ffmpeg -hide_banner -loglevel error -y -i $rawPath `
+    & $ffmpeg -hide_banner -loglevel error -y -i $rawPath `
       -map 0:v:0 -map 0:a:0 `
       -vf "scale=out_range=tv:out_color_matrix=bt709,format=yuv420p" `
       -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p `
