@@ -122,6 +122,7 @@ Check:
 - `no-repeated-icons-in-card-group`: grouped list cards/nodes do not repeat the same primary icon inside one `beatGroupId` or rendered list.
 - `card-heavy-sequence-warning`: three consecutive main visual events should not all be cards or panels.
 - `main-card-ratio-warning`: card/panel-like main events should stay near or below 35% of all main events.
+- `long-card-monotony`: a non-progressive card/panel over about 6 seconds warns and over about 8 seconds fails; source-bound `workflow-progressive` panels are exempt because their internal state keeps changing.
 - `component-family-repetition`: three consecutive main visual events must not use the same rendered component family, such as three flow-list/status panels in a row.
 - `semantic-beats-present`: `visual_script.json` must include non-empty `semanticBeats` for generated/rebuilt V4 edits.
 - `semantic-intent-fulfilled`: every semantic beat must have at least one visual event with matching `sourceBeatId`, except a low-confidence `explanation-claim` explicitly marked `visualForm=intentionalCleanHold` with the `intentional-clean-hold` audit check.
@@ -135,6 +136,7 @@ Check:
 - `numeric-suffix-preserved`: source entities such as `2K`, `1k`, `30%`, or `3倍` keep the complete suffix in semantic entities and rendered numeric fields.
 - `workflow-not-generic-card`: workflow, enumeration, and field-list beats must use flow/list/status visual grammar with `internalSteps`, not a generic `infoCard`.
 - `proof-video-must-play`: proof video assets must be rendered as video through `materialMain` + `recording-proof`.
+- `proof-motion-qa`: every recording-proof asset decodes at multiple sampled points and contains measurable frame change; missing, escaped, undecodable, single-frame, or frozen video is a hard failure, while near-static video requires early/middle/late visual review.
 - `no-generic-card-fallback`: if a generated event falls back to `infoCard`, confirm the semantic beat truly is a small information card; otherwise replace it with the proper component family.
 - `layered-hud-internal-steps`: `capabilityShare`, `sceneLockGrid`, and `transformationStack` must define internal steps so their layers can appear in semantic order. A rendered `transformationStack` must contain exactly one source, one target, one or two drivers, and one explicit result in that order.
 - `transformation-source-binding`: every transformation step has a short `label` contained in exact caption-source `text` and non-empty `sourceCueIds` owned by its source beat and scene. `transformationSourceCueIds` equals the ordered union of all step cue IDs; `event.text`/`subtext` contain only the sourced state/driver labels. Missing, cross-scene, uncited, reordered, or invented copy is a hard failure.

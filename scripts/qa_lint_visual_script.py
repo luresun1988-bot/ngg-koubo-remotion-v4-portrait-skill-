@@ -446,6 +446,8 @@ def hud_duration_budget_checks(data: dict[str, Any]) -> tuple[list[str], list[st
     fps = int(data.get("composition", {}).get("fps") or 25)
     hard_min = round(fps * 3.2)
     preferred_min = round(fps * 4.5)
+    long_card_warn = round(fps * 6.0)
+    long_card_error = round(fps * 8.0)
 
     for idx, event in enumerate(data.get("visualEvents", [])):
         if not isinstance(event, dict):
@@ -477,6 +479,18 @@ def hud_duration_budget_checks(data: dict[str, Any]) -> tuple[list[str], list[st
                 "main HUD duration is below preferred hold: "
                 f"{event_id} ({event_type}) lasts {duration}f; prefer {preferred_min}f or more"
             )
+        if event_type in CARD_LIKE_MAIN_EVENT_TYPES and str(event.get("motionType") or "") != "workflow-progressive":
+            if duration > long_card_error:
+                errors.append(
+                    "long-card-monotony failed: "
+                    f"{event_id} ({event_type}) lasts {duration / fps:.2f}s; split the source span at authoritative cue "
+                    "boundaries into different semantic forms, or use a source-bound workflow-progressive event"
+                )
+            elif duration > long_card_warn:
+                warnings.append(
+                    "long-card-monotony warning: "
+                    f"{event_id} ({event_type}) lasts {duration / fps:.2f}s; inspect internal changes or split it near 6s"
+                )
 
     return errors, warnings
 

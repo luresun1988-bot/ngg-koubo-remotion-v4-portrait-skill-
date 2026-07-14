@@ -27,6 +27,7 @@ REGRESSIONS = [
     "sfx_mastering_regression.py",
     "sfx_semantic_routing_regression.py",
     "visual_density_regression.py",
+    "portrait_hud_duration_regression.py",
     "presenter_impact_regression.py",
     "keyword_hold_regression.py",
     "dynamic_continuity_regression.py",
@@ -34,6 +35,8 @@ REGRESSIONS = [
     "fps_contract_regression.py",
     "final_media_qa_regression.py",
     "render_pipeline_regression.py",
+    "proof_motion_qa_regression.py",
+    "real_project_corpus_regression.py",
     "upgrade_existing_project_regression.py",
     "motion_preview_regression.py",
     "portrait_runtime_contract_regression.py",
@@ -67,6 +70,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--gallery", action="store_true")
     parser.add_argument("--skip-typecheck", action="store_true")
+    parser.add_argument("--real-corpus-manifest", help="Optional local historical-project corpus manifest.")
     args = parser.parse_args()
 
     for path in sorted(SCRIPT_DIR.glob("*.py")):
@@ -105,6 +109,20 @@ def main() -> int:
         run_check(
             "component-render-smoke",
             [powershell, "-ExecutionPolicy", "Bypass", "-File", str(SKILL_ROOT / "assets" / "component-gallery" / "render_gallery.ps1"), "-SkipVideo", "-Smoke"],
+            cwd=SKILL_ROOT,
+        )
+
+    if args.real_corpus_manifest:
+        run_check(
+            "real-project-corpus",
+            [
+                sys.executable,
+                str(SCRIPT_DIR / "real_project_corpus.py"),
+                "--manifest",
+                str(Path(args.real_corpus_manifest).resolve()),
+                "--skill",
+                "portrait",
+            ],
             cwd=SKILL_ROOT,
         )
 

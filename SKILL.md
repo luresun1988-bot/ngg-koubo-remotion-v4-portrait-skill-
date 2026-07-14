@@ -67,7 +67,7 @@ Produce or modify 9:16 Chinese vertical talking-head Remotion edits in the NGG V
 - Keep one bottom caption layer. `embedded` renders complete authoritative cue text in one or two all-white lines with adaptive dark backing; `none` preserves the full timecoded caption data but renders no caption layer. Never truncate or fabricate timing.
 - Keep source brightness by default. Use semantic colors, uniform dark translucent HUD backing, and neutral shadows; do not use colored glow, directional card gradients, generic edge masks, or more than three simultaneous information cards.
 - Keep card/panel forms near or below 35% of main events, avoid three consecutive card/panel families, and use source-bound semantic refreshes rather than slow presenter zoom or component roulette. Clean proof playback is exempt.
-- Play readable proof video as video through `materialMain` + `recording-proof` + `OffthreadVideo`; suppress ordinary HUD during material focus and retain only sourced proof overlays/labels.
+- Play readable proof video as video through `materialMain` + `recording-proof` + `OffthreadVideo`; run `scripts/proof_motion_qa.py` before rendering so missing, undecodable, or frozen recording-proof video cannot pass as moving evidence. Suppress ordinary HUD during material focus and retain only sourced proof overlays/labels.
 
 ### Theme Thesis, Depth Type, and Presenter Impact
 
@@ -108,3 +108,5 @@ python scripts/run_skill_regression.py
 The default suite includes shared semantic-contract checks, a six-case semantic-text → generated visual-script → real Remotion still regression with controlled warning assertions, a rendered 12-second/25fps fullscreen → proof/PiP → fullscreen → CTA continuity regression, and a six-keyframe component render smoke. The dynamic regression verifies corner-label visibility, caption suppression, proof playback, smooth portrait presenter geometry, a short impact punch, continuous normalized audio, frame count, audio coverage, BT.709 metadata, and full-file decode. Add `--audit` after dependency changes and `--gallery` after component style/motion changes. Run `scripts/render_motion_previews.ps1` when motion timing, presenter geometry, or lip sync needs review.
 
 Forward-test substantial workflow changes on a realistic request equivalent to: use V4 Portrait to cut a 9:16 Chinese talking-head video from a source video, script, screenshots, and no prebuilt timeline. Confirm that the agent gates on real timecodes, keeps poster generation conditional, produces config/visual-script/Remotion/QA plans before rendering, preserves presenter continuity, protects the portrait face band, and does not fabricate semantic claims or proof.
+
+When a local historical-project manifest is available, add `--real-corpus-manifest <path>` to the unified regression command. Gate cases must preserve declared format/FPS/duration/media contracts; audit cases expose legacy validator/lint debt without rewriting the original project.

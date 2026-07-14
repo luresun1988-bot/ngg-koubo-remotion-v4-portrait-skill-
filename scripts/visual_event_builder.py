@@ -1145,7 +1145,7 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
                 "subtext": "真实录屏 / 页面结果",
                 "assetPath": asset_path,
                 "style": "recording-proof" if Path(asset_path).suffix.lower() in {".mp4", ".mov", ".m4v", ".webm"} else "single-proof",
-                "motionType": "screen-recording-proof",
+                "motionType": "screen-recording-proof" if Path(asset_path).suffix.lower() in {".mp4", ".mov", ".m4v", ".webm"} else "material-zoom-highlight",
             }
 
     if intent == "explanation-claim" and str(beat.get("visualForm") or "") == INTENTIONAL_CLEAN_HOLD:
@@ -1386,7 +1386,7 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
                 "subtext": "真实录屏 / 页面结果",
                 "assetPath": asset_path,
                 "style": "recording-proof" if Path(asset_path).suffix.lower() in {".mp4", ".mov", ".m4v", ".webm"} else "single-proof",
-                "motionType": "screen-recording-proof",
+                "motionType": "screen-recording-proof" if Path(asset_path).suffix.lower() in {".mp4", ".mov", ".m4v", ".webm"} else "material-zoom-highlight",
             }
         return {
             **base,

@@ -211,7 +211,7 @@ Do not use online images, videos, charts, screenshots, logos, or data as final a
 16. Fix hard QA failures.
 17. Render and validate the delivery MP4 through one command:
     - `powershell -ExecutionPolicy Bypass -File scripts/render_final_and_qa.ps1 -RemotionRoot 06_remotion -VisualScript visual_script.json -Output out/final.mp4`
-    - The wrapper runs schema/lint/data/type checks, serial Remotion render, BT.709 H.264/AAC post-process, and final full-file QA. Stop on any stage failure; failed output is retained with a `.failed.mp4` suffix and must not be delivered.
+    - The wrapper runs schema/lint, recording-proof motion/freeze QA, data/type checks, serial Remotion render, BT.709 H.264/AAC post-process, and final full-file QA. Stop on any stage failure; failed output is retained with a `.failed.mp4` suffix and must not be delivered.
 18. Produce `qa_report.md` and reference the passing final-media report.
 
 To refresh only reusable runtime files in an existing project, first dry-run and inspect the plan:

@@ -92,6 +92,9 @@ try {
     Invoke-Step "pre-render QA" {
       & $python "scripts/qa_lint_visual_script.py" --visual-script $visualScriptPath --remotion-root $root --out "qa/pre_render_lint.md"
     }
+    Invoke-Step "proof motion QA" {
+      & $python "scripts/proof_motion_qa.py" --visual-script $visualScriptPath --remotion-root $root --out "qa/proof_motion_qa.md" --json-out "qa/proof_motion_qa.json"
+    }
     Invoke-Step "generate Remotion data" {
       & $python "scripts/write_generated_visual_script.py" --visual-script $visualScriptPath --out "src/generatedVisualScript.ts"
     }
