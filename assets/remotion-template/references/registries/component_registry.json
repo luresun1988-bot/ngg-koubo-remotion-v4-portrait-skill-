@@ -1,0 +1,30 @@
+{
+  "schema": "ngg-koubo-v4-component-registry",
+  "version": 1,
+  "format": "portrait",
+  "sourceOfTruth": "assets/remotion-template/src/components/V4Primitives.tsx",
+  "components": [
+    {"visualForm": "topicKeyword", "eventTypes": ["topicKeyword"], "renderer": "TopicKeyword", "formats": ["9:16"], "requires": ["text"], "fallback": "claimStrip"},
+    {"visualForm": "claimStrip", "eventTypes": ["claimStrip"], "renderer": "ClaimStrip", "formats": ["9:16"], "requires": ["text"], "fallback": "captionHighlight"},
+    {"visualForm": "intentionalCleanHold", "eventTypes": [], "renderer": "none", "formats": ["9:16"], "requires": ["reason"], "fallback": "claimStrip"},
+    {"visualForm": "sourceBoundSticker", "eventTypes": ["statusSticker"], "renderer": "StatusSticker", "formats": ["9:16"], "requires": ["text", "sourceCueIds"], "fallback": "claimStrip"},
+    {"visualForm": "bigJudgement", "eventTypes": ["kineticTitle"], "renderer": "KineticTitle", "formats": ["9:16"], "requires": ["text"], "fallback": "kineticTitle"},
+    {"visualForm": "kineticTitle", "eventTypes": ["kineticTitle"], "renderer": "KineticTitle", "formats": ["9:16"], "requires": ["text"], "fallback": "claimStrip"},
+    {"visualForm": "redWarningCard", "eventTypes": ["semanticProblemMap"], "renderer": "SemanticProblemMap", "formats": ["9:16"], "requires": ["text"], "fallback": "captionHighlight"},
+    {"visualForm": "greenConfirmCard", "eventTypes": ["captionHighlight"], "renderer": "CaptionHighlight", "formats": ["9:16"], "requires": ["text"], "fallback": "captionHighlight"},
+    {"visualForm": "automationHandoff", "eventTypes": ["automationHandoff"], "renderer": "AutomationHandoff", "formats": ["9:16"], "requires": ["text", "internalSteps"], "fallback": "captionHighlight"},
+    {"visualForm": "infoCard", "eventTypes": ["infoCard"], "renderer": "InfoCard", "formats": ["9:16"], "requires": ["text", "iconName"], "fallback": "captionHighlight"},
+    {"visualForm": "platformFanout", "eventTypes": ["platformFanout", "transitionPushZoom"], "renderer": "PlatformFanout", "formats": ["9:16"], "requires": ["internalSteps"], "fallback": "captionHighlight"},
+    {"visualForm": "ratioGallery", "eventTypes": ["ratioGallery"], "renderer": "RatioGallery", "formats": ["9:16"], "requires": ["internalSteps"], "fallback": "captionHighlight"},
+    {"visualForm": "materialMain", "eventTypes": ["materialMain", "statusSticker"], "renderer": "MaterialMain/StatusSticker", "formats": ["9:16"], "requires": ["assetPath"], "fallback": "statusSticker"},
+    {"visualForm": "capabilityShare", "eventTypes": ["flowPath"], "renderer": "FlowPath", "formats": ["9:16"], "requires": ["internalSteps"], "fallback": "captionHighlight"},
+    {"visualForm": "sceneLockGrid", "eventTypes": ["flowPath"], "renderer": "FlowPath", "formats": ["9:16"], "requires": ["internalSteps"], "fallback": "captionHighlight"},
+    {"visualForm": "transformationStack", "eventTypes": ["transformationStack", "captionHighlight"], "renderer": "TransformationStack/CaptionHighlight", "formats": ["9:16"], "requires": ["source", "target", "driver", "result"], "fallback": "captionHighlight"},
+    {"visualForm": "flowPath", "eventTypes": ["flowPath"], "renderer": "FlowPath", "formats": ["9:16"], "requires": ["internalSteps"], "fallback": "captionHighlight"},
+    {"visualForm": "statusStack", "eventTypes": ["statusStack"], "renderer": "StatusStack", "formats": ["9:16"], "requires": ["internalSteps"], "fallback": "captionHighlight"},
+    {"visualForm": "dataPunch", "eventTypes": ["statusSticker"], "renderer": "StatusSticker", "formats": ["9:16"], "requires": ["text", "numericValue"], "fallback": "captionHighlight"},
+    {"visualForm": "statusSticker", "eventTypes": ["statusSticker"], "renderer": "StatusSticker", "formats": ["9:16"], "requires": ["text"], "fallback": "captionHighlight"},
+    {"visualForm": "ctaTitle", "eventTypes": ["ctaTitle"], "renderer": "CtaTitle", "formats": ["9:16"], "requires": ["text", "ctaProvenance"], "fallback": "captionHighlight"},
+    {"visualForm": "captionHighlight", "eventTypes": ["captionHighlight"], "renderer": "CaptionHighlight", "formats": ["9:16"], "requires": ["text"], "fallback": "captionHighlight"}
+  ]
+}

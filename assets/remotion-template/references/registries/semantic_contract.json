@@ -1,0 +1,34 @@
+{
+  "schema": "ngg-koubo-v4-semantic-contract",
+  "version": 1,
+  "format": "portrait",
+  "sourceOfTruth": "scripts/semantic_router.py",
+  "runtimePolicy": {
+    "routerOwns": ["semanticIntent", "visualForm", "keywords", "confidence", "evidence"],
+    "plannerOwns": ["componentChoice", "audioIntent", "fallback"],
+    "mustPreserveVisualScriptInterface": true
+  },
+  "roles": [
+    {"semanticIntent": "topic-intro", "visualForm": "topicKeyword", "fallbackVisualForm": "claimStrip", "evidence": ["topicIntroTerms"], "degradeWhenEvidenceMissing": false},
+    {"semanticIntent": "explanation-claim", "visualForm": "claimStrip", "fallbackVisualForm": "captionHighlight", "evidence": ["claimText"], "degradeWhenEvidenceMissing": false},
+    {"semanticIntent": "cta-resolve", "visualForm": "ctaTitle", "fallbackVisualForm": "captionHighlight", "evidence": ["ctaProvenance"], "degradeWhenEvidenceMissing": true},
+    {"semanticIntent": "workflow-step", "visualForm": "flowPath", "fallbackVisualForm": "captionHighlight", "evidence": ["orderedSteps", "processContext"], "degradeWhenEvidenceMissing": true},
+    {"semanticIntent": "workflow-fields", "visualForm": "flowPath", "fallbackVisualForm": "captionHighlight", "evidence": ["fieldEntities"], "degradeWhenEvidenceMissing": true},
+    {"semanticIntent": "enumeration", "visualForm": "statusStack", "fallbackVisualForm": "captionHighlight", "evidence": ["enumerationTerms"], "degradeWhenEvidenceMissing": true},
+    {"semanticIntent": "negative-friction", "visualForm": "redWarningCard", "fallbackVisualForm": "captionHighlight", "evidence": ["negativeTerms", "resultEvaluation=negative"], "degradeWhenEvidenceMissing": false},
+    {"semanticIntent": "negative-to-positive", "visualForm": "redWarningCard", "fallbackVisualForm": "captionHighlight", "evidence": ["negativeTerms", "positiveTerms"], "degradeWhenEvidenceMissing": false},
+    {"semanticIntent": "positive-confirm", "visualForm": "greenConfirmCard", "fallbackVisualForm": "captionHighlight", "evidence": ["completionPolarity=asserted", "resultEvaluation=positive"], "degradeWhenEvidenceMissing": true},
+    {"semanticIntent": "automation-handoff", "visualForm": "automationHandoff", "fallbackVisualForm": "captionHighlight", "evidence": ["handoffState=asserted", "sourceSteps"], "degradeWhenEvidenceMissing": true},
+    {"semanticIntent": "manual-field", "visualForm": "infoCard", "fallbackVisualForm": "captionHighlight", "evidence": ["fieldEntities"], "degradeWhenEvidenceMissing": true},
+    {"semanticIntent": "platform-fanout", "visualForm": "platformFanout", "fallbackVisualForm": "captionHighlight", "evidence": ["platformEntities"], "degradeWhenEvidenceMissing": true},
+    {"semanticIntent": "asset-variants", "visualForm": "ratioGallery", "fallbackVisualForm": "captionHighlight", "evidence": ["ratioOrAssetEntities"], "degradeWhenEvidenceMissing": true},
+    {"semanticIntent": "proof-material", "visualForm": "materialMain", "fallbackVisualForm": "statusSticker", "evidence": ["proofTerms", "media.role=proof-material"], "degradeWhenEvidenceMissing": true},
+    {"semanticIntent": "capability-share", "visualForm": "capabilityShare", "fallbackVisualForm": "captionHighlight", "evidence": ["comparisonEntities"], "degradeWhenEvidenceMissing": true},
+    {"semanticIntent": "scene-lock", "visualForm": "sceneLockGrid", "fallbackVisualForm": "captionHighlight", "evidence": ["sceneEntities"], "degradeWhenEvidenceMissing": true},
+    {"semanticIntent": "transformation-stack", "visualForm": "transformationStack", "fallbackVisualForm": "captionHighlight", "evidence": ["source", "target", "driver", "result"], "degradeWhenEvidenceMissing": true},
+    {"semanticIntent": "result-promise", "visualForm": "bigJudgement", "fallbackVisualForm": "kineticTitle", "evidence": ["resultPromiseTerms", "topicOpening"], "degradeWhenEvidenceMissing": false},
+    {"semanticIntent": "numeric-metric", "visualForm": "dataPunch", "fallbackVisualForm": "captionHighlight", "evidence": ["numericValue", "numericUnit", "meaningfulNumericContext"], "degradeWhenEvidenceMissing": true},
+    {"semanticIntent": "low-confidence-claim", "visualForm": "intentionalCleanHold", "fallbackVisualForm": "claimStrip", "evidence": ["claimRunLimit"], "degradeWhenEvidenceMissing": false},
+    {"semanticIntent": "source-bound-claim", "visualForm": "sourceBoundSticker", "fallbackVisualForm": "claimStrip", "evidence": ["sourceCueIds"], "degradeWhenEvidenceMissing": true}
+  ]
+}

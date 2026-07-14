@@ -85,6 +85,18 @@ def sfx_manifest_items() -> dict[str, dict[str, Any]]:
     return {str(item.get("intent") or ""): item for item in items if isinstance(item, dict)}
 
 
+def assert_template_registry_mirrors() -> None:
+    template_dir = SKILL_ROOT / "assets" / "remotion-template" / "references" / "registries"
+    if not template_dir.is_dir():
+        fail("missing template registry mirror directory")
+    for source in sorted(REGISTRY_DIR.glob("*.json")):
+        target = template_dir / source.name
+        if not target.is_file():
+            fail(f"missing template registry mirror: {target.relative_to(SKILL_ROOT).as_posix()}")
+        if source.read_bytes().replace(b"\r\n", b"\n") != target.read_bytes().replace(b"\r\n", b"\n"):
+            fail(f"stale template registry mirror: {target.relative_to(SKILL_ROOT).as_posix()}")
+
+
 def main() -> int:
     semantic_contract = load_json(REGISTRY_DIR / "semantic_contract.json")
     presentation_rules = load_json(REGISTRY_DIR / "presentation_rules.json")
@@ -95,6 +107,7 @@ def main() -> int:
     components = component_map(component_registry)
     icons = icon_ids(icon_registry)
     manifest_by_intent = sfx_manifest_items()
+    assert_template_registry_mirrors()
 
     for intent, rule in semantic_router.RULES.items():
         if intent not in roles:

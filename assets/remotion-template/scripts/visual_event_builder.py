@@ -28,50 +28,64 @@ STRONG_CLAIM_TERMS = [
     "关键", "本质", "真正", "核心", "重点", "重要", "原因", "结论",
     "缺点", "优点", "只能", "救不了", "一定要", "推荐", "更划算",
 ]
-SFX_SUGGESTIONS: dict[str, dict[str, Any]] = {
-    "title_impact": {
-        "sfxId": "title_impact_whoosh_01",
-        "path": "input/audio/sfx/title_impact_whoosh_01.wav",
-        "volumeDb": -5,
-        "durationFrames": 50,
-        "preRollFrames": 4,
-    },
-    "confirm": {
-        "sfxId": "confirm_ding_01",
-        "path": "input/audio/sfx/confirm_ding_01.wav",
-        "volumeDb": -5,
-        "durationFrames": 50,
-        "preRollFrames": 0,
-    },
-    "negative_warning": {
-        "sfxId": "negative_warning_01",
-        "path": "input/audio/sfx/negative_warning_01.wav",
-        "volumeDb": -5,
-        "durationFrames": 25,
-        "preRollFrames": 0,
-    },
-    "automation_handoff": {
-        "sfxId": "automation_handoff_01",
-        "path": "input/audio/sfx/automation_handoff_01.wav",
-        "volumeDb": -5,
-        "durationFrames": 50,
-        "preRollFrames": 0,
-    },
-    "data_count": {
-        "sfxId": "data_count_01",
-        "path": "input/audio/sfx/data_count_01.wav",
-        "volumeDb": -5,
-        "durationFrames": 25,
-        "preRollFrames": 0,
-    },
-    "proof_reveal": {
-        "sfxId": "proof_reveal_01",
-        "path": "input/audio/sfx/proof_reveal_01.wav",
-        "volumeDb": -5,
-        "durationFrames": 25,
-        "preRollFrames": 0,
-    },
-}
+def sfx_manifest_path() -> Path:
+    candidates = [
+        SCRIPT_DIR.parent / "public" / "input" / "audio" / "sfx_manifest.json",
+        SCRIPT_DIR.parent / "assets" / "remotion-template" / "public" / "input" / "audio" / "sfx_manifest.json",
+    ]
+    for path in candidates:
+        if path.is_file():
+            return path
+    raise FileNotFoundError("missing V4 portrait sfx_manifest.json")
+
+
+def load_sfx_suggestions() -> dict[str, dict[str, Any]]:
+    manifest = json.loads(sfx_manifest_path().read_text(encoding="utf-8-sig"))
+    suggestions: dict[str, dict[str, Any]] = {}
+    for item in manifest.get("items", []):
+        if not isinstance(item, dict):
+            continue
+        intent = str(item.get("intent") or "")
+        if not intent:
+            continue
+        suggestions[intent] = {
+            "sfxId": str(item.get("sfxId") or ""),
+            "path": str(item.get("path") or ""),
+            "volumeDb": item.get("defaultVolumeDb", -5),
+            "durationFrames": int(item.get("durationFrames", 25) or 25),
+            "preRollFrames": 4 if intent == "title_impact" else 0,
+        }
+    return suggestions
+
+
+SFX_SUGGESTIONS: dict[str, dict[str, Any]] = load_sfx_suggestions()
+
+
+def presentation_rules_path() -> Path:
+    candidates = [
+        SCRIPT_DIR.parent / "references" / "registries" / "presentation_rules.json",
+        SCRIPT_DIR.parent.parent / "references" / "registries" / "presentation_rules.json",
+    ]
+    for path in candidates:
+        if path.is_file():
+            return path
+    raise FileNotFoundError("missing V4 portrait presentation_rules.json")
+
+
+def load_presentation_sfx_intents() -> dict[str, str]:
+    data = json.loads(presentation_rules_path().read_text(encoding="utf-8-sig"))
+    mapping: dict[str, str] = {}
+    for item in data.get("semanticToPresentation", []):
+        if not isinstance(item, dict):
+            continue
+        intent = str(item.get("semanticIntent") or "")
+        sfx_intent = item.get("primarySfxIntent")
+        if intent and sfx_intent:
+            mapping[intent] = str(sfx_intent)
+    return mapping
+
+
+PRESENTATION_SFX_INTENTS = load_presentation_sfx_intents()
 PUNCTUATION = " ，。？！、；;：:.!?"
 NUMERIC_VALUE_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|[KkMmGg]|个|张|条|分钟|秒)?")
 
@@ -1698,19 +1712,19 @@ def sfx_intent_for_event(beat: dict[str, Any], event: dict[str, Any]) -> str | N
     event_type = str(event.get("type") or "")
     semantic_role = str(event.get("semanticRole") or "")
     if semantic_intent == "result-promise" and event_type in {"kineticTitle", "bigJudgement"}:
-        return "title_impact"
+        return PRESENTATION_SFX_INTENTS.get("result-promise")
     if semantic_intent in {"negative-friction", "negative-to-positive"}:
-        return "negative_warning"
+        return PRESENTATION_SFX_INTENTS.get(semantic_intent)
     if semantic_intent == "positive-confirm":
-        return "confirm"
+        return PRESENTATION_SFX_INTENTS.get("positive-confirm")
     if semantic_intent == "automation-handoff":
-        return "automation_handoff"
+        return PRESENTATION_SFX_INTENTS.get("automation-handoff")
     if semantic_intent == "numeric-metric" and "completed" in [str(item) for item in beat.get("semanticModifiers", [])]:
-        return "confirm"
+        return PRESENTATION_SFX_INTENTS.get("positive-confirm")
     if semantic_intent == "numeric-metric" or event_type in {"dataPunch", "metricSpotlight"}:
-        return "data_count"
+        return PRESENTATION_SFX_INTENTS.get("numeric-metric")
     if semantic_intent == "proof-material" or semantic_role in {"proof-material", "proof-focus", "material-main"}:
-        return "proof_reveal"
+        return PRESENTATION_SFX_INTENTS.get("proof-material")
     return None
 
 
