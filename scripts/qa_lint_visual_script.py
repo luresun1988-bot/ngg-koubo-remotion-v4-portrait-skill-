@@ -628,6 +628,111 @@ def _transformation_provenance_errors(
     return errors
 
 
+SOURCE_BOUND_COMPONENT_INTENTS = {
+    "capability-share", "scene-lock", "platform-fanout", "manual-field",
+    "asset-variants", "automation-handoff", "workflow-step", "workflow-fields", "enumeration",
+}
+
+
+def _component_provenance_errors(
+    *,
+    event: dict[str, Any],
+    event_id: str,
+    beats_by_id: dict[str, dict[str, Any]],
+    captions_by_id: dict[str, dict[str, Any]],
+) -> list[str]:
+    source_beat = beats_by_id.get(str(event.get("sourceBeatId") or ""))
+    if source_beat is None:
+        return []
+    intent = str(source_beat.get("semanticIntent") or "")
+    if (
+        intent not in SOURCE_BOUND_COMPONENT_INTENTS
+        or str(event.get("semanticFallbackFrom") or "")
+        or str(event.get("motionType") or "") == "workflow-progressive"
+    ):
+        return []
+
+    errors: list[str] = []
+    steps = event.get("internalSteps")
+    minimum = 1 if intent == "automation-handoff" else 2
+    if not isinstance(steps, list) or len(steps) < minimum:
+        return [
+            "component-source-binding failed: "
+            f"{event_id} ({intent}) needs at least {minimum} source-bound internalSteps"
+        ]
+
+    beat_source_ids = _ordered_unique(
+        [str(item or "") for item in source_beat.get("sourceCueIds", [])]
+    )
+    cue_order = {cue_id: index for index, cue_id in enumerate(beat_source_ids)}
+    prior_position = (-1, -1)
+    seen_labels: set[str] = set()
+    for step_index, step in enumerate(steps):
+        step_ref = f"{event_id}.internalSteps[{step_index}]"
+        if not isinstance(step, dict):
+            errors.append(f"component-source-binding failed: {step_ref} must be an object")
+            continue
+        label = str(step.get("label") or "")
+        source_text = str(step.get("text") or "")
+        cue_ids = _ordered_unique([str(item or "") for item in step.get("sourceCueIds", [])])
+        if not label or not source_text or not cue_ids:
+            errors.append(
+                "component-source-binding failed: "
+                f"{step_ref} needs non-empty label, text, and sourceCueIds"
+            )
+            continue
+        if label in seen_labels:
+            errors.append(f"component-source-binding failed: {step_ref}.label={label!r} is duplicated")
+        seen_labels.add(label)
+        if label not in source_text:
+            errors.append(
+                "component-label-source-binding failed: "
+                f"{step_ref}.label={label!r} must be an exact substring of step.text"
+            )
+        invalid_ids = [cue_id for cue_id in cue_ids if cue_id not in beat_source_ids]
+        if invalid_ids:
+            errors.append(
+                "component-source-binding failed: "
+                f"{step_ref}.sourceCueIds {invalid_ids} are not owned by its source beat"
+            )
+        positions: list[tuple[int, int]] = []
+        valid_caption_texts: list[str] = []
+        for cue_id in cue_ids:
+            cue = captions_by_id.get(cue_id)
+            if cue is None:
+                errors.append(
+                    "component-source-binding failed: "
+                    f"{step_ref}.sourceCueIds contains missing caption {cue_id!r}"
+                )
+                continue
+            if str(cue.get("sceneId") or "") != str(event.get("sceneId") or ""):
+                errors.append(
+                    "component-source-binding failed: "
+                    f"{step_ref} cites caption {cue_id!r} from another scene"
+                )
+                continue
+            caption_text = str(cue.get("text") or "")
+            valid_caption_texts.append(caption_text)
+            position = caption_text.find(source_text)
+            if position >= 0 and cue_id in cue_order:
+                positions.append((cue_order[cue_id], position))
+        if valid_caption_texts and not any(source_text in text for text in valid_caption_texts):
+            errors.append(
+                "component-step-source-binding failed: "
+                f"{step_ref}.text={source_text!r} is not an exact substring of its cited captions"
+            )
+        if positions:
+            current_position = min(positions)
+            if current_position < prior_position:
+                errors.append(
+                    "component-source-order failed: "
+                    f"{step_ref}.text={source_text!r} is out of linked-caption order"
+                )
+            prior_position = max(prior_position, current_position)
+    return errors
+
+
+
 def layered_hud_step_checks(data: dict[str, Any]) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -646,9 +751,15 @@ def layered_hud_step_checks(data: dict[str, Any]) -> tuple[list[str], list[str]]
         if not isinstance(event, dict):
             continue
         event_type = str(event.get("type") or "")
+        event_id = str(event.get("id") or f"visualEvents[{idx}]")
+        errors.extend(_component_provenance_errors(
+            event=event,
+            event_id=event_id,
+            beats_by_id=beats_by_id,
+            captions_by_id=captions_by_id,
+        ))
         if event_type not in {"capabilityShare", "sceneLockGrid", "transformationStack"}:
             continue
-        event_id = str(event.get("id") or f"visualEvents[{idx}]")
         steps = event.get("internalSteps")
         if event_type == "transformationStack":
             roles = {transformation_step_role(step) for step in steps} if isinstance(steps, list) else set()
@@ -983,23 +1094,23 @@ def semantic_beat_fulfillment_checks(data: dict[str, Any]) -> tuple[list[str], l
 
         event_types = {str(event.get("type") or "") for event in matched_events}
         allowed_types = SEMANTIC_ALLOWED_EVENT_TYPES.get(intent)
-        explicit_transform_fallback = intent == "transformation-stack" and any(
+        explicit_semantic_fallback = any(
             str(event.get("type") or "") == "captionHighlight"
-            and str(event.get("semanticFallbackFrom") or "") == "transformation-stack"
+            and str(event.get("semanticFallbackFrom") or "") == intent
             and bool(str(event.get("fallbackReason") or ""))
             for event in matched_events
         )
-        if explicit_transform_fallback:
+        if explicit_semantic_fallback:
             fallback_reasons = sorted(
                 {
                     str(event.get("fallbackReason") or "")
                     for event in matched_events
-                    if str(event.get("semanticFallbackFrom") or "") == "transformation-stack"
+                    if str(event.get("semanticFallbackFrom") or "") == intent
                 }
             )
             warnings.append(
-                "transformation-semantic-fallback warning: "
-                f"{beat_id} was downgraded to captionHighlight because complete transformation evidence was unavailable "
+                "semantic-component-fallback warning: "
+                f"{beat_id} ({intent}) was downgraded to captionHighlight because complete source evidence was unavailable "
                 f"({', '.join(reason for reason in fallback_reasons if reason)})"
             )
             allowed_types = None

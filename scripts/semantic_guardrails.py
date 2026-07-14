@@ -114,6 +114,99 @@ COMPLETION_PARTIAL_PATTERNS = [
     re.compile(r"(?:其中)?[一二两三四五六七八九十\d]+项(?:已经|已)?完成"),
 ]
 
+RESULT_EVALUATION_SUBJECT = (
+    r"(?:结果|答案|结论|输出|验证|校验|检查|测试|执行|运行|流程|任务|交付|处理|"
+    r"识别|匹配|计算|生成|渲染|导出|发布|状态|确认|这一步|这次|这个结果|最终结果)"
+)
+RESULT_EVALUATION_POSITIVE_PATTERNS = [
+    re.compile(r"(?:没有|并无|无(?:任何)?|未发现|不存在)(?:出现)?(?:任何)?(?:错误|出错|报错|异常|失败)"),
+    re.compile(r"(?:错误|报错|异常|失败)(?:项|数|数量)?\s*(?:为|是|[:：])?\s*(?:0|零)(?:个|项|次)?"),
+    re.compile(
+        RESULT_EVALUATION_SUBJECT
+        + r"(?:已经|已|最终|均|都|全部|完全)?(?:是|为)?(?:正确|成功|通过|正常|无误)"
+    ),
+    re.compile(r"(?:这是|这个结果(?:是|为)?|这个结论(?:是|为)?)(?:正确|成功|通过|正常|无误)的?"),
+    re.compile(r"(?:通过|成功完成)了?(?:验证|校验|检查|测试)"),
+]
+RESULT_EVALUATION_NEGATIVE_PATTERNS = [
+    re.compile(
+        RESULT_EVALUATION_SUBJECT
+        + r"(?:已经|已|最终|均|都|全部|完全)?(?:是|为)?"
+        r"(?:没有通过|没通过|未通过|不通过|没有成功|没成功|未成功|不正确|不正常|"
+        r"错误|出错|失败|异常|不完整|有缺失|缺失)"
+    ),
+    re.compile(r"(?:这是|这个结果(?:是|为)?|这个结论(?:是|为)?)(?:不正确|错误|失败|异常|不正常)的?"),
+    re.compile(r"(?:系统|程序|工具|页面|接口|这一步|这次|刚才|最终|实际)?(?:报错|出错|失败|异常)(?:了|啦)?"),
+    re.compile(r"(?:未|没|没有)(?:交付|输出)"),
+    re.compile(r"(?:最终|结果|输出|交付|内容|文件|成片)?(?:并)?不完整"),
+    re.compile(r"(?:最终|实际|这次|这一步)?(?:没有|没|未)成功"),
+    re.compile(r"(?:结果|输出|交付|内容|文件|素材)?(?:有)?缺失"),
+]
+RESULT_EVALUATION_RESET_RE = re.compile(r"(?:但|不过|但是|而是|现在|如今|最终)")
+RESULT_EVALUATION_NON_ASSERTED_PREFIX_RE = re.compile(
+    r"(?:是否|能否|可否|是不是|有没有|可能|也许|或许|大概|预计|担心|容易|避免|防止|"
+    r"以免|如果|只要|一旦|等到|待|假如|万一)[^，。；！？!?\n]{0,14}$"
+)
+RESULT_EVALUATION_QUESTION_RE = re.compile(r"(?:吗|么|呢|是否|没有|没)(?:[？?])?$")
+RESULT_EVALUATION_META_SUFFIX_RE = re.compile(
+    r"^(?:按钮|状态|字段|标识|文案|选项|页面|率|条件|示例|案例|词|字样|说法|概念|定义|"
+    r"教程|方法|规则|名称|类型|原因|分析|记录|日志)"
+)
+RESULT_EVALUATION_ZERO_SUFFIX_RE = re.compile(
+    r"^(?:项|数|数量)?\s*(?:为|是|[:：])?\s*(?:0|零)(?:个|项|次)?"
+)
+
+
+def _result_candidate_is_non_asserted(
+    clause: str,
+    start: int,
+    end: int,
+    polarity: str,
+) -> bool:
+    prefix = RESULT_EVALUATION_RESET_RE.split(clause[:start])[-1]
+    near_prefix = prefix[-18:]
+    source = clause[start:end]
+    suffix = clause[end:end + 14].lstrip()
+    question_scope = f"{near_prefix[-6:]}{source}{suffix[:3]}"
+    if RESULT_EVALUATION_NON_ASSERTED_PREFIX_RE.search(near_prefix):
+        return True
+    if any(marker in question_scope for marker in ["是否", "能否", "可否", "是不是", "有没有"]):
+        return True
+    if RESULT_EVALUATION_QUESTION_RE.search(f"{source}{suffix[:3]}"):
+        return True
+    if suffix.startswith(("后", "之后", "以后", "前", "之前")):
+        return True
+    if RESULT_EVALUATION_META_SUFFIX_RE.search(suffix):
+        return True
+    if polarity == "negative":
+        if re.search(r"(?:没有|并无|无(?:任何)?|未发现|不存在|不再|不是|并非|不算)\s*$", near_prefix):
+            return True
+        if RESULT_EVALUATION_ZERO_SUFFIX_RE.search(suffix):
+            return True
+    return False
+
+
+def result_evaluation(text: str) -> dict[str, Any] | None:
+    """Return the latest asserted positive/negative result evaluation in spoken text."""
+    candidates: list[tuple[int, int, str, str]] = []
+    for clause_match in CLAUSE_RE.finditer(text):
+        clause = clause_match.group(0)
+        for polarity, patterns in (
+            ("positive", RESULT_EVALUATION_POSITIVE_PATTERNS),
+            ("negative", RESULT_EVALUATION_NEGATIVE_PATTERNS),
+        ):
+            for pattern in patterns:
+                for match in pattern.finditer(clause):
+                    if _result_candidate_is_non_asserted(clause, match.start(), match.end(), polarity):
+                        continue
+                    start = clause_match.start() + match.start()
+                    end = clause_match.start() + match.end()
+                    candidates.append((end, start, polarity, match.group(0).strip()))
+    if not candidates:
+        return None
+    end, start, polarity, source_text = max(candidates, key=lambda item: (item[0], item[1]))
+    return {"polarity": polarity, "sourceText": source_text, "start": start, "end": end}
+
 
 def _completion_is_partial_or_unresolved(clause: str, start: int, end: int) -> bool:
     scope = clause[max(0, start - 18):min(len(clause), end + 18)]

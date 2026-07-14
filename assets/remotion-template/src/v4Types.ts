@@ -102,6 +102,7 @@ export type VisualEvent = {
   subtext?: string;
   title?: string;
   status?: string;
+  processingText?: string;
   emphasisWords?: string[];
   iconName?: string;
   numericValue?: number;

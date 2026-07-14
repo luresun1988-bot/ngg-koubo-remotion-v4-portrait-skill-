@@ -49,9 +49,9 @@ Default rhythm is strong-packaging dense motion, but still readable.
 Choose by semantic role:
 
 - Pain/question: word-by-word pop, synced to speech beats.
-- Result/contrast/number promise: crash-in, rebound settle, keyword second-pop.
+- Result/contrast/number promise: fast crash-in, controlled title settle, then one keyword scale-to-hold.
 - Strong title effects must be short. Shakes, glow pulses, and impact lines should resolve quickly.
-- Emphasized title keywords can do one secondary enlarge/rebound after the main entrance. Use it only for 1-3 semantic keywords, not every word.
+- Emphasized title keywords may enlarge once in about 4–6 FPS-scaled frames after the main entrance, then hold until the parent event exits. Use it only for 1-3 semantic keywords, not every word; do not shrink, rebound, or pulse mid-event.
 - Hook titles render as stacked title blocks by default. Do not animate a long Hook as one horizontal strip across the top edge.
 
 Failure conditions:
@@ -97,8 +97,8 @@ In fullscreen/large portrait presenter scenes, `semanticProblemMap` uses a compa
 The V4 template currently implements these concrete presets:
 
 - `word-pop`: staged word entrance for pain/question hooks.
-- `crash-rebound-keyword-pop`: title scale-in, rebound, and short keyword emphasis for results, routes, and CTA.
-- `keyword-second-pop`: emphasized title words scale up briefly once after the primary entrance, then settle back; no continuous pulsing.
+- `crash-rebound-keyword-pop`: compatibility motion name for a fast title scale-in with controlled primary settle, followed by one emphasized-keyword scale-up that holds until the parent exits.
+- `keyword-second-pop`: compatibility name for one fast emphasized-keyword scale-up after the primary entrance. Hold the enlarged state through the parent event's readable phase; the parent exit removes it. Do not rebound, shrink mid-event, or pulse continuously.
 - `presenter-impact-punch`: reserve for a strong source-bound question, core judgement, reversal, warning, or asserted result. The default is semantic-lifecycle sync: pair it with one visible non-reposition semantic event in the same scene using the same `sourceBeatId` and exact `[startFrame,endFrame)` range. Push to 1.06–1.10 in 4–6 FPS-scaled frames, do not rebound, hold at peak through the companion's readable phase, and return during that companion's standard exit window so both finish on the same frame. A lifecycle-synced event may last up to six seconds; an unpaired standalone fallback remains 18–28 frames at 30 fps or about 15–23 at 25 fps. Keep a face-safe origin near `50% 37%`, starts about eight seconds apart, and at most three punches in a rolling minute. Do not overlap proof/material focus, PiP transitions, CTA, ordinary explanation, or another major camera move.
 - `contrast-swap-scan`: pain contrast board with state highlight and "not A / but B" layout.
 - `hub-to-platform-flow`: center package fans out to platform nodes with staggered line reveal.
@@ -113,7 +113,7 @@ The V4 template currently implements these concrete presets:
 - `corner-slide-fade`: lightweight top-left chapter label slides in softly and does not trigger edge shade.
 - `material-zoom-highlight`: material board push-in with state highlight and proof highlight.
 - `screen-recording-proof`: material board styled as a screen-recording or backend proof surface.
-- `cta-result-keyword`: CTA closes with a large result judgement, a delayed explanatory line, and a compact keyword/action strip. The strip enters after the judgement has settled, and the emphasized CTA word gets one secondary scale pop. In fullscreen-presenter scenes, the CTA is a left-lane HUD by default so it does not cover the presenter's face.
+- `cta-result-keyword`: CTA closes with a large result judgement, a delayed explanatory line, and a compact sourced keyword/action strip. The strip enters after the judgement has settled, and the emphasized CTA word scales up once and holds through the CTA. In fullscreen-presenter scenes, the CTA is a left-lane HUD by default so it does not cover the presenter's face.
 
 ## Card Motion
 

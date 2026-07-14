@@ -21,6 +21,7 @@ from semantic_guardrails import (  # noqa: E402
     is_process_context,
     is_proof_context,
     parse_cta_provenance,
+    result_evaluation,
     topic_intro,
 )
 
@@ -165,6 +166,7 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
     matched = {intent: hits for intent, hits in matched.items() if hits}
     solution_hits = list(matched.get("positive-confirm", [])) + list(matched.get("automation-handoff", []))
     completion_state = completion_polarity(text)
+    evaluated_result = result_evaluation(text)
     handoff = handoff_state(text)
     cta_signal = parse_cta_provenance(text)
 
@@ -297,6 +299,19 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
             "requiredChecks": RULES["negative-friction"]["checks"],
             "confidence": 0.94,
         }
+
+    if completion_state == "asserted":
+        completion_keywords = [term for term in COMPLETION_TERMS if term in text]
+        return rule_result("positive-confirm", completion_keywords or ["完成"], 0.92)
+
+    if evaluated_result:
+        evaluation_intent = (
+            "positive-confirm"
+            if evaluated_result.get("polarity") == "positive"
+            else "negative-friction"
+        )
+        source_text = str(evaluated_result.get("sourceText") or "").strip()
+        return rule_result(evaluation_intent, [source_text] if source_text else [], 0.94)
 
     if handoff == "asserted" and ENUMERATION_RE.search(text) is None:
         return rule_result("automation-handoff", matched.get("automation-handoff", []) or ["自动交接"], 0.92)

@@ -120,6 +120,79 @@ def caption_cues_by_id(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
     }
 
 
+def owned_source_cues(beat: dict[str, Any], data: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return caption cues explicitly owned by this semantic beat, in source order."""
+    cue_map = caption_cues_by_id(data)
+    scene_id = str(beat.get("sceneId") or "")
+    cues: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in beat.get("sourceCueIds", []):
+        cue_id = str(item or "")
+        cue = cue_map.get(cue_id)
+        if not cue_id or cue_id in seen or cue is None:
+            continue
+        if scene_id and str(cue.get("sceneId") or "") != scene_id:
+            continue
+        seen.add(cue_id)
+        cues.append(cue)
+    return sorted(cues, key=lambda cue: int(cue.get("startFrame", 0) or 0))
+
+
+def source_bound_steps(
+    beat: dict[str, Any],
+    data: dict[str, Any],
+    candidates: list[tuple[str, str]],
+    prefix: str,
+    limit: int = 5,
+) -> list[dict[str, Any]]:
+    """Build visible rows only from exact words present in beat-owned caption cues."""
+    matches: list[tuple[int, int, str, str, str, str]] = []
+    for cue_index, cue in enumerate(owned_source_cues(beat, data)):
+        cue_id = str(cue.get("id") or "")
+        cue_text = str(cue.get("text") or "")
+        for label, icon in candidates:
+            position = cue_text.find(label)
+            if position >= 0:
+                matches.append((cue_index, position, label, icon, cue_id, cue_text))
+    steps: list[dict[str, Any]] = []
+    seen_labels: set[str] = set()
+    for _cue_index, _position, label, icon, cue_id, cue_text in sorted(matches):
+        if label in seen_labels:
+            continue
+        seen_labels.add(label)
+        steps.append({
+            "id": f"{prefix}-{len(steps) + 1:02d}",
+            "label": label,
+            "text": label,
+            "sourceCueIds": [cue_id],
+            "iconName": icon,
+        })
+        if len(steps) == limit:
+            break
+    return steps
+
+
+def provenance_fallback(
+    base: dict[str, Any], intent: str, text: str, reason: str,
+) -> dict[str, Any]:
+    source_copy = re.sub(r"\s+", "", text).strip(PUNCTUATION)[:18]
+    return {
+        **base,
+        "type": "captionHighlight",
+        "semanticRole": "explanation-claim",
+        "text": source_copy or "信息不足",
+        "status": "SOURCE ONLY",
+        "iconName": "Info",
+        "motionType": "hud-slide-fade",
+        "semanticFallbackFrom": intent,
+        "fallbackReason": reason,
+    }
+
+
+def provenance_reason(beat: dict[str, Any], data: dict[str, Any], entity_reason: str) -> str:
+    return entity_reason if owned_source_cues(beat, data) else "missing-source-cues"
+
+
 def cue_anchor_for_event(event: dict[str, Any], beat: dict[str, Any], data: dict[str, Any]) -> tuple[int, str] | None:
     source_ids = [str(item) for item in beat.get("sourceCueIds", []) if str(item)]
     if not source_ids:
@@ -532,32 +605,18 @@ def proof_asset_from_media(data: dict[str, Any]) -> str | None:
     return None
 
 
-def poster_steps(text: str) -> list[dict[str, str]]:
-    ratios: list[tuple[str, str]] = []
-    if "16:9" in text:
-        ratios.append(("横屏 16:9", "PanelsTopLeft"))
-    elif any(signal in text for signal in ["横屏", "横版"]):
-        ratios.append(("横版", "PanelsTopLeft"))
-    if "3:4" in text:
-        ratios.append(("竖图 3:4", "Image"))
-    elif any(signal in text for signal in ["竖屏", "竖版"]):
-        ratios.append(("竖版", "Image"))
-    if "1:1" in text:
-        ratios.append(("方图 1:1", "Images"))
-    elif any(signal in text for signal in ["方图", "方形"]):
-        ratios.append(("方图", "Images"))
-    if "4:3" in text:
-        ratios.append(("横图 4:3", "PanelsTopLeft"))
-    if not ratios:
-        ratios = [("横版", "PanelsTopLeft"), ("竖版", "Image"), ("方图", "Images")]
-    return [
-        {"id": f"ratio-{index + 1:02d}", "label": label, "iconName": icon}
-        for index, (label, icon) in enumerate(ratios[:4])
-    ]
+def poster_steps(beat: dict[str, Any], data: dict[str, Any]) -> list[dict[str, Any]]:
+    return source_bound_steps(beat, data, [
+        ("16:9", "PanelsTopLeft"), ("3:4", "Image"), ("1:1", "Images"),
+        ("4:3", "PanelsTopLeft"), ("横屏", "PanelsTopLeft"), ("横版", "PanelsTopLeft"),
+        ("竖屏", "Image"), ("竖版", "Image"), ("方图", "Images"), ("方形", "Images"),
+    ], "ratio", 4)
 
 
-def field_steps(text: str) -> list[dict[str, str]]:
-    candidates = [
+def field_steps(beat: dict[str, Any], data: dict[str, Any]) -> list[dict[str, Any]]:
+    return source_bound_steps(beat, data, [
+        ("输入", "TextCursorInput"),
+        ("关键词", "Hash"),
         ("上传", "UploadCloud"),
         ("标题", "FileText"),
         ("简介", "AlignLeft"),
@@ -565,58 +624,27 @@ def field_steps(text: str) -> list[dict[str, str]]:
         ("封面", "Image"),
         ("字段", "ClipboardList"),
         ("输出", "SendHorizontal"),
-    ]
-    steps = [
-        {"id": f"field-{idx + 1:02d}", "label": label, "iconName": icon}
-        for idx, (label, icon) in enumerate(candidates)
-        if label in text
-    ]
-    if len(steps) >= 2:
-        return steps[:5]
-    return [
-        {"id": "step-01", "label": "定义规则", "iconName": "ListChecks"},
-        {"id": "step-02", "label": "自动执行", "iconName": "Bot"},
-        {"id": "step-03", "label": "输出结果", "iconName": "SendHorizontal"},
-    ]
+        ("视频", "Video"),
+    ], "field", 5)
 
 
-def capability_steps(text: str) -> list[dict[str, str]]:
-    candidates = [
+def capability_steps(beat: dict[str, Any], data: dict[str, Any]) -> list[dict[str, Any]]:
+    return source_bound_steps(beat, data, [
         ("OpenAI", "Bot"), ("Google", "Network"), ("Anthropic", "BrainCircuit"),
         ("国内", "Landmark"), ("国外", "Globe2"), ("企业客户", "Building2"),
         ("模型能力", "BrainCircuit"), ("市场份额", "BarChart3"), ("排名", "Trophy"),
-    ]
-    steps = [
-        {"id": f"cap-{index + 1:02d}", "label": label, "iconName": icon}
-        for index, (label, icon) in enumerate(candidates)
-        if label in text
-    ]
-    return steps[:3] or [
-        {"id": "cap-01", "label": "比较对象", "iconName": "Scale"},
-        {"id": "cap-02", "label": "能力指标", "iconName": "BrainCircuit"},
-        {"id": "cap-03", "label": "差异结论", "iconName": "BarChart3"},
-    ]
+    ], "cap", 4)
 
 
-def scene_steps(text: str) -> list[dict[str, str]]:
-    candidates = [
+def scene_steps(beat: dict[str, Any], data: dict[str, Any]) -> list[dict[str, Any]]:
+    return source_bound_steps(beat, data, [
         ("支付", "CreditCard"),
         ("教育", "GraduationCap"),
         ("政务", "Landmark"),
-        ("行业", "BriefcaseBusiness"),
         ("下沉市场", "MapPinned"),
         ("本地生活", "Store"),
-    ]
-    steps = [
-        {"id": f"scene-{idx + 1:02d}", "label": label, "iconName": icon}
-        for idx, (label, icon) in enumerate(candidates)
-        if label in text
-    ]
-    return steps[:4] or [
-        {"id": "scene-01", "label": "场景", "iconName": "MapPinned"},
-        {"id": "scene-02", "label": "行业", "iconName": "BriefcaseBusiness"},
-        {"id": "scene-03", "label": "落地", "iconName": "BadgeCheck"},
-    ]
+        ("餐饮", "Store"), ("零售", "Store"), ("基础设施", "Landmark"),
+    ], "scene", 4)
 
 
 def transformation_steps(text: str) -> list[dict[str, str]]:
@@ -897,21 +925,21 @@ def _trusted_transformation_plan(
     }, ""
 
 
-def platform_steps(text: str) -> list[dict[str, str]]:
-    platforms = [
+def platform_steps(beat: dict[str, Any], data: dict[str, Any]) -> list[dict[str, Any]]:
+    return source_bound_steps(beat, data, [
         ("抖音", "Video"), ("小红书", "Image"), ("B站", "MonitorUp"),
         ("快手", "SendHorizontal"), ("视频号", "PanelsTopLeft"),
-    ]
-    steps = [
-        {"id": f"platform-{index + 1:02d}", "label": label, "iconName": icon}
-        for index, (label, icon) in enumerate(platforms)
-        if label in text
-    ]
-    return steps[:5] or [
-        {"id": "platform-01", "label": "渠道适配", "iconName": "Route"},
-        {"id": "platform-02", "label": "多端发布", "iconName": "Network"},
-        {"id": "platform-03", "label": "统一交付", "iconName": "PackageCheck"},
-    ]
+    ], "platform", 5)
+
+
+def automation_steps(beat: dict[str, Any], data: dict[str, Any]) -> list[dict[str, Any]]:
+    return source_bound_steps(beat, data, [
+        ("任务", "ClipboardList"), ("素材", "Image"), ("文案", "FileText"),
+        ("页面", "MonitorUp"), ("标题", "FileText"), ("简介", "AlignLeft"),
+        ("标签", "Tags"), ("封面", "Image"), ("视频", "Video"),
+        ("流程", "ListChecks"), ("Codex", "Bot"), ("系统", "Bot"),
+        ("自动执行", "Play"), ("接管", "Bot"), ("处理", "Cog"),
+    ], "handoff", 5)
 
 
 def topic_keyword(text: str, beat: dict[str, Any]) -> str:
@@ -1179,29 +1207,45 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
         }
 
     if intent == "automation-handoff":
-        title_copy, subtext_copy, emphasis_words = confirm_copy(text)
+        steps = automation_steps(beat, data)
+        if not steps:
+            return provenance_fallback(
+                base, intent, text, provenance_reason(beat, data, "missing-handoff-evidence")
+            )
+        labels = [str(step.get("label") or "") for step in steps]
+        beat["internalSteps"] = steps
+        actor = "Codex" if "Codex" in text else "系统" if "系统" in text else labels[0]
         return {
             **base,
             "type": "automationHandoff",
-            "text": title_copy or "Codex 接管",
-            "subtext": subtext_copy or "把流程交给系统执行",
+            "text": labels[0],
+            "title": actor,
+            "subtext": " / ".join(labels[1:3]),
             "status": "AUTO HANDOFF",
-            "emphasisWords": emphasis_words or ["Codex"],
+            "processingText": "自动执行" if "自动执行" in text else "执行",
+            "emphasisWords": [actor],
             "iconName": "Bot",
+            "internalSteps": steps,
             "motionType": "field-collapse-to-action",
         }
 
     if intent == "manual-field":
+        steps = field_steps(beat, data)
+        if len(steps) < 2:
+            return provenance_fallback(
+                base, intent, text, provenance_reason(beat, data, "missing-field-entities")
+            )
+        labels = [str(step.get("label") or "") for step in steps]
         return {
             **base,
             "type": "infoCard",
             "semanticRole": "manual-field",
-            "text": "重复字段",
-            "title": "自动填字段",
-            "subtext": "标题 / 简介 / 标签 / 封面",
+            "text": re.sub(r"\s+", "", text).strip(PUNCTUATION)[:18],
+            "title": " / ".join(labels[:3]),
+            "subtext": " / ".join(labels[3:5]),
             "status": "FIELDS",
             "iconName": "ClipboardList",
-            "internalSteps": field_steps(text),
+            "internalSteps": steps,
             "motionType": "manual-field-task-stack",
         }
 
@@ -1226,6 +1270,11 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
         }
 
     if intent in {"workflow-step", "workflow-fields", "enumeration"}:
+        steps = field_steps(beat, data)
+        if len(steps) < 2:
+            return provenance_fallback(
+                base, intent, text, provenance_reason(beat, data, "missing-workflow-steps")
+            )
         title_copy = key_message(text, 14, ["流程", "步骤", "指标", "规则", "发布", "主图", "字段"])
         return {
             **base,
@@ -1233,51 +1282,71 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
             "text": "流程推进",
             "title": title_copy or "步骤列表",
             "status": "STEP BY STEP",
-            "internalSteps": field_steps(text),
+            "internalSteps": steps,
             "motionType": "flow-list-stagger",
         }
 
     if intent == "asset-variants":
+        steps = poster_steps(beat, data)
+        if len(steps) < 2:
+            return provenance_fallback(
+                base, intent, text, provenance_reason(beat, data, "missing-variant-entities")
+            )
         return {
             **base,
             "type": "ratioGallery",
             "text": "多尺寸主图",
-            "title": "横屏 / 竖屏 / 方图",
+            "title": " / ".join(str(step.get("label") or "") for step in steps),
             "status": "ASSET VARIANTS",
-            "internalSteps": poster_steps(text),
+            "internalSteps": steps,
             "motionType": "flow-list-stagger",
         }
 
     if intent == "platform-fanout":
+        steps = platform_steps(beat, data)
+        if len(steps) < 2:
+            return provenance_fallback(
+                base, intent, text, provenance_reason(beat, data, "missing-platform-entities")
+            )
         return {
             **base,
             "type": "platformFanout",
             "text": "一份素材包",
-            "subtext": "分发到多个平台",
+            "subtext": " / ".join(str(step.get("label") or "") for step in steps),
             "iconName": "Network",
-            "internalSteps": platform_steps(text),
+            "internalSteps": steps,
             "motionType": "hub-to-platform-flow",
         }
 
     if intent == "capability-share":
+        steps = capability_steps(beat, data)
+        if len(steps) < 2:
+            return provenance_fallback(
+                base, intent, text, provenance_reason(beat, data, "missing-comparison-entities")
+            )
         return {
             **base,
             "type": "capabilityShare",
             "text": "能力 / 份额 / 排名",
             "title": key_message(text, 16, ["份额", "排名", "领先", "对比", "大模型"]),
             "status": "CAPABILITY SHARE",
-            "internalSteps": capability_steps(text),
+            "internalSteps": steps,
             "motionType": "layered-capability-share",
         }
 
     if intent == "scene-lock":
+        steps = scene_steps(beat, data)
+        if len(steps) < 2:
+            return provenance_fallback(
+                base, intent, text, provenance_reason(beat, data, "missing-scene-entities")
+            )
         return {
             **base,
             "type": "sceneLockGrid",
             "text": "场景落地",
             "title": key_message(text, 16, ["支付", "教育", "政务", "行业", "场景", "下沉市场"]),
             "status": "SCENE LOCK",
-            "internalSteps": scene_steps(text),
+            "internalSteps": steps,
             "motionType": "scene-grid-stagger",
         }
 
@@ -1365,16 +1434,7 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
             "motionType": "lightweight-claim-slide",
         }
 
-    title_copy = key_message(text, 14, ["流程", "步骤", "规则", "自动", "发布", "主图"])
-    return {
-        **base,
-        "type": "flowPath",
-        "text": "流程推进",
-        "title": title_copy or "语义步骤",
-        "status": "PROCESS",
-        "internalSteps": field_steps(text),
-        "motionType": "flow-list-stagger",
-    }
+    return provenance_fallback(base, intent or "unclassified", text, "unsupported-semantic-component")
 
 
 def scene_by_id(data: dict[str, Any]) -> dict[str, dict[str, Any]]:

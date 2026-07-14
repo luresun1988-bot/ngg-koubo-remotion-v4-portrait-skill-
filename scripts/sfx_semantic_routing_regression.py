@@ -28,6 +28,20 @@ EXPECTED: dict[str, dict[str, str]] = {
     "proof-01": {"intent": "proof_reveal", "sfxId": "proof_reveal_01"},
 }
 
+DIRECT_RESULT_CASES: list[dict[str, str]] = [
+    {"id": "result-confirm-correct", "text": "结果正确", "semanticIntent": "positive-confirm", "sfxIntent": "confirm", "sfxId": "confirm_ding_01"},
+    {"id": "result-confirm-validation", "text": "验证通过", "semanticIntent": "positive-confirm", "sfxIntent": "confirm", "sfxId": "confirm_ding_01"},
+    {"id": "result-confirm-success", "text": "执行成功", "semanticIntent": "positive-confirm", "sfxIntent": "confirm", "sfxId": "confirm_ding_01"},
+    {"id": "result-confirm-no-error", "text": "没有错误", "semanticIntent": "positive-confirm", "sfxIntent": "confirm", "sfxId": "confirm_ding_01"},
+    {"id": "result-confirm-zero-failure", "text": "失败项为0", "semanticIntent": "positive-confirm", "sfxIntent": "confirm", "sfxId": "confirm_ding_01"},
+    {"id": "result-warning-error", "text": "这一步出错了", "semanticIntent": "negative-friction", "sfxIntent": "negative_warning", "sfxId": "negative_warning_01"},
+    {"id": "result-warning-failure", "text": "执行失败了", "semanticIntent": "negative-friction", "sfxIntent": "negative_warning", "sfxId": "negative_warning_01"},
+    {"id": "result-warning-incorrect", "text": "结果不正确", "semanticIntent": "negative-friction", "sfxIntent": "negative_warning", "sfxId": "negative_warning_01"},
+    {"id": "result-none-question", "text": "结果是否正确", "semanticIntent": "", "sfxIntent": "", "sfxId": ""},
+    {"id": "result-none-possible", "text": "这一步可能出错", "semanticIntent": "", "sfxIntent": "", "sfxId": ""},
+    {"id": "result-none-avoid", "text": "这里要避免错误", "semanticIntent": "", "sfxIntent": "", "sfxId": ""},
+]
+
 
 def case_by_id(case_id: str) -> dict[str, str]:
     for case in semantic_router_regression.CASES:
@@ -72,8 +86,48 @@ def run_case(case_id: str, index: int) -> dict[str, Any]:
     }
 
 
+def run_direct_result_case(case: dict[str, str], index: int) -> dict[str, Any]:
+    data = semantic_router_regression.visual_script_for_case(case, index)
+    semantic_router.apply_semantic_beats(data)
+    visual_event_builder.apply_visual_events(data)
+    sfx_cues = [
+        cue for cue in data.get("audioCues", [])
+        if isinstance(cue, dict) and cue.get("type") == "sfx"
+    ]
+    expected_intent = case["sfxIntent"]
+    cue = first_sfx_cue(data, expected_intent) if expected_intent else None
+    actual_semantic_intent = str(data["semanticBeats"][0].get("semanticIntent") or "")
+    actual_sfx_intent = str((cue or {}).get("sfxIntent") or "")
+    actual_sfx_id = str((cue or {}).get("sfxId") or "")
+    if expected_intent:
+        ok = (
+            actual_semantic_intent == case["semanticIntent"]
+            and actual_sfx_intent == expected_intent
+            and actual_sfx_id == case["sfxId"]
+            and str((cue or {}).get("status") or "") == "suggested"
+        )
+    else:
+        ok = not sfx_cues
+    return {
+        "id": case["id"],
+        "semanticIntent": actual_semantic_intent,
+        "expectedSfxIntent": expected_intent or "none",
+        "actualSfxIntent": actual_sfx_intent,
+        "expectedSfxId": case["sfxId"],
+        "actualSfxId": actual_sfx_id,
+        "status": str((cue or {}).get("status") or ""),
+        "path": str((cue or {}).get("path") or ""),
+        "ok": ok,
+    }
+
+
 def main() -> int:
     results = [run_case(case_id, index) for index, case_id in enumerate(EXPECTED)]
+    direct_start = len(results)
+    results.extend(
+        run_direct_result_case(case, direct_start + index)
+        for index, case in enumerate(DIRECT_RESULT_CASES)
+    )
     failed = [item for item in results if not item["ok"]]
     for item in results:
         marker = "PASS" if item["ok"] else "MISS"

@@ -46,10 +46,15 @@ def run_case(case: dict[str, Any]) -> dict[str, Any]:
     actual_checks = [str(item) for item in beat.get("requiredChecks", [])]
     provenance = event.get("ctaProvenance") if isinstance(event.get("ctaProvenance"), dict) else {}
     expected_keyword = str(case.get("ctaKeyword") or "")
+    accepted_fallback = (
+        event.get("type") == "captionHighlight"
+        and event.get("semanticFallbackFrom") == case["intent"]
+        and bool(str(event.get("fallbackReason") or ""))
+    )
     checks = {
         "intent": beat.get("semanticIntent") == case["intent"],
         "visualForm": beat.get("visualForm") == adapter["visualForm"],
-        "eventType": event.get("type") == adapter["eventType"],
+        "eventType": event.get("type") == adapter["eventType"] or accepted_fallback,
         "modifiers": all(item in actual_modifiers for item in expected_modifiers),
         "requiredChecks": all(item in actual_checks for item in expected_checks),
         "ctaKeyword": not expected_keyword or provenance.get("keyword") == expected_keyword,
@@ -57,7 +62,7 @@ def run_case(case: dict[str, Any]) -> dict[str, Any]:
         "eventText": not adapter.get("eventText") or event.get("text") == adapter["eventText"],
         "eventSubtext": not adapter.get("eventSubtext") or event.get("subtext") == adapter["eventSubtext"],
     }
-    return {"id":case["id"],"format":FORMAT,"expectedIntent":case["intent"],"actualIntent":beat.get("semanticIntent"),"expectedEventType":adapter["eventType"],"actualEventType":event.get("type"),"checks":checks,"ok":all(checks.values())}
+    return {"id":case["id"],"format":FORMAT,"expectedIntent":case["intent"],"actualIntent":beat.get("semanticIntent"),"expectedEventType":adapter["eventType"],"actualEventType":event.get("type"),"acceptedFallback":accepted_fallback,"fallbackReason":str(event.get("fallbackReason") or ""),"checks":checks,"ok":all(checks.values())}
 
 
 def main() -> int:
@@ -65,6 +70,8 @@ def main() -> int:
         raise AssertionError("router completion logic is not bound to the shared semantic core")
     if semantic_router.parse_cta_provenance is not semantic_guardrails.parse_cta_provenance:
         raise AssertionError("router CTA logic is not bound to the shared semantic core")
+    if semantic_router.result_evaluation is not semantic_guardrails.result_evaluation:
+        raise AssertionError("router result-evaluation logic is not bound to the shared semantic core")
     contract = json.loads((SCRIPT_DIR / "semantic_contract_cases.json").read_text(encoding="utf-8-sig"))
     results = [run_case(case) for case in contract.get("cases", [])]
     for item in results:

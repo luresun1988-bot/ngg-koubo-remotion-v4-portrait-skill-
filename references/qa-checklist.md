@@ -138,6 +138,7 @@ Check:
 - `no-generic-card-fallback`: if a generated event falls back to `infoCard`, confirm the semantic beat truly is a small information card; otherwise replace it with the proper component family.
 - `layered-hud-internal-steps`: `capabilityShare`, `sceneLockGrid`, and `transformationStack` must define internal steps so their layers can appear in semantic order. A rendered `transformationStack` must contain exactly one source, one target, one or two drivers, and one explicit result in that order.
 - `transformation-source-binding`: every transformation step has a short `label` contained in exact caption-source `text` and non-empty `sourceCueIds` owned by its source beat and scene. `transformationSourceCueIds` equals the ordered union of all step cue IDs; `event.text`/`subtext` contain only the sourced state/driver labels. Missing, cross-scene, uncited, reordered, or invented copy is a hard failure.
+- `component-source-binding`: workflow/enumeration, manual-field, capability-share, scene-lock, platform-fanout, asset-variant, and automation-handoff components use only ordered source-bound `internalSteps`. Every step has a non-empty exact-source `label`, exact-source `text`, and cue IDs owned by the event's source beat and scene. Missing evidence must use an explicit reasoned `captionHighlight` fallback; invented or uncited component rows are a hard failure.
 - `transformation-semantic-fallback`: incomplete transformation evidence must produce an explicit `captionHighlight` with `semanticFallbackFrom: "transformation-stack"` and a specific missing-evidence reason. Treat the warning as an audit trail; a silent generic card, fabricated result, or target-plus-`达成` result is a hard failure.
 - Layered HUDs must not reveal top, middle, and bottom sections all at once. Sample early, middle, and late frames of the event to confirm staged reveal.
 - `semantic-fulfillment-numeric`: clear numeric metrics such as `+30%`, `3倍`, `885万`, conversion rate, growth, or ratio use `dataPunch` / `metricSpotlight`; they must not fall back to ordinary `infoCard`.
@@ -176,7 +177,7 @@ Check:
 
 - Hook motion matches semantic type.
 - Negative Hook motion uses a red warning pop, strike/delete gesture, or contrast swap; it must not be only a positive green/white title.
-- Emphasized HUD keywords use at most one secondary enlarge/rebound and settle back cleanly; no repeated pulsing, no caption movement.
+- Emphasized HUD keywords enlarge once in about 4–6 FPS-scaled frames and hold the peak until the parent event exits; no mid-event shrink, rebound, repeated pulse, or caption movement.
 - Dense V4 main HUD events hold about 4.5-6 seconds when scene length allows it.
 - Internal-step components finish their full sequence before exit. If the animation is still revealing rows, numbers, or labels when the component disappears, extend the event or reduce the number of steps.
 - Dense V4 has a visible semantic change every 2-3 seconds: field completion, node fan-out, state highlight, label swap, status change, or a new semantic sub-event.

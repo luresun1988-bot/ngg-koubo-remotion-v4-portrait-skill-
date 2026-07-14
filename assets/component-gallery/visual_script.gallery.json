@@ -87,7 +87,7 @@
       "materialLayout": "none",
       "intent": "Component gallery sample for flowPath.",
       "sourceVideo": "input/gallery_presenter.mp4",
-      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u4e09\u4e2a\u6b65\u9aa4\uff0c\u5224\u65ad\u80fd\u4e0d\u80fd\u7a33\u5b9a\u6295\u653e"
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u53e3\u64ad\u8282\u594f\u3001\u5b57\u5e55\u8bfb\u5b8c\u3001\u7d20\u6750\u5207\u6362\uff0c\u4e09\u4e2a\u6b65\u9aa4\u5224\u65ad\u80fd\u4e0d\u80fd\u7a33\u5b9a\u6295\u653e"
     },
     {
       "id": "scene-05-card",
@@ -100,7 +100,7 @@
       "materialLayout": "none",
       "intent": "Component gallery sample for infoCard.",
       "sourceVideo": "input/gallery_presenter.mp4",
-      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u6807\u9898 / \u7b80\u4ecb / \u6807\u7b7e\uff0c\u6bcf\u4e2a\u5e73\u53f0\u91cd\u590d\u586b\u5199"
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u751f\u6210\u6807\u9898\u3001\u538b\u7f29\u7b80\u4ecb\u3001\u8865\u9f50\u6807\u7b7e\uff0c\u6bcf\u4e2a\u5e73\u53f0\u91cd\u590d\u586b\u5199"
     },
     {
       "id": "scene-06-capability",
@@ -113,7 +113,7 @@
       "materialLayout": "none",
       "intent": "Component gallery sample for capabilityShare.",
       "sourceVideo": "input/gallery_presenter.mp4",
-      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u80fd\u529b\u4efd\u989d\uff0c\u8c01\u5728\u771f\u6b63\u9886\u5148"
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1aAnthropic 42%\u3001OpenAI 21%\u3001Google 10%\uff0c\u8c01\u5728\u771f\u6b63\u9886\u5148"
     },
     {
       "id": "scene-07-scene",
@@ -126,7 +126,7 @@
       "materialLayout": "none",
       "intent": "Component gallery sample for sceneLockGrid.",
       "sourceVideo": "input/gallery_presenter.mp4",
-      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u573a\u666f\u7ed1\u5b9a\uff0c\u628a\u80fd\u529b\u843d\u5230\u5177\u4f53\u573a\u666f"
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u652f\u4ed8\u3001\u6559\u80b2\u3001\u653f\u52a1\u4e09\u4e2a\u573a\u666f\u7ed1\u5b9a\uff0c\u628a\u80fd\u529b\u843d\u5230\u5177\u4f53\u573a\u666f"
     },
     {
       "id": "scene-08-transform",
@@ -152,7 +152,7 @@
       "materialLayout": "none",
       "intent": "Component gallery sample for platformFanout.",
       "sourceVideo": "input/gallery_presenter.mp4",
-      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u4e00\u4efd\u7d20\u6750\u5305\uff0c\u5206\u53d1\u591a\u5e73\u53f0"
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u4e00\u4efd\u7d20\u6750\u5305\uff0c\u5206\u53d1\u5230\u6296\u97f3\u3001\u5c0f\u7ea2\u4e66\u548cB\u7ad9"
     },
     {
       "id": "scene-10-automation",
@@ -230,7 +230,7 @@
       "materialLayout": "none",
       "intent": "Component gallery sample for ratioGallery.",
       "sourceVideo": "input/gallery_presenter.mp4",
-      "narrationText": "\u4e3b\u56fe\u540c\u65f6\u8f93\u51fa\u6a2a\u7248\u3001\u7ad6\u7248\u548c\u65b9\u56fe"
+      "narrationText": "\u4e3b\u56fe\u540c\u65f6\u8f93\u51fa\u6a2a\u7248 16:9\u3001\u7ad6\u7248 3:4 \u548c\u65b9\u56fe 1:1"
     }
   ],
   "captionCues": [
@@ -263,7 +263,7 @@
       "sceneId": "scene-04-flow",
       "startFrame": 460,
       "endFrame": 590,
-      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u4e09\u4e2a\u6b65\u9aa4\uff0c\u5224\u65ad\u80fd\u4e0d\u80fd\u7a33\u5b9a\u6295\u653e",
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u53e3\u64ad\u8282\u594f\u3001\u5b57\u5e55\u8bfb\u5b8c\u3001\u7d20\u6750\u5207\u6362\uff0c\u4e09\u4e2a\u6b65\u9aa4\u5224\u65ad\u80fd\u4e0d\u80fd\u7a33\u5b9a\u6295\u653e",
       "highlightWords": []
     },
     {
@@ -271,7 +271,7 @@
       "sceneId": "scene-05-card",
       "startFrame": 610,
       "endFrame": 740,
-      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u6807\u9898 / \u7b80\u4ecb / \u6807\u7b7e\uff0c\u6bcf\u4e2a\u5e73\u53f0\u91cd\u590d\u586b\u5199",
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u751f\u6210\u6807\u9898\u3001\u538b\u7f29\u7b80\u4ecb\u3001\u8865\u9f50\u6807\u7b7e\uff0c\u6bcf\u4e2a\u5e73\u53f0\u91cd\u590d\u586b\u5199",
       "highlightWords": []
     },
     {
@@ -279,7 +279,7 @@
       "sceneId": "scene-06-capability",
       "startFrame": 760,
       "endFrame": 890,
-      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u80fd\u529b\u4efd\u989d\uff0c\u8c01\u5728\u771f\u6b63\u9886\u5148",
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1aAnthropic 42%\u3001OpenAI 21%\u3001Google 10%\uff0c\u8c01\u5728\u771f\u6b63\u9886\u5148",
       "highlightWords": []
     },
     {
@@ -287,7 +287,7 @@
       "sceneId": "scene-07-scene",
       "startFrame": 910,
       "endFrame": 1040,
-      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u573a\u666f\u7ed1\u5b9a\uff0c\u628a\u80fd\u529b\u843d\u5230\u5177\u4f53\u573a\u666f",
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u652f\u4ed8\u3001\u6559\u80b2\u3001\u653f\u52a1\u4e09\u4e2a\u573a\u666f\u7ed1\u5b9a\uff0c\u628a\u80fd\u529b\u843d\u5230\u5177\u4f53\u573a\u666f",
       "highlightWords": []
     },
     {
@@ -303,7 +303,7 @@
       "sceneId": "scene-09-platform",
       "startFrame": 1210,
       "endFrame": 1340,
-      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u4e00\u4efd\u7d20\u6750\u5305\uff0c\u5206\u53d1\u591a\u5e73\u53f0",
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u4e00\u4efd\u7d20\u6750\u5305\uff0c\u5206\u53d1\u5230\u6296\u97f3\u3001\u5c0f\u7ea2\u4e66\u548cB\u7ad9",
       "highlightWords": []
     },
     {
@@ -351,7 +351,7 @@
       "sceneId": "scene-15-ratio",
       "startFrame": 2110,
       "endFrame": 2240,
-      "text": "\u4e3b\u56fe\u540c\u65f6\u8f93\u51fa\u6a2a\u7248\u3001\u7ad6\u7248\u548c\u65b9\u56fe",
+      "text": "\u4e3b\u56fe\u540c\u65f6\u8f93\u51fa\u6a2a\u7248 16:9\u3001\u7ad6\u7248 3:4 \u548c\u65b9\u56fe 1:1",
       "highlightWords": []
     }
   ],
@@ -485,16 +485,22 @@
         {
           "id": "flow-01",
           "label": "\u53e3\u64ad\u8282\u594f",
+          "text": "\u53e3\u64ad\u8282\u594f",
+          "sourceCueIds": ["cap-04"],
           "iconName": "ListChecks"
         },
         {
           "id": "flow-02",
           "label": "\u5b57\u5e55\u8bfb\u5b8c",
+          "text": "\u5b57\u5e55\u8bfb\u5b8c",
+          "sourceCueIds": ["cap-04"],
           "iconName": "AlignLeft"
         },
         {
           "id": "flow-03",
           "label": "\u7d20\u6750\u5207\u6362",
+          "text": "\u7d20\u6750\u5207\u6362",
+          "sourceCueIds": ["cap-04"],
           "iconName": "Video"
         }
       ],
@@ -531,20 +537,23 @@
       "status": "\u63a5\u7ba1",
       "internalSteps": [
         {
-          "label": "01",
+          "label": "\u751f\u6210\u6807\u9898",
           "text": "\u751f\u6210\u6807\u9898",
+          "sourceCueIds": ["cap-05"],
           "status": "\u5b8c\u6210",
           "iconName": "FileText"
         },
         {
-          "label": "02",
+          "label": "\u538b\u7f29\u7b80\u4ecb",
           "text": "\u538b\u7f29\u7b80\u4ecb",
+          "sourceCueIds": ["cap-05"],
           "status": "\u5b8c\u6210",
           "iconName": "AlignLeft"
         },
         {
-          "label": "03",
+          "label": "\u8865\u9f50\u6807\u7b7e",
           "text": "\u8865\u9f50\u6807\u7b7e",
+          "sourceCueIds": ["cap-05"],
           "status": "\u6267\u884c\u4e2d",
           "iconName": "Tags"
         }
@@ -582,18 +591,24 @@
         {
           "id": "cap-01",
           "label": "Anthropic",
+          "text": "Anthropic 42%",
+          "sourceCueIds": ["cap-06"],
           "iconName": "BrainCircuit",
           "status": "42%"
         },
         {
           "id": "cap-02",
           "label": "OpenAI",
+          "text": "OpenAI 21%",
+          "sourceCueIds": ["cap-06"],
           "iconName": "Bot",
           "status": "21%"
         },
         {
           "id": "cap-03",
           "label": "Google",
+          "text": "Google 10%",
+          "sourceCueIds": ["cap-06"],
           "iconName": "Network",
           "status": "10%"
         }
@@ -631,18 +646,24 @@
         {
           "id": "scene-01",
           "label": "\u652f\u4ed8",
+          "text": "\u652f\u4ed8",
+          "sourceCueIds": ["cap-07"],
           "iconName": "CreditCard",
           "status": "\u9ad8\u9891\u4ea4\u6613"
         },
         {
           "id": "scene-02",
           "label": "\u6559\u80b2",
+          "text": "\u6559\u80b2",
+          "sourceCueIds": ["cap-07"],
           "iconName": "GraduationCap",
           "status": "\u5b66\u4e60\u573a\u666f"
         },
         {
           "id": "scene-03",
           "label": "\u653f\u52a1",
+          "text": "\u653f\u52a1",
+          "sourceCueIds": ["cap-07"],
           "iconName": "Landmark",
           "status": "\u516c\u5171\u670d\u52a1"
         }
@@ -754,6 +775,11 @@
       "style": "dark-fullscreen-semantic-hud",
       "safeArea": "avoid-face-caption",
       "status": "PACKAGE",
+      "internalSteps": [
+        {"id": "platform-01", "label": "\u6296\u97f3", "text": "\u6296\u97f3", "sourceCueIds": ["cap-09"], "iconName": "Video"},
+        {"id": "platform-02", "label": "\u5c0f\u7ea2\u4e66", "text": "\u5c0f\u7ea2\u4e66", "sourceCueIds": ["cap-09"], "iconName": "BookOpen"},
+        {"id": "platform-03", "label": "B\u7ad9", "text": "B\u7ad9", "sourceCueIds": ["cap-09"], "iconName": "MonitorPlay"}
+      ],
       "sourceBeatId": "gallery-beat-09",
       "beatGroupId": "scene-09-platform-gallery-beat-09"
     },
@@ -785,6 +811,10 @@
       "status": "Codex EXEC",
       "emphasisWords": [
         "Codex"
+      ],
+      "internalSteps": [
+        {"id": "manual", "label": "\u91cd\u590d\u586b\u5199", "text": "\u91cd\u590d\u586b\u5199", "sourceCueIds": ["cap-10"], "iconName": "FileText"},
+        {"id": "actor", "label": "Codex", "text": "Codex \u6267\u884c", "sourceCueIds": ["cap-10"], "iconName": "Bot"}
       ],
       "sourceBeatId": "gallery-beat-10",
       "beatGroupId": "scene-10-automation-gallery-beat-10"
@@ -957,9 +987,9 @@
       "style": "dark-fullscreen-semantic-hud",
       "safeArea": "avoid-face-caption right",
       "internalSteps": [
-        {"id": "ratio-01", "label": "\u6a2a\u7248 16:9", "iconName": "PanelsTopLeft"},
-        {"id": "ratio-02", "label": "\u7ad6\u7248 3:4", "iconName": "Image"},
-        {"id": "ratio-03", "label": "\u65b9\u56fe 1:1", "iconName": "Images"}
+        {"id": "ratio-01", "label": "\u6a2a\u7248 16:9", "text": "\u6a2a\u7248 16:9", "sourceCueIds": ["cap-15"], "iconName": "PanelsTopLeft"},
+        {"id": "ratio-02", "label": "\u7ad6\u7248 3:4", "text": "\u7ad6\u7248 3:4", "sourceCueIds": ["cap-15"], "iconName": "Image"},
+        {"id": "ratio-03", "label": "\u65b9\u56fe 1:1", "text": "\u65b9\u56fe 1:1", "sourceCueIds": ["cap-15"], "iconName": "Images"}
       ],
       "sourceBeatId": "gallery-beat-15",
       "beatGroupId": "scene-15-ratio-gallery-beat-15"
@@ -1179,7 +1209,7 @@
         "workflow-not-generic-card",
         "small-card-has-icon"
       ],
-      "sourceCueIds": []
+      "sourceCueIds": ["cap-04"]
     },
     {
       "id": "gallery-beat-05",
@@ -1195,7 +1225,7 @@
       "requiredChecks": [
         "small-card-has-icon"
       ],
-      "sourceCueIds": []
+      "sourceCueIds": ["cap-05"]
     },
     {
       "id": "gallery-beat-06",
@@ -1211,7 +1241,7 @@
       "requiredChecks": [
         "layered-hud-internal-steps"
       ],
-      "sourceCueIds": []
+      "sourceCueIds": ["cap-06"]
     },
     {
       "id": "gallery-beat-07",
@@ -1227,7 +1257,7 @@
       "requiredChecks": [
         "layered-hud-internal-steps"
       ],
-      "sourceCueIds": []
+      "sourceCueIds": ["cap-07"]
     },
     {
       "id": "gallery-beat-08",
@@ -1261,7 +1291,7 @@
       "requiredChecks": [
         "platform-fanout-treatment"
       ],
-      "sourceCueIds": []
+      "sourceCueIds": ["cap-09"]
     },
     {
       "id": "gallery-beat-10",
@@ -1277,7 +1307,7 @@
       "requiredChecks": [
         "positive-confirm-treatment"
       ],
-      "sourceCueIds": []
+      "sourceCueIds": ["cap-10"]
     },
     {
       "id": "gallery-beat-11",
@@ -1354,7 +1384,7 @@
       "confidence": 1.0,
       "keywords": ["\u6a2a\u7248", "\u7ad6\u7248", "\u65b9\u56fe"],
       "requiredChecks": ["asset-ratio-preserved", "no-generic-card-fallback"],
-      "sourceCueIds": []
+      "sourceCueIds": ["cap-15"]
     }
   ]
 }

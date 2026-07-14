@@ -66,9 +66,9 @@ Big text is the primary packaging element.
 - Avoid one-line squeezed hooks such as "别再手动做主图 这一步，该自动化了" across the top. Split into a main judgement and a smaller supporting line, similar to a reference-style title block.
 - The template should auto-stack Hook title text as a safety net. Even if the event text is one line, brand/keyword titles such as "Codex 离谱用法" must render as separate lines.
 - Pain/question hooks: word-by-word pop synced to the spoken question.
-- Result, contrast, and numeric promise hooks: crash-in, rebound settle, then keyword second-pop.
+- Result, contrast, and numeric promise hooks: fast crash-in, controlled title settle, then one keyword scale-to-hold.
 - Main text is black/white bold type. Keywords use semantic green `#20E0B0` or electric blue `#067EF6`.
-- Emphasized HUD keywords may use semantic color plus a single secondary enlarge/rebound. This applies to big titles and HUD text, not bottom captions.
+- Emphasized HUD keywords may use semantic color plus one fast enlarge-and-hold. The enlarged keyword stays at peak until the parent event exits; it does not shrink, rebound, or pulse mid-event. This applies to big titles and HUD text, not bottom captions.
 - Negative or friction words such as "还在手动", "手动", "麻烦", "别再", "不是", "低效", "重复", "卡住", and "风险" require visible red negative treatment before the positive resolution. Default treatment is a dark red warning card/sticker with a red icon, red rail/border, and white text with the negative keyword in red. A negative hook must not appear as a neutral white/green title only.
 - Red warning copy must be compressed into the key objection or wrong-path phrase. Do not place the whole spoken sentence in the warning card. Use white base text with the one decisive negative phrase in red.
 - Hook intensity may be strong only for a short burst.

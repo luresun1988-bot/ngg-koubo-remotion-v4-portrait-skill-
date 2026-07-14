@@ -12,6 +12,10 @@ The schema is intentionally practical rather than exhaustive. Add fields only wh
   "projectConfigPath": "../project_config.json",
   "sourceVideoMode": "raw-presenter",
   "captionRenderMode": "embedded",
+  "presenterAudio": {
+    "mode": "embedded",
+    "syncOffsetFrames": 0
+  },
   "packagingDensity": "dense",
   "composition": {
     "format": "9:16",
@@ -277,7 +281,7 @@ Each significant event should declare semantic role and motion type.
 
 Keyword emphasis:
 
-- Use `emphasisWords` for 1-3 HUD words that should receive a secondary enlarge/rebound after the main entrance.
+- Use `emphasisWords` for 1-3 HUD words that should enlarge once in about 4–6 FPS-scaled frames and hold until the parent event exits. Do not shrink, rebound, or pulse the keyword while the semantic event is still active.
 - `emphasisWords` is for HUD/big-title emphasis. Bottom captions may carry `highlightWords` metadata, but the rendered caption text stays all white and should not scale, pulse, or color individual words.
 - If omitted, the template may use a short `subtext` as a conservative emphasis target for `kineticTitle`.
 
@@ -312,6 +316,7 @@ Layered reference-style HUD fields:
 - Use `type: "capabilityShare"` when the transcript compares capability, share, ranking, model/company positions, global/local strength, or "who leads". Use `internalSteps` for the object/logo/icon tiles and bar rows. Each step needs `label`, `iconName`, and preferably a percent/status such as `42%`.
 - Use `type: "sceneLockGrid"` when the transcript lists practical scenarios, industries, local adoption categories, or "where this is used". Use `internalSteps` for the scenario tiles; each tile needs a distinct `iconName`.
 - Use `type: "transformationStack"` only when the source beat owns caption evidence for all required layers. Use `internalSteps` in this order: exactly one source state, exactly one target state, one or two drivers, and exactly one explicit result. Every step requires `role`, a short `label` contained in exact source `text`, and non-empty `sourceCueIds`; every cited cue must belong to the source beat and scene. Record their ordered union in event-level `transformationSourceCueIds`. Do not treat the target as a second result, borrow uncited nearby cues, synthesize `目标状态达成`, or rely on gallery fallback labels. Missing relation/driver/result/provenance must produce the audited `captionHighlight` fallback with `semanticFallbackFrom` and `fallbackReason`.
+- For `workflow-step`, `workflow-fields`, `enumeration`, `manual-field`, `capability-share`, `scene-lock`, `platform-fanout`, `asset-variants`, and `automation-handoff`, every `internalSteps[]` item requires an exact-source `label`, exact-source `text`, and non-empty `sourceCueIds` owned by the same beat and scene. Preserve source order and require at least two distinct items except automation handoff, which may use one. Insufficient evidence produces an audited `captionHighlight` fallback with `semanticFallbackFrom` and a specific `fallbackReason`; it must not be filled with gallery defaults.
 - These components are not one-shot panels. Their internal sections must appear in semantic phases: header/title, then top object/scenario tiles, then data rows/bar growth or remaining tiles.
 - `internalSteps` must contain only source-bound content. Do not use gallery defaults as project facts when entities, percentages, platforms, or transformation states were not spoken or provided.
 

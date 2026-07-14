@@ -20,6 +20,9 @@ def actual_for(case: dict[str, Any]) -> Any:
     check = str(case["check"])
     if check == "completion":
         return guards.completion_polarity(text)
+    if check == "result-evaluation":
+        evaluation = guards.result_evaluation(text)
+        return str((evaluation or {}).get("polarity") or "none")
     if check == "handoff":
         return guards.handoff_state(text)
     if check == "future":
@@ -51,6 +54,18 @@ CASES: list[dict[str, Any]] = [
     {"id": "complete-conditional", "check": "completion", "text": "如果完成设置，就可以导出", "expected": "prospective"},
     {"id": "complete-nominal", "check": "completion", "text": "完成按钮在右上角", "expected": "none"},
     {"id": "complete-handoff", "check": "completion", "text": "把素材交给 Codex 自动完成", "expected": "prospective"},
+    {"id": "result-positive-correct", "check": "result-evaluation", "text": "结果正确", "expected": "positive"},
+    {"id": "result-positive-validation", "check": "result-evaluation", "text": "验证通过", "expected": "positive"},
+    {"id": "result-positive-execution", "check": "result-evaluation", "text": "执行成功", "expected": "positive"},
+    {"id": "result-positive-no-error", "check": "result-evaluation", "text": "没有错误", "expected": "positive"},
+    {"id": "result-positive-zero-failure", "check": "result-evaluation", "text": "失败项为0", "expected": "positive"},
+    {"id": "result-negative-error", "check": "result-evaluation", "text": "这一步出错了", "expected": "negative"},
+    {"id": "result-negative-failure", "check": "result-evaluation", "text": "执行失败了", "expected": "negative"},
+    {"id": "result-negative-incorrect", "check": "result-evaluation", "text": "结果不正确", "expected": "negative"},
+    {"id": "result-negative-latest", "check": "result-evaluation", "text": "验证通过，但最终执行失败", "expected": "negative"},
+    {"id": "result-none-question", "check": "result-evaluation", "text": "结果是否正确", "expected": "none"},
+    {"id": "result-none-possible", "check": "result-evaluation", "text": "这一步可能出错", "expected": "none"},
+    {"id": "result-none-avoid", "check": "result-evaluation", "text": "这里要避免错误", "expected": "none"},
     {"id": "handoff-asserted", "check": "handoff", "text": "把素材交给 Codex 自动完成", "expected": "asserted"},
     {"id": "handoff-negated", "check": "handoff", "text": "Codex 还没有接管这一步", "expected": "negated"},
     {"id": "future-preview", "check": "future", "text": "下一期介绍 Codex 自动剪辑", "expected": True},

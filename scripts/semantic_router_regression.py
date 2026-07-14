@@ -216,7 +216,13 @@ def run_case(case: dict[str, Any], index: int) -> dict[str, Any]:
     cta_ok = not expected_cta_keyword or event_provenance.get("keyword") == expected_cta_keyword
     expected_status = str(case.get("eventStatus") or "")
     status_ok = not expected_status or str(event.get("status") or "") == expected_status
-    ok = beat.get("semanticIntent") == case["intent"] and event.get("type") == expected_type and text_ok and modifiers_ok and checks_ok and cta_ok and status_ok
+    accepted_fallback = (
+        event.get("type") == "captionHighlight"
+        and event.get("semanticFallbackFrom") == case["intent"]
+        and bool(str(event.get("fallbackReason") or ""))
+    )
+    event_type_ok = event.get("type") == expected_type or accepted_fallback
+    ok = beat.get("semanticIntent") == case["intent"] and event_type_ok and text_ok and modifiers_ok and checks_ok and cta_ok and status_ok
     return {
         "id": case["id"],
         "text": case["text"],
@@ -236,6 +242,8 @@ def run_case(case: dict[str, Any], index: int) -> dict[str, Any]:
         "actualCtaKeyword": str(event_provenance.get("keyword") or ""),
         "expectedStatus": expected_status,
         "actualStatus": str(event.get("status") or ""),
+        "acceptedFallback": accepted_fallback,
+        "fallbackReason": str(event.get("fallbackReason") or ""),
         "ok": ok,
     }
 

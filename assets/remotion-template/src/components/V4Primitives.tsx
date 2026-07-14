@@ -55,6 +55,7 @@ import {
   Store,
 } from 'lucide-react';
 import {
+  Easing,
   Img,
   OffthreadVideo,
   Sequence,
@@ -321,16 +322,16 @@ const inferEmphasis = (text: string, fallback: string[], maxChars = 8): string =
 };
 
 const emphasisScale = (local: number, fps: number, delay = 34): number => {
-  const pop = spring({
-    frame: Math.max(0, local - delay),
-    fps,
-    config: {damping: 12, stiffness: 190},
-  });
-  const window = interpolate(local - delay, [0, 10, 24, 36], [0, 1, 1, 0], {
+  const pushFrames = Math.max(3, Math.round((5 * fps) / 25));
+  const progress = interpolate(local, [delay, delay + pushFrames], [0, 1], {
+    easing: Easing.bezier(0.16, 1, 0.3, 1),
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-  return 1 + interpolate(pop, [0, 1], [0, 0.16]) * window;
+
+  // Punch once, then hold the emphasized keyword until the parent event exits.
+  // This avoids an unintended enlarge-shrink cycle while the idea is still active.
+  return 1 + 0.16 * progress;
 };
 
 const numericPattern = /([+-]?\d+(?:\.\d+)?)/;
@@ -1332,11 +1333,8 @@ export const FlowListPanel: React.FC<{event: VisualEvent; side?: 'left' | 'right
   const duration = event.endFrame - event.startFrame;
   const enter = spring({frame: local, fps, config: {damping: 22, stiffness: 100}});
   const opacity = clampFade(local, duration);
-  const steps = (event.internalSteps && event.internalSteps.length > 0 ? event.internalSteps : [
-    {label: '\u7ed3\u8bba', iconName: 'BadgeCheck'},
-    {label: '\u6570\u636e', iconName: 'BarChart3'},
-    {label: '\u884c\u52a8', iconName: 'SendHorizontal'},
-  ]).slice(0, 6);
+  const steps = (event.internalSteps ?? []).slice(0, 6);
+  if (steps.length === 0) return null;
 
   return (
     <div
@@ -1597,11 +1595,8 @@ export const PlatformFanOutPanel: React.FC<{event: VisualEvent}> = ({event}) => 
   ];
   const palette = [colors.blue, colors.red, colors.green, colors.amber, colors.white];
   const sourceSteps = (event.internalSteps ?? []).slice(0, 5);
-  const platforms = (sourceSteps.length ? sourceSteps : [
-    {label: '渠道适配', iconName: 'Route'},
-    {label: '多端发布', iconName: 'Network'},
-    {label: '统一交付', iconName: 'Package'},
-  ]).map((step, index) => ({
+  if (sourceSteps.length === 0) return null;
+  const platforms = sourceSteps.map((step, index) => ({
     name: step.label ?? step.text ?? `渠道 ${index + 1}`,
     icon: iconMap[(step.iconName as IconName) ?? 'Network'] ?? Network,
     color: palette[index % palette.length],
@@ -1930,9 +1925,9 @@ export const AutomationHandoffPanel: React.FC<{event: VisualEvent}> = ({event}) 
           transformOrigin: 'center center',
         }}
       >
-        Codex
+        {event.title ?? event.emphasisWords?.[0] ?? event.text}
         <br />
-        执行
+        {event.processingText ?? event.status ?? '执行'}
       </div>
       <div style={{position: 'absolute', left: compact ? 24 : 32, right: compact ? 24 : 32, bottom: compact ? 22 : 28, color: colors.muted, fontSize: compact ? 16 : 21, fontWeight: 800, textShadow: hudTextHighlight}}>
         {event.subtext}
@@ -1985,25 +1980,6 @@ const MaterialAsset: React.FC<{src: string; fit?: 'cover' | 'contain'; startFrom
 
 type InternalStep = NonNullable<VisualEvent['internalSteps']>[number];
 
-const defaultCapabilitySteps: InternalStep[] = [
-  {label: '比较对象', iconName: 'Scale', status: '对象'},
-  {label: '能力指标', iconName: 'BrainCircuit', status: '指标'},
-  {label: '差异结论', iconName: 'BarChart3', status: '结论'},
-];
-
-const defaultSceneLockSteps: InternalStep[] = [
-  {label: '应用场景', iconName: 'Link2', status: '场景'},
-  {label: '目标行业', iconName: 'Building2', status: '行业'},
-  {label: '落地结果', iconName: 'BadgeCheck', status: '结果'},
-];
-
-const defaultTransformationSteps: InternalStep[] = [
-  {label: '原状态', iconName: 'Layers', status: '起点'},
-  {label: '目标状态', iconName: 'TrendingUp', status: '目标'},
-  {label: '关键驱动', iconName: 'BrainCircuit', status: '驱动'},
-  {label: '转化结果', iconName: 'BadgeCheck', status: '结果'},
-];
-
 const parsePercent = (value?: string): number => {
   const match = String(value ?? '').match(/(\d+(?:\.\d+)?)/);
   return match ? Math.max(0, Math.min(100, Number(match[1]))) : 0;
@@ -2025,7 +2001,8 @@ export const CapabilitySharePanel: React.FC<{event: VisualEvent; side?: 'left' |
   const duration = event.endFrame - event.startFrame;
   const enter = spring({frame: local, fps, config: {damping: 22, stiffness: 105}});
   const opacity = clampFade(local, duration);
-  const steps = (event.internalSteps && event.internalSteps.length > 0 ? event.internalSteps : defaultCapabilitySteps).slice(0, 4);
+  const steps = (event.internalSteps ?? []).slice(0, 4);
+  if (steps.length < 2) return null;
   const tileSteps = steps.slice(0, 3);
   const panelProgress = sectionProgress(local, 38, 18);
   const Icon = iconForEvent(event, 'BarChart3');
@@ -2188,7 +2165,8 @@ export const SceneLockGridPanel: React.FC<{event: VisualEvent; side?: 'left' | '
   const duration = event.endFrame - event.startFrame;
   const enter = spring({frame: local, fps, config: {damping: 22, stiffness: 105}});
   const opacity = clampFade(local, duration);
-  const steps = (event.internalSteps && event.internalSteps.length > 0 ? event.internalSteps : defaultSceneLockSteps).slice(0, 4);
+  const steps = (event.internalSteps ?? []).slice(0, 4);
+  if (steps.length < 2) return null;
   const HeaderIcon = iconForEvent(event, 'Link2');
   const compact = shouldUsePortraitCompactHud(event, width, height);
 
@@ -2306,11 +2284,12 @@ export const TransformationStackPanel: React.FC<{event: VisualEvent; side?: 'lef
   const duration = event.endFrame - event.startFrame;
   const enter = spring({frame: local, fps, config: {damping: 22, stiffness: 105}});
   const opacity = clampFade(local, duration);
-  const steps = (event.internalSteps && event.internalSteps.length > 0 ? event.internalSteps : defaultTransformationSteps);
-  const source = steps[0] ?? defaultTransformationSteps[0];
-  const target = steps[1] ?? defaultTransformationSteps[1];
+  const steps = event.internalSteps ?? [];
+  if (steps.length < 4) return null;
+  const source = steps[0];
+  const target = steps[1];
   const drivers = (steps.length > 3 ? steps.slice(2, -1) : steps.slice(2)).slice(0, 2);
-  const result = steps.length >= 4 ? steps[steps.length - 1] : defaultTransformationSteps[4];
+  const result = steps[steps.length - 1];
   const SourceIcon = iconMap[(source.iconName as IconName) || 'User'] ?? User;
   const TargetIcon = iconMap[(target.iconName as IconName) || 'Users'] ?? Users;
   const resultText = result.label ?? event.title ?? event.text ?? '55%-81%';
