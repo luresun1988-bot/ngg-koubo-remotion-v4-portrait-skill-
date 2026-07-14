@@ -23,6 +23,18 @@ REQUIRED_TEMPLATE_SCRIPTS = {
     "semantic_guardrails.py",
     "upgrade_existing_project.py",
 }
+TEXT_SUFFIXES = {".py", ".ps1", ".json", ".md", ".ts", ".tsx"}
+
+
+def mirror_bytes_equal(source: Path, target: Path) -> bool:
+    if not target.is_file():
+        return False
+    source_bytes = source.read_bytes()
+    target_bytes = target.read_bytes()
+    if source.suffix.lower() in TEXT_SUFFIXES and target.suffix.lower() in TEXT_SUFFIXES:
+        source_bytes = source_bytes.replace(b"\r\n", b"\n")
+        target_bytes = target_bytes.replace(b"\r\n", b"\n")
+    return source_bytes == target_bytes
 
 
 def mirror_pairs() -> list[tuple[Path, Path]]:
@@ -46,13 +58,15 @@ def sync(write: bool) -> list[str]:
         if not source.is_file():
             errors.append(f"missing source for template mirror: {source}")
             continue
-        if write:
+        if write and not mirror_bytes_equal(source, target):
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
             continue
+        if write:
+            continue
         if not target.is_file():
             errors.append(f"missing template mirror: {relative}")
-        elif source.read_bytes() != target.read_bytes():
+        elif not mirror_bytes_equal(source, target):
             errors.append(f"stale template mirror: {relative}")
     return errors
 

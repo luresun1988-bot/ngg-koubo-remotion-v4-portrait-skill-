@@ -16,6 +16,7 @@ SKILL_ROOT = SCRIPT_DIR.parent
 TEMPLATE_ROOT = SKILL_ROOT / "assets" / "remotion-template"
 REGRESSIONS = [
     "sync_template_mirrors.py",
+    "sync_template_mirrors_regression.py",
     "caption_reference_regression.py",
     "semantic_router_regression.py",
     "semantic_contract_regression.py",
