@@ -311,7 +311,7 @@ Layered reference-style HUD fields:
 
 - Use `type: "capabilityShare"` when the transcript compares capability, share, ranking, model/company positions, global/local strength, or "who leads". Use `internalSteps` for the object/logo/icon tiles and bar rows. Each step needs `label`, `iconName`, and preferably a percent/status such as `42%`.
 - Use `type: "sceneLockGrid"` when the transcript lists practical scenarios, industries, local adoption categories, or "where this is used". Use `internalSteps` for the scenario tiles; each tile needs a distinct `iconName`.
-- Use `type: "transformationStack"` when the transcript expresses "from A to B", individual-to-team, moat/leverage, driver-to-result, or productivity shifts. Use `internalSteps` in this order: source state, target state, one or two driver chips, result metric.
+- Use `type: "transformationStack"` only when the source beat owns caption evidence for all required layers. Use `internalSteps` in this order: exactly one source state, exactly one target state, one or two drivers, and exactly one explicit result. Every step requires `role`, a short `label` contained in exact source `text`, and non-empty `sourceCueIds`; every cited cue must belong to the source beat and scene. Record their ordered union in event-level `transformationSourceCueIds`. Do not treat the target as a second result, borrow uncited nearby cues, synthesize `目标状态达成`, or rely on gallery fallback labels. Missing relation/driver/result/provenance must produce the audited `captionHighlight` fallback with `semanticFallbackFrom` and `fallbackReason`.
 - These components are not one-shot panels. Their internal sections must appear in semantic phases: header/title, then top object/scenario tiles, then data rows/bar growth or remaining tiles.
 - `internalSteps` must contain only source-bound content. Do not use gallery defaults as project facts when entities, percentages, platforms, or transformation states were not spoken or provided.
 
@@ -528,14 +528,43 @@ Semantic routing examples:
   "type": "transformationStack",
   "semanticRole": "transformation-stack",
   "motionType": "state-driver-result-build",
-  "text": "一个人变成一个团队",
-  "subtext": "AI 提效",
+  "sourceBeatId": "beat-transform",
+  "text": "个人经验 → 团队流程",
+  "subtext": "自动化",
+  "transformationSourceCueIds": ["cap-relation", "cap-driver", "cap-result"],
   "internalSteps": [
-    {"label": "一个人", "iconName": "User"},
-    {"label": "一个团队", "iconName": "Users"},
-    {"label": "护城河", "iconName": "ShieldCheck", "status": "MOAT"},
-    {"label": "杠杆", "iconName": "TrendingUp", "status": "LEVERAGE"},
-    {"label": "55%-81%", "iconName": "FlaskConical", "status": "FASTER"}
+    {
+      "id": "state-01",
+      "role": "source",
+      "label": "个人经验",
+      "text": "把个人经验变成团队流程",
+      "sourceCueIds": ["cap-relation"],
+      "iconName": "User"
+    },
+    {
+      "id": "state-02",
+      "role": "target",
+      "label": "团队流程",
+      "text": "把个人经验变成团队流程",
+      "sourceCueIds": ["cap-relation"],
+      "iconName": "Users"
+    },
+    {
+      "id": "driver-01",
+      "role": "driver",
+      "label": "自动化",
+      "text": "通过自动化推动这次升级",
+      "sourceCueIds": ["cap-driver"],
+      "iconName": "Bot"
+    },
+    {
+      "id": "result-01",
+      "role": "result",
+      "label": "稳定交付",
+      "text": "最终实现稳定交付",
+      "sourceCueIds": ["cap-result"],
+      "iconName": "TrendingUp"
+    }
   ]
 }
 ```

@@ -56,6 +56,7 @@ Produce or modify 9:16 Chinese vertical talking-head Remotion edits in the NGG V
 - Keep numeric facts primary even when incomplete. Preserve suffixes and source entities, add the incomplete modifier/check, and render a sourced unfinished state without green styling.
 - Preserve CTA action channel and keyword through matching `ctaProvenance`. Do not invent actions, channels, keywords, proof, positive resolutions, numbers, brands, platforms, states, or results.
 - Keep automation-handoff steps ordered and source-bound. Numeric, process, enumeration, negative, proof, transformation, platform, and CTA beats must use their matching visual grammar.
+- A `transformationStack` requires a sourced A→B relation, one or two sourced drivers, and an explicit sourced result. Every step must carry `text` plus `sourceCueIds` owned by the source beat, and the event must record their ordered union in `transformationSourceCueIds`. If any layer is missing, use an explicit `captionHighlight` semantic fallback with a reason; never invent a result such as `目标状态达成` or borrow an uncited nearby cue.
 - Treat real CTA, strong proof, and numeric-metric cues as hard semantic boundaries; progressive workflows must not absorb or bridge across them.
 
 ### Portrait Visual and Material Integrity

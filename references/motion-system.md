@@ -85,6 +85,8 @@ Use these defaults when creating `visualEvents`:
 | CTA or final action | `cta-resolve` | `ctaTitle` | `cta-result-keyword` |
 | Section context, cold open, process chapter, proof chapter | `chapter-label` | `cornerChapterLabel` | `corner-slide-fade` |
 
+Run `state-driver-result-build` only after source, target, driver, and result steps have all passed source-provenance QA. Reveal them in that order and hold the full stack before exit. When any layer is missing, animate the explicit `captionHighlight` fallback; do not animate an empty result strip or create a result to satisfy the motion preset.
+
 Do not use a generic card when a more specific semantic pattern exists. For example, multi-platform publishing should use `platform-fanout`, not five platform cards.
 Do not use `infoCard` for clear numeric metrics or process/enumeration beats. Numeric beats need count-up/chart motion; process beats need numbered rows, nodes, or flow paths.
 Do not render negative/friction language as a normal positive title. The negative part should enter with red warning motion or a strike/delete gesture, then resolve to the positive idea.

@@ -43,7 +43,7 @@ python scripts/sfx_semantic_routing_regression.py
 | `numeric-metric` | percentages, counts, ratios, scale, minutes, seconds | `dataPunch` | `dataPunch` |
 | `capability-share` | capability, market share, ranking, leader comparison | `capabilityShare` | `capabilityShare` |
 | `scene-lock` | scenario, industry, local usage, where it lands | `sceneLockGrid` | `sceneLockGrid` |
-| `transformation-stack` | from A to B, individual to team, driver to result | `transformationStack` | `transformationStack` |
+| `transformation-stack` | sourced A to B, sourced driver, explicit sourced result | `transformationStack` | `transformationStack`; explicit `captionHighlight` fallback when incomplete |
 | `proof-material` | screen recording, screenshot, backend, generated result | `materialMain` or proof sticker | `materialMain` / `statusSticker` |
 | `cta-resolve` | comment keyword, claim, self-pickup, follow-up action | `ctaTitle` | `ctaTitle` |
 | `enumeration` | first/second/third, steps, directions, numbered actions | `numberedList` | `statusStack` / `flowPath` |
@@ -70,7 +70,7 @@ python scripts/sfx_semantic_routing_regression.py
 - Numeric metrics beat generic negative mood words. A sentence like "directly shocked: answer 100 questions" must stay `numeric-metric` instead of being swallowed by a neighboring negative beat.
 - Multi-size asset signals require size/form words such as horizontal, vertical, square, multi-size, or three-size. A lone "cover" or "main image" is not enough.
 - Numbered words such as "第一/第二/第三" beat broad transformation words unless the sentence also contains a clear transformation relation such as "从", "变成", "到", "团队", "杠杆", or "护城河".
-- Capability, scene binding, and transformation routes must beat generic cards. Do not silently collapse them to `infoCard`.
+- Capability, scene binding, and transformation routes must beat generic cards. Do not silently collapse them to `infoCard`; an evidence-incomplete transformation may use only the explicit audited `captionHighlight` fallback described above.
 - CTA routing requires an explicit viewer-directed action such as `评论区回复…`, `评论区扣…`, `私信我`, `关注我/关注一下`, `收藏这一条`, or `直接领取`. Bare `评论区`, `关键词`, `关注`, or `自提` nouns are not enough; `页面展示了评论区互动数据`, `输入关键词生成标题`, and `门店支持到店自提` are not CTA.
 - Future episode previews such as "下一期会介绍", "下期将拆解", or "下一条讲" are `explanation-claim` unless the same source text contains an explicit CTA action. Words such as "自动剪辑" inside a future preview do not mean completed automation or a present-tense handoff.
 - Do not route a broad token alone. `从官网下载` is not transformation, `发布前检查` is not platform fan-out, and `模型文件` is not capability/share.
@@ -82,6 +82,9 @@ python scripts/sfx_semantic_routing_regression.py
 - A handoff is separate from completion. `把素材交给 Codex 自动完成` is `automation-handoff` with processing treatment; `Codex 还没有接管这一步` is `negative-friction`.
 - The format-agnostic guards live in `scripts/semantic_guardrails.py` and are mirrored into every generated project. Landscape and portrait share polarity, future/topic, handoff, process, proof, explanation, and explicit-viewer-CTA predicates; only their component adapters differ.
 - Component data must come from transcript entities, provided assets, or explicit user input. Do not invent platform names, brands, percentages, state labels, or transformation drivers.
+- Generate `transformationStack` only when its source beat formally owns caption evidence for one source state, one target state, one or two drivers, and one explicit result. A target state is not a separate result.
+- Every transformation step must carry `role`, a short `label`, exact source `text`, and non-empty `sourceCueIds`; all cited cues must belong to the same source beat and scene. `transformationSourceCueIds` must equal their ordered union.
+- Do not scan uncited previous cues for drivers and do not synthesize copy such as `目标状态达成`. Missing relation, driver, result, or provenance must produce the audited `captionHighlight` fallback with a specific `fallbackReason`.
 - Preserve complete numeric entities and suffixes. `2K`, `1k`, `30%`, and `3倍` must keep their suffix in `entities` and the generated numeric fields; normalize lowercase `k/m/g` to uppercase for display without dropping it.
 - Build CTA title, subtext, status, action, and keyword only from the source beat. Generated CTA events must record `ctaProvenance.sourceText`; record `action` or `keyword` only when it appears in that source text.
 - CTA has scheduling priority at the end of a scene. If an earlier left-lane HUD would push a sourced CTA below the readable minimum or remove it, trim/drop the earlier HUD and preserve the CTA with the lane buffer.
@@ -133,4 +136,4 @@ Every generated `visualEvent` that fulfills a semantic beat must keep:
 }
 ```
 
-The regression suite currently covers 122 positive, compound, adversarial, future-preview, numeric-suffix, real-project, short-tail, and shared guard examples. `semantic_component_contract_regression.py` additionally checks canonical event types, source-bound short-claim downgrade, same-scene claim selection, the two-claim run limit, no invented platforms/brands/states/ratios, CTA provenance and scheduling priority, approval-gated theme-thesis candidates, and schema/renderer type parity. The SFX regression suite covers the six confirmed semantic audio suggestions and requires `status: "suggested"`. A route change should update the tests and this document in the same commit.
+The regression suite currently covers 123 positive, compound, adversarial, future-preview, numeric-suffix, real-project, short-tail, shared guard, and complete-evidence transformation examples. `semantic_component_contract_regression.py` additionally checks canonical event types, source-bound short-claim downgrade, same-scene claim selection, the two-claim run limit, no invented platforms/brands/states/ratios, CTA provenance and scheduling priority, approval-gated theme-thesis candidates, transformation provenance/fallback behavior, and schema/renderer type parity. The SFX regression suite covers the six confirmed semantic audio suggestions and requires `status: "suggested"`. A route change should update the tests and this document in the same commit.

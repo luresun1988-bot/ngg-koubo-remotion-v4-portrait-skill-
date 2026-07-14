@@ -139,7 +139,7 @@
       "materialLayout": "none",
       "intent": "Component gallery sample for transformationStack.",
       "sourceVideo": "input/gallery_presenter.mp4",
-      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u80fd\u529b\u8f6c\u5316\uff0c\u4ece\u4e00\u4e2a\u4eba\u5230\u4e00\u4e2a\u56e2\u961f"
+      "narrationText": "\u7ec4\u4ef6\u6837\u7247\uff1a\u901a\u8fc7\u81ea\u52a8\u5316\uff0c\u628a\u4e2a\u4eba\u7ecf\u9a8c\u53d8\u6210\u56e2\u961f\u6d41\u7a0b\uff0c\u6700\u7ec8\u5b9e\u73b0\u7a33\u5b9a\u4ea4\u4ed8"
     },
     {
       "id": "scene-09-platform",
@@ -295,7 +295,7 @@
       "sceneId": "scene-08-transform",
       "startFrame": 1060,
       "endFrame": 1190,
-      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u80fd\u529b\u8f6c\u5316\uff0c\u4ece\u4e00\u4e2a\u4eba\u5230\u4e00\u4e2a\u56e2\u961f",
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u901a\u8fc7\u81ea\u52a8\u5316\uff0c\u628a\u4e2a\u4eba\u7ecf\u9a8c\u53d8\u6210\u56e2\u961f\u6d41\u7a0b\uff0c\u6700\u7ec8\u5b9e\u73b0\u7a33\u5b9a\u4ea4\u4ed8",
       "highlightWords": []
     },
     {
@@ -669,43 +669,60 @@
       "type": "transformationStack",
       "startFrame": 1062,
       "endFrame": 1192,
-      "text": "\u80fd\u529b\u8f6c\u5316",
-      "subtext": "\u4ece\u4e00\u4e2a\u4eba\u5230\u4e00\u4e2a\u56e2\u961f",
+      "text": "\u4e2a\u4eba\u7ecf\u9a8c \u2192 \u56e2\u961f\u6d41\u7a0b",
+      "subtext": "\u81ea\u52a8\u5316",
       "semanticRole": "transformation-stack",
       "motionType": "state-driver-result-build",
       "style": "dark-fullscreen-semantic-hud",
       "safeArea": "avoid-face-caption",
-      "status": "LEVERAGE",
+      "status": "TRANSFORM",
+      "transformationSourceCueIds": [
+        "cap-08"
+      ],
       "internalSteps": [
         {
           "id": "source",
-          "label": "\u4e00\u4e2a\u4eba",
+          "role": "source",
+          "label": "\u4e2a\u4eba\u7ecf\u9a8c",
+          "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u901a\u8fc7\u81ea\u52a8\u5316\uff0c\u628a\u4e2a\u4eba\u7ecf\u9a8c\u53d8\u6210\u56e2\u961f\u6d41\u7a0b\uff0c\u6700\u7ec8\u5b9e\u73b0\u7a33\u5b9a\u4ea4\u4ed8",
+          "sourceCueIds": [
+            "cap-08"
+          ],
           "iconName": "User",
-          "status": "\u8d77\u70b9"
+          "status": "SOURCE"
         },
         {
           "id": "target",
-          "label": "\u4e00\u4e2a\u56e2\u961f",
+          "role": "target",
+          "label": "\u56e2\u961f\u6d41\u7a0b",
+          "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u901a\u8fc7\u81ea\u52a8\u5316\uff0c\u628a\u4e2a\u4eba\u7ecf\u9a8c\u53d8\u6210\u56e2\u961f\u6d41\u7a0b\uff0c\u6700\u7ec8\u5b9e\u73b0\u7a33\u5b9a\u4ea4\u4ed8",
+          "sourceCueIds": [
+            "cap-08"
+          ],
           "iconName": "Users",
-          "status": "\u76ee\u6807"
+          "status": "TARGET"
         },
         {
           "id": "driver-01",
-          "label": "\u62a4\u57ce\u6cb3",
-          "iconName": "ShieldCheck",
-          "status": "MOAT"
-        },
-        {
-          "id": "driver-02",
-          "label": "\u6760\u6746",
-          "iconName": "TrendingUp",
-          "status": "AI"
+          "role": "driver",
+          "label": "\u81ea\u52a8\u5316",
+          "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u901a\u8fc7\u81ea\u52a8\u5316\uff0c\u628a\u4e2a\u4eba\u7ecf\u9a8c\u53d8\u6210\u56e2\u961f\u6d41\u7a0b\uff0c\u6700\u7ec8\u5b9e\u73b0\u7a33\u5b9a\u4ea4\u4ed8",
+          "sourceCueIds": [
+            "cap-08"
+          ],
+          "iconName": "Bot",
+          "status": "DRIVER"
         },
         {
           "id": "result",
-          "label": "55%-81%",
-          "iconName": "FlaskConical",
-          "status": "FASTER"
+          "role": "result",
+          "label": "\u7a33\u5b9a\u4ea4\u4ed8",
+          "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u901a\u8fc7\u81ea\u52a8\u5316\uff0c\u628a\u4e2a\u4eba\u7ecf\u9a8c\u53d8\u6210\u56e2\u961f\u6d41\u7a0b\uff0c\u6700\u7ec8\u5b9e\u73b0\u7a33\u5b9a\u4ea4\u4ed8",
+          "sourceCueIds": [
+            "cap-08"
+          ],
+          "iconName": "TrendingUp",
+          "status": "RESULT"
         }
       ],
       "sourceBeatId": "gallery-beat-08",
@@ -1218,7 +1235,7 @@
       "startFrame": 1062,
       "endFrame": 1192,
       "beatGroupId": "scene-08-transform-gallery-beat-08",
-      "text": "\u80fd\u529b\u8f6c\u5316",
+      "text": "\u7ec4\u4ef6\u6837\u7247\uff1a\u901a\u8fc7\u81ea\u52a8\u5316\uff0c\u628a\u4e2a\u4eba\u7ecf\u9a8c\u53d8\u6210\u56e2\u961f\u6d41\u7a0b\uff0c\u6700\u7ec8\u5b9e\u73b0\u7a33\u5b9a\u4ea4\u4ed8",
       "semanticIntent": "transformation-stack",
       "visualForm": "transformationStack",
       "confidence": 1.0,
@@ -1226,7 +1243,9 @@
       "requiredChecks": [
         "layered-hud-internal-steps"
       ],
-      "sourceCueIds": []
+      "sourceCueIds": [
+        "cap-08"
+      ]
     },
     {
       "id": "gallery-beat-09",

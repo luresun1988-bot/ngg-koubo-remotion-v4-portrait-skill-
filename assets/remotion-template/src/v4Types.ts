@@ -119,6 +119,7 @@ export type VisualEvent = {
   presenterPeakScale?: number;
   /** Legacy compatibility only; presenter-impact-punch now holds presenterPeakScale until semantic exit. */
   presenterSettleScale?: number;
+  transformationSourceCueIds?: string[];
   internalSteps?: Array<{
     id?: string;
     label?: string;
@@ -126,6 +127,8 @@ export type VisualEvent = {
     value?: string;
     iconName?: string;
     status?: string;
+    sourceCueIds?: string[];
+    role?: 'source' | 'target' | 'driver' | 'result' | string;
   }>;
   assetPath?: string;
   assetStack?: string[];

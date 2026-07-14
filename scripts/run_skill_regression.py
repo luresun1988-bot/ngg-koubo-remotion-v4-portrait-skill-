@@ -22,6 +22,7 @@ REGRESSIONS = [
     "semantic_render_regression.py",
     "semantic_guardrails_regression.py",
     "semantic_component_contract_regression.py",
+    "transformation_evidence_regression.py",
     "sfx_semantic_routing_regression.py",
     "visual_density_regression.py",
     "presenter_impact_regression.py",

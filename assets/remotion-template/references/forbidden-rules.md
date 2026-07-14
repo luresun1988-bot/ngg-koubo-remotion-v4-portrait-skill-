@@ -23,6 +23,8 @@ Use this reference before finalizing any V4 visual script, template change, or Q
 - Do not collapse enumeration or workflow language into one ordinary information card. Use numbered rows, flow nodes, or internal-step sequences.
 - Do not treat future episode previews as completed work or present-tense automation handoff merely because they contain "自动" or a tool name.
 - Do not invent CTA actions or keywords. Generated CTA copy must be traceable to `ctaProvenance.sourceText`, and a sourced CTA must not be discarded by lane scheduling.
+- Do not build a `transformationStack` from only an A→B phrase. Source, target, one or two drivers, and an explicit result must each cite caption cues owned by the same source beat and scene.
+- Do not borrow an uncited previous cue to fill a transformation driver or result, and do not synthesize result copy such as `目标状态达成`. Use the explicit `captionHighlight` fallback when the evidence contract is incomplete.
 
 ## Material Prohibitions
 

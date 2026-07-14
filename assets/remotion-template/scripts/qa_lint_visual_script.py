@@ -464,9 +464,183 @@ def hud_duration_budget_checks(data: dict[str, Any]) -> tuple[list[str], list[st
     return errors, warnings
 
 
+def transformation_step_role(step: Any) -> str:
+    if not isinstance(step, dict):
+        return ""
+    explicit_role = str(step.get("role") or "").strip().lower()
+    if explicit_role in {"source", "target", "driver", "result"}:
+        return explicit_role
+    identifier = str(step.get("id") or "").strip().lower()
+    status = str(step.get("status") or "").strip().lower()
+    if identifier in {"state-01", "source"} or status == "source":
+        return "source"
+    if identifier in {"state-02", "target"} or status == "target":
+        return "target"
+    if identifier.startswith("driver-") or status in {"driver", "moat", "leverage", "auto", "process", "system"}:
+        return "driver"
+    if identifier.startswith("result-") or status in {"result", "faster"}:
+        return "result"
+    return ""
+
+
+def _ordered_unique(values: list[str]) -> list[str]:
+    result: list[str] = []
+    for value in values:
+        if value and value not in result:
+            result.append(value)
+    return result
+
+
+def _transformation_provenance_errors(
+    *,
+    event: dict[str, Any],
+    event_id: str,
+    beats_by_id: dict[str, dict[str, Any]],
+    captions_by_id: dict[str, dict[str, Any]],
+) -> list[str]:
+    errors: list[str] = []
+    steps = event.get("internalSteps")
+    if not isinstance(steps, list):
+        return [
+            "transformation-source-binding failed: "
+            f"{event_id}.internalSteps must be a source-bound list"
+        ]
+
+    source_beat = beats_by_id.get(str(event.get("sourceBeatId") or ""))
+    if source_beat is None:
+        return [
+            "transformation-source-binding failed: "
+            f"{event_id} must link to a transformation semanticBeat"
+        ]
+    beat_source_ids = _ordered_unique(
+        [str(item or "") for item in source_beat.get("sourceCueIds", [])]
+    )
+    event_source_ids = _ordered_unique(
+        [str(item or "") for item in event.get("transformationSourceCueIds", [])]
+    )
+    if not event_source_ids:
+        errors.append(
+            "transformation-source-binding failed: "
+            f"{event_id}.transformationSourceCueIds must cite the captions used by every visible step"
+        )
+
+    step_source_union: list[str] = []
+    roles: list[str] = []
+    role_labels: dict[str, list[str]] = {"source": [], "target": [], "driver": [], "result": []}
+    for step_index, step in enumerate(steps):
+        step_ref = f"{event_id}.internalSteps[{step_index}]"
+        if not isinstance(step, dict):
+            errors.append(f"transformation-source-binding failed: {step_ref} must be an object")
+            continue
+        role = transformation_step_role(step)
+        roles.append(role)
+        label = str(step.get("label") or "")
+        source_text = str(step.get("text") or "")
+        cue_ids = _ordered_unique([str(item or "") for item in step.get("sourceCueIds", [])])
+        if role in role_labels:
+            role_labels[role].append(label)
+        if not role:
+            errors.append(
+                "transformation-source-binding failed: "
+                f"{step_ref}.role must be source, target, driver, or result"
+            )
+        if not label or not source_text or not cue_ids:
+            errors.append(
+                "transformation-source-binding failed: "
+                f"{step_ref} needs non-empty label, text, and sourceCueIds"
+            )
+        if len(label) > 12:
+            errors.append(
+                "transformation-source-binding failed: "
+                f"{step_ref}.label has {len(label)} chars; limit is 12"
+            )
+        if label and source_text and label not in source_text:
+            errors.append(
+                "transformation-label-source-binding failed: "
+                f"{step_ref}.label={label!r} must be an exact substring of step.text"
+            )
+        invalid_beat_ids = [cue_id for cue_id in cue_ids if cue_id not in beat_source_ids]
+        if invalid_beat_ids:
+            errors.append(
+                "transformation-source-binding failed: "
+                f"{step_ref}.sourceCueIds {invalid_beat_ids} are not owned by its source beat"
+            )
+        valid_caption_texts: list[str] = []
+        for cue_id in cue_ids:
+            cue = captions_by_id.get(cue_id)
+            if cue is None:
+                errors.append(
+                    "transformation-source-binding failed: "
+                    f"{step_ref}.sourceCueIds contains missing caption {cue_id!r}"
+                )
+                continue
+            if str(cue.get("sceneId") or "") != str(event.get("sceneId") or ""):
+                errors.append(
+                    "transformation-source-binding failed: "
+                    f"{step_ref} cites caption {cue_id!r} from another scene"
+                )
+                continue
+            valid_caption_texts.append(str(cue.get("text") or ""))
+            if cue_id not in step_source_union:
+                step_source_union.append(cue_id)
+        if source_text and valid_caption_texts and not any(source_text in text for text in valid_caption_texts):
+            errors.append(
+                "transformation-step-source-binding failed: "
+                f"{step_ref}.text={source_text!r} is not an exact substring of its cited captions"
+            )
+
+    expected_role_order = ["source", "target", *(["driver"] * max(0, len(steps) - 3)), "result"]
+    if roles != expected_role_order:
+        errors.append(
+            "transformation-step-order failed: "
+            f"{event_id} roles must be source, target, 1-2 drivers, result; got {roles}"
+        )
+    if len(role_labels["source"]) != 1 or len(role_labels["target"]) != 1 or len(role_labels["result"]) != 1:
+        errors.append(
+            "transformation-step-cardinality failed: "
+            f"{event_id} needs exactly one source, target, and result step"
+        )
+    if not 1 <= len(role_labels["driver"]) <= 2:
+        errors.append(
+            "transformation-step-cardinality failed: "
+            f"{event_id} needs one or two driver steps"
+        )
+    if event_source_ids != step_source_union:
+        errors.append(
+            "transformation-source-union failed: "
+            f"{event_id}.transformationSourceCueIds must equal the ordered union of step sourceCueIds; "
+            f"expected {step_source_union}, got {event_source_ids}"
+        )
+
+    source_label = role_labels["source"][0] if len(role_labels["source"]) == 1 else ""
+    target_label = role_labels["target"][0] if len(role_labels["target"]) == 1 else ""
+    driver_labels = role_labels["driver"]
+    if source_label and target_label and str(event.get("text") or "") != f"{source_label} \u2192 {target_label}":
+        errors.append(
+            "transformation-visible-copy-binding failed: "
+            f"{event_id}.text must be composed only from its sourced source/target labels"
+        )
+    if driver_labels and str(event.get("subtext") or "") != " \u00b7 ".join(driver_labels):
+        errors.append(
+            "transformation-visible-copy-binding failed: "
+            f"{event_id}.subtext must be composed only from its sourced driver labels"
+        )
+    return errors
+
+
 def layered_hud_step_checks(data: dict[str, Any]) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
+    beats_by_id = {
+        str(beat.get("id") or ""): beat
+        for beat in data.get("semanticBeats", [])
+        if isinstance(beat, dict)
+    }
+    captions_by_id = {
+        str(cue.get("id") or ""): cue
+        for cue in data.get("captionCues", [])
+        if isinstance(cue, dict)
+    }
 
     for idx, event in enumerate(data.get("visualEvents", [])):
         if not isinstance(event, dict):
@@ -476,6 +650,24 @@ def layered_hud_step_checks(data: dict[str, Any]) -> tuple[list[str], list[str]]
             continue
         event_id = str(event.get("id") or f"visualEvents[{idx}]")
         steps = event.get("internalSteps")
+        if event_type == "transformationStack":
+            roles = {transformation_step_role(step) for step in steps} if isinstance(steps, list) else set()
+            missing_roles = {"source", "target", "driver", "result"} - roles
+            if missing_roles:
+                errors.append(
+                    "layered-hud-internal-steps failed: "
+                    f"{event_id} (transformationStack) needs source, target, at least one driver, and result metric steps; "
+                    f"missing roles: {', '.join(sorted(missing_roles))}"
+                )
+            errors.extend(
+                _transformation_provenance_errors(
+                    event=event,
+                    event_id=event_id,
+                    beats_by_id=beats_by_id,
+                    captions_by_id=captions_by_id,
+                )
+            )
+            continue
         if not isinstance(steps, list) or len(steps) < 2:
             errors.append(
                 "layered-hud-internal-steps failed: "
@@ -487,12 +679,6 @@ def layered_hud_step_checks(data: dict[str, Any]) -> tuple[list[str], list[str]]
                 "capabilityShare is sparse: "
                 f"{event_id} has {len(steps)} internalSteps; use 3-4 rows/objects when comparing shares or capabilities"
             )
-        if event_type == "transformationStack" and len(steps) < 4:
-            errors.append(
-                "layered-hud-internal-steps failed: "
-                f"{event_id} (transformationStack) needs source, target, at least one driver, and result metric steps"
-            )
-
     return errors, warnings
 
 
@@ -797,6 +983,26 @@ def semantic_beat_fulfillment_checks(data: dict[str, Any]) -> tuple[list[str], l
 
         event_types = {str(event.get("type") or "") for event in matched_events}
         allowed_types = SEMANTIC_ALLOWED_EVENT_TYPES.get(intent)
+        explicit_transform_fallback = intent == "transformation-stack" and any(
+            str(event.get("type") or "") == "captionHighlight"
+            and str(event.get("semanticFallbackFrom") or "") == "transformation-stack"
+            and bool(str(event.get("fallbackReason") or ""))
+            for event in matched_events
+        )
+        if explicit_transform_fallback:
+            fallback_reasons = sorted(
+                {
+                    str(event.get("fallbackReason") or "")
+                    for event in matched_events
+                    if str(event.get("semanticFallbackFrom") or "") == "transformation-stack"
+                }
+            )
+            warnings.append(
+                "transformation-semantic-fallback warning: "
+                f"{beat_id} was downgraded to captionHighlight because complete transformation evidence was unavailable "
+                f"({', '.join(reason for reason in fallback_reasons if reason)})"
+            )
+            allowed_types = None
         if allowed_types and not event_types.intersection(allowed_types):
             errors.append(
                 "semantic-intent-fulfilled failed: "

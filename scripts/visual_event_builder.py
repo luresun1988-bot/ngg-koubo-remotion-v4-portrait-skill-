@@ -644,6 +644,259 @@ def transformation_steps(text: str) -> list[dict[str, str]]:
     return steps
 
 
+_TRUSTED_TRANSFORMATION_PATTERNS = (
+    re.compile(
+        r"(?:\u4ece|\u7531)\s*(?P<source>[^\uFF0C\u3002\uFF01\uFF1F\uFF1B;]{1,18}?)\s*[,\uFF0C]?\s*"
+        r"(?:\u53d8\u6210|\u8f6c\u53d8\u6210|\u8f6c\u5316\u6210|\u8f6c\u4e3a|\u5230)\s*"
+        r"(?P<target>[^\uFF0C\u3002\uFF01\uFF1F\uFF1B;]{1,18})"
+    ),
+    re.compile(
+        r"\u628a\s*(?P<source>[^\uFF0C\u3002\uFF01\uFF1F\uFF1B;]{1,18}?)\s*[,\uFF0C]?\s*"
+        r"(?:\u53d8\u6210|\u8f6c\u53d8\u6210|\u8f6c\u5316\u6210|\u8f6c\u4e3a)\s*"
+        r"(?P<target>[^\uFF0C\u3002\uFF01\uFF1F\uFF1B;]{1,18})"
+    ),
+    re.compile(
+        r"(?P<source>[^\uFF0C\u3002\uFF01\uFF1F\uFF1B;]{1,14}?)\s*(?:\u4f1a|\u80fd)?\s*"
+        r"(?:\u53d8\u6210|\u8f6c\u53d8\u6210|\u8f6c\u5316\u6210|\u8f6c\u4e3a)\s*"
+        r"(?P<target>[^\uFF0C\u3002\uFF01\uFF1F\uFF1B;]{1,18})"
+    ),
+)
+_TRUSTED_DRIVER_ICONS = {
+    "\u6c1b\u56f4": "Sparkles",
+    "\u8bbe\u5907": "Monitor",
+    "\u642d\u5b50": "Handshake",
+    "\u670b\u53cb": "Handshake",
+    "\u65b0\u5e97": "Store",
+    "AI": "Bot",
+    "Codex": "TerminalSquare",
+    "\u7cfb\u7edf": "Network",
+    "\u81ea\u52a8\u5316": "Bot",
+    "\u7b2c\u4e8c\u5927\u8111": "BrainCircuit",
+    "\u77e5\u8bc6\u5e93": "Database",
+    "\u89c4\u5219": "ListChecks",
+    "\u5de5\u5177": "Wrench",
+    "\u6d41\u7a0b": "Workflow",
+    "\u6760\u6746": "TrendingUp",
+    "\u7ecf\u9a8c": "BadgeCheck",
+}
+
+
+def _trusted_transform_label(value: str, limit: int = 10) -> str:
+    clean = re.sub(r"\s+", "", value).strip(PUNCTUATION)
+    clean = re.sub(r"^(?:\u6765|\u8ba9|\u5c06|\u4f1a|\u80fd)", "", clean)
+    return clean[:limit]
+
+
+def _trusted_transformation_source_cues(
+    beat: dict[str, Any],
+    data: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Return only caption cues explicitly owned by the semantic beat."""
+    scene_id = str(beat.get("sceneId") or "")
+    cue_by_id = {
+        str(cue.get("id") or ""): cue
+        for cue in data.get("captionCues", [])
+        if isinstance(cue, dict)
+    }
+    cues: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for item in beat.get("sourceCueIds", []):
+        cue_id = str(item or "")
+        cue = cue_by_id.get(cue_id)
+        if not cue_id or cue_id in seen or cue is None:
+            continue
+        if str(cue.get("sceneId") or "") != scene_id:
+            continue
+        seen.add(cue_id)
+        cues.append(cue)
+    return sorted(cues, key=lambda cue: int(cue.get("startFrame", 0) or 0))
+
+
+def _trusted_transformation_relation(cues: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for cue in cues:
+        text = str(cue.get("text") or "")
+        for pattern in _TRUSTED_TRANSFORMATION_PATTERNS:
+            match = pattern.search(text)
+            if not match:
+                continue
+            source = _trusted_transform_label(match.group("source"))
+            target = _trusted_transform_label(match.group("target"))
+            if source and target and source != target and source in text and target in text:
+                return {
+                    "source": source,
+                    "target": target,
+                    "text": text,
+                    "sourceCueIds": [str(cue.get("id") or "")],
+                }
+    return None
+
+
+def _trusted_split_drivers(value: str) -> list[str]:
+    clean = re.sub(r"(?:\u90fd|\u5168\u90e8)$", "", re.sub(r"\s+", "", value).strip(PUNCTUATION))
+    return [item for item in re.split(r"[\u3001\uFF0C\u548c\u4e0e\u53ca]", clean) if 1 < len(item) <= 10]
+
+
+def _trusted_transformation_drivers(cues: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    candidates: list[tuple[int, int, str, str, str]] = []
+    patterns = (
+        re.compile(
+            r"\u628a(?P<items>[^\u3002\uFF01\uFF1F]{2,32}?)(?:\u90fd|\u5168\u90e8)?"
+            r"(?:\u51c6\u5907\u597d|\u51c6\u5907\u597d\u4e86|\u914d\u9f50|\u5b89\u6392\u597d|\u505a\u597d)"
+        ),
+        re.compile(
+            r"(?:\u9760|\u901a\u8fc7|\u501f\u52a9|\u4f9d\u9760|\u7528)"
+            r"(?P<items>[^\uFF0C\u3002\uFF01\uFF1F\uFF1B;]{2,24})\s*[,\uFF0C]?\s*"
+            r"(?:\u63a8\u52a8|\u5b9e\u73b0|\u5b8c\u6210|\u8ba9|\u628a|\u5c06)"
+        ),
+        re.compile(
+            r"(?:\u5173\u952e\u662f|\u6838\u5fc3\u662f|\u9a71\u52a8\u529b\u662f)\s*"
+            r"(?P<items>[^\uFF0C\u3002\uFF01\uFF1F\uFF1B;]{2,18})"
+        ),
+        re.compile(
+            r"(?P<items>AI|Codex|\u81ea\u52a8\u5316|\u7cfb\u7edf|\u77e5\u8bc6\u5e93|\u7b2c\u4e8c\u5927\u8111)\s*"
+            r"(?:\u4f1a|\u80fd|\u53ef\u4ee5)?\s*\u628a"
+        ),
+    )
+    for cue_index, cue in enumerate(cues):
+        cue_id = str(cue.get("id") or "")
+        text = str(cue.get("text") or "")
+        for pattern_index, pattern in enumerate(patterns):
+            for match in pattern.finditer(text):
+                candidates.extend(
+                    (cue_index, match.start() + pattern_index, item, cue_id, text)
+                    for item in _trusted_split_drivers(match.group("items"))
+                )
+
+    drivers: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for _, _, label, cue_id, text in sorted(candidates, key=lambda item: (item[0], item[1])):
+        label = _trusted_transform_label(label)
+        if not label or label in seen or label not in text:
+            continue
+        seen.add(label)
+        drivers.append(
+            {
+                "label": label,
+                "iconName": _TRUSTED_DRIVER_ICONS.get(label, "Cog"),
+                "text": text,
+                "sourceCueIds": [cue_id],
+            }
+        )
+        if len(drivers) == 2:
+            break
+    return drivers
+
+
+_TRUSTED_RESULT_PATTERNS = (
+    re.compile(
+        r"(?P<result>(?:\u6548\u7387|\u901f\u5ea6|\u4ea7\u51fa|\u51c6\u786e\u7387|\u901a\u8fc7\u7387|\u8f6c\u5316\u7387|\u6210\u672c|\u8017\u65f6|\u65f6\u95f4|\u9519\u8bef\u7387|\u5931\u8d25\u9879|\u5b8c\u6210\u7387)\s*"
+        r"(?:\u63d0\u5347|\u63d0\u9ad8|\u589e\u957f|\u589e\u52a0|\u964d\u4f4e|\u51cf\u5c11|\u7f29\u77ed|\u8fbe\u5230|\u964d\u5230|\u4e3a|\u662f)?\s*"
+        r"\d+(?:\.\d+)?\s*(?:%|\u500d|\u6761|\u5f20|\u4e2a|\u5206\u949f|\u79d2|\u5c0f\u65f6|\u5929|\u9879)?)"
+    ),
+    re.compile(
+        r"(?:\u6700\u7ec8|\u6700\u540e|\u4ece\u800c|\u4e8e\u662f|\u7ed3\u679c(?:\u662f|\u4e3a)?|\u73b0\u5728\u5df2\u7ecf|\u5df2\u7ecf)\s*"
+        r"(?:\u53ef\u4ee5|\u80fd\u591f|\u80fd|\u4f1a)?\s*"
+        r"(?:\u5b9e\u73b0|\u5f62\u6210|\u5f97\u5230|\u5e26\u6765|\u505a\u5230|\u8fbe\u6210|\u5b8c\u6210)\s*"
+        r"(?P<result>[^\uFF0C\u3002\uFF01\uFF1F\uFF1B;]{2,18})"
+    ),
+)
+
+
+def _trusted_transformation_result(cues: list[dict[str, Any]]) -> dict[str, Any] | None:
+    for cue in cues:
+        text = str(cue.get("text") or "")
+        for pattern in _TRUSTED_RESULT_PATTERNS:
+            match = pattern.search(text)
+            if not match:
+                continue
+            result = _trusted_transform_label(match.group("result"), 12)
+            if result and result in text:
+                return {
+                    "label": result,
+                    "text": text,
+                    "sourceCueIds": [str(cue.get("id") or "")],
+                }
+    return None
+
+
+def _trusted_transformation_plan(
+    beat: dict[str, Any],
+    data: dict[str, Any],
+) -> tuple[dict[str, Any] | None, str]:
+    cues = _trusted_transformation_source_cues(beat, data)
+    if not cues:
+        return None, "missing-source-cues"
+    relation = _trusted_transformation_relation(cues)
+    if not relation:
+        return None, "missing-source-target"
+    drivers = _trusted_transformation_drivers(cues)
+    if not drivers:
+        return None, "missing-driver"
+    result = _trusted_transformation_result(cues)
+    if not result:
+        return None, "missing-result"
+
+    source = str(relation["source"])
+    target = str(relation["target"])
+    relation_text = str(relation["text"])
+    relation_cue_ids = [str(item) for item in relation["sourceCueIds"]]
+    steps: list[dict[str, Any]] = [
+        {
+            "id": "state-01",
+            "role": "source",
+            "label": source,
+            "text": relation_text,
+            "sourceCueIds": relation_cue_ids,
+            "iconName": "User",
+            "status": "SOURCE",
+        },
+        {
+            "id": "state-02",
+            "role": "target",
+            "label": target,
+            "text": relation_text,
+            "sourceCueIds": relation_cue_ids,
+            "iconName": "Users",
+            "status": "TARGET",
+        },
+    ]
+    steps.extend(
+        {
+            "id": f"driver-{index + 1:02d}",
+            "role": "driver",
+            "label": str(driver["label"]),
+            "text": str(driver["text"]),
+            "sourceCueIds": [str(item) for item in driver["sourceCueIds"]],
+            "iconName": str(driver["iconName"]),
+            "status": "DRIVER",
+        }
+        for index, driver in enumerate(drivers)
+    )
+    steps.append(
+        {
+            "id": "result-01",
+            "role": "result",
+            "label": str(result["label"]),
+            "text": str(result["text"]),
+            "sourceCueIds": [str(item) for item in result["sourceCueIds"]],
+            "iconName": "TrendingUp",
+            "status": "RESULT",
+        }
+    )
+    source_cue_ids: list[str] = []
+    for step in steps:
+        for cue_id in step["sourceCueIds"]:
+            if cue_id not in source_cue_ids:
+                source_cue_ids.append(cue_id)
+    return {
+        "source": source,
+        "target": target,
+        "drivers": [str(driver["label"]) for driver in drivers],
+        "steps": steps,
+        "sourceCueIds": source_cue_ids,
+    }, ""
+
+
 def platform_steps(text: str) -> list[dict[str, str]]:
     platforms = [
         ("抖音", "Video"), ("小红书", "Image"), ("B站", "MonitorUp"),
@@ -1029,16 +1282,28 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
         }
 
     if intent == "transformation-stack":
-        steps = transformation_steps(text)
-        source_label = str(steps[0].get("label") or "原状态")
-        target_label = str(steps[1].get("label") or "目标状态")
+        plan, fallback_reason = _trusted_transformation_plan(beat, data)
+        if not plan:
+            return {
+                **base,
+                "type": "captionHighlight",
+                "semanticRole": "explanation-claim",
+                "text": key_message(text, 16, ["\u53d8\u6210", "\u8f6c\u5316", "\u653e\u5927", "\u6539\u53d8"])
+                or _trusted_transform_label(text, 16),
+                "status": "KEY CHANGE",
+                "iconName": "ArrowRightLeft",
+                "motionType": "hud-slide-fade",
+                "semanticFallbackFrom": "transformation-stack",
+                "fallbackReason": fallback_reason,
+            }
         return {
             **base,
             "type": "transformationStack",
-            "text": f"{source_label} → {target_label}",
-            "subtext": key_message(text, 16, ["转化", "变成", "杠杆", "护城河", "能力", "流程"]),
+            "text": f"{plan['source']} \u2192 {plan['target']}",
+            "subtext": " \u00b7 ".join(str(item) for item in plan["drivers"]),
             "status": "TRANSFORM",
-            "internalSteps": steps,
+            "internalSteps": plan["steps"],
+            "transformationSourceCueIds": plan["sourceCueIds"],
             "motionType": "state-driver-result-build",
         }
 

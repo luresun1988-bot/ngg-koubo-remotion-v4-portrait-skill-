@@ -233,7 +233,7 @@ def main() -> int:
     if any(label in {"OpenAI", "Google", "Anthropic"} for label in capability_labels):
         failures.append(f"capability component invented brands: {capability_labels}")
 
-    transform = sample("从模糊画面变成高清画面")
+    transform = sample("AI把模糊画面变成高清画面，最终实现稳定交付")
     transform_event = next(item for item in transform["visualEvents"] if item.get("type") == "transformationStack")
     transform_labels = [str(item.get("label") or "") for item in transform_event.get("internalSteps", [])]
     if transform_labels[:2] != ["模糊画面", "高清画面"] or any(label in {"一个人", "一个团队"} for label in transform_labels):
