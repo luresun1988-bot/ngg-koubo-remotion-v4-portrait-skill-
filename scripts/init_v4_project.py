@@ -73,8 +73,8 @@ ICON_REQUIRED_EVENT_TYPES = {"infoCard", "iconPulse"}
 sys.path.insert(0, str(SCRIPT_DIR))
 from v4_utf8 import configure_utf8  # noqa: E402
 from split_caption_cues import split_cues  # noqa: E402
-from semantic_router import apply_semantic_beats  # noqa: E402
-from visual_event_builder import apply_visual_events  # noqa: E402
+from semantic_router import apply_semantic_beats, classify_text  # noqa: E402
+from visual_event_builder import apply_visual_events, semantic_role_for_beat  # noqa: E402
 
 configure_utf8()
 
@@ -1105,31 +1105,8 @@ def derive_poster_topic_keyword(texts: list[str]) -> str:
 
 
 def semantic_role_for_text(text: str, idx: int, scene_count: int) -> str:
-    if idx == 0:
-        if contains_any(text, ["\u8fd8\u5728\u624b\u52a8", "\u624b\u52a8", "\u522b\u518d", "\u4e0d\u662f", "\u9ebb\u70e6"]):
-            return "semantic-problem-map"
-        return "result-promise" if contains_any(text, ["\u4e00\u952e", "\u81ea\u52a8", "Skill", "Codex"]) else "pain-question"
-    if idx == scene_count - 1:
-        return "cta-resolve"
-    if contains_any(text, ["\u4e0d\u662f", "\u800c\u662f", "\u6700\u9ebb\u70e6", "\u75db\u70b9", "\u74f6\u9888"]):
-        return "semantic-problem-map"
-    if has_clear_numeric_metric(text):
-        return "metric-growth"
-    if has_scene_lock_signal(text):
-        return "scene-lock"
-    if has_capability_share_signal(text):
-        return "capability-share"
-    if has_transformation_signal(text):
-        return "transformation-stack"
-    if contains_any(text, ["\u91cd\u590d", "\u586b\u5199", "\u6807\u9898", "\u7b80\u4ecb", "\u6807\u7b7e", "\u5c01\u9762"]):
-        return "manual-field"
-    if contains_any(text, ["\u6296\u97f3", "\u5c0f\u7ea2\u4e66", "B \u7ad9", "B\u7ad9", "\u5feb\u624b", "\u591a\u5e73\u53f0"]):
-        return "platform-fanout"
-    if contains_any(text, ["\u81ea\u52a8", "\u4ea4\u7ed9", "Codex", "AI", "\u7cfb\u7edf", "\u6267\u884c"]):
-        return "automation-handoff"
-    if contains_any(text, ["\u751f\u6210", "\u8c03\u7528", "\u4e0a\u4f20", "\u53d1\u5e03", "\u6d41\u7a0b"]) or FLOW_TEXT_RE.search(text):
-        return "workflow-step"
-    return "workflow-step"
+    routed = classify_text(text, frame_midpoint=0, duration_frames=1)
+    return semantic_role_for_beat({"semanticIntent": routed.get("semanticIntent", "")})
 
 
 def scene_type_for_role(role: str, idx: int, scene_count: int) -> str:
