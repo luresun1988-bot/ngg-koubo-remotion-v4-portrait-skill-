@@ -528,8 +528,11 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
             errors.append(f"visualEvents[{idx}] transitionPushZoom is a legacy platform-fanout alias and requires semanticRole=platform-fanout")
         if event_type == "highlightBox" and role != "semantic-problem-map":
             errors.append(f"visualEvents[{idx}] highlightBox is a legacy semantic-problem-map alias")
-        if event_type == "captionHighlight" and role != "automation-handoff":
-            errors.append(f"visualEvents[{idx}] captionHighlight is a legacy automation-handoff alias")
+        if event_type == "captionHighlight" and role not in {"automation-handoff", "positive-confirm", "explanation-claim"}:
+            errors.append(
+                f"visualEvents[{idx}] captionHighlight requires automation-handoff, positive-confirm, "
+                "or an audited explanation-claim fallback"
+            )
         if event_type == "presenterReposition" and event.get("motionType") != "presenter-impact-punch":
             errors.append(f"visualEvents[{idx}] presenterReposition only supports motionType=presenter-impact-punch")
         if event_type == "depthKeyword":

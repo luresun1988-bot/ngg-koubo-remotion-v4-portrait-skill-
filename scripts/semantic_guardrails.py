@@ -18,6 +18,11 @@ HANDOFF_NEGATED_RE = re.compile(
     r"(?:还没有|还没|尚未|并未|没有|未|不再)[^，。！？]{0,10}(?:接管|执行|处理)"
     r"|(?:不要|别|不)[^，。！？]{0,8}(?:交给|丢给|交由)"
 )
+HANDOFF_PRIOR_RE = re.compile(
+    r"(?:(?:交给|丢给|交由|让|由)[^，。！？]{0,16}(?:Codex|系统|自动化)"
+    r"|(?:Codex|系统|自动化)[^，。！？]{0,10}(?:接管|执行|处理))"
+    r"[^，。！？]{0,8}(?:之前|以前|前)"
+)
 HANDOFF_ASSERTED_RE = re.compile(
     r"(?:交给|丢给|交由|让|由)[^，。！？]{0,16}(?:Codex|系统|自动化)"
     r"|(?:Codex|系统|自动化)[^，。！？]{0,10}(?:接管|执行|处理)"
@@ -26,6 +31,7 @@ PROCESS_CONTEXT_RE = re.compile(
     r"(?:输入|填写|上传|选择|设置|点击|确认|提交|搜索|整理|配置)[^，。！？]{0,18}"
     r"(?:生成|导出|发布|提交|保存|标题|关键词|素材|参数|选项|结果|页面|竞品)"
     r"|(?:系统|平台|工具|AI|Codex)[^，。！？]{0,8}(?:会|将|可以|能够)?(?:自动)?(?:生成|导出|处理|执行)"
+    r"|(?:首先|然后|接着|随后|最后)[^，。！？]{0,6}(?:读取|判断|写入|检查|整理|生成|导出|提交|发布)"
 )
 CONDITIONAL_PROCESS_RE = re.compile(
     r"(?:如果|只要|一旦)[^。！？]{0,18}(?:完成|设置|确认)[^。！？]{0,18}(?:导出|提交|继续|发布|保存)"
@@ -37,6 +43,7 @@ EXPLANATION_CLAIM_RE = re.compile(
 PROOF_CONTEXT_RE = re.compile(
     r"(?:页面|后台|录屏|录像|截图|结果)[^，。！？]{0,16}(?:展示|显示|互动|数据|结果|证据|证明)"
     r"|(?:展示|显示|查看)[^，。！？]{0,16}(?:页面|后台|互动数据|生成结果)"
+    r"|(?:你|大家|我们)?(?:现在|来|先)?看(?:一下|一眼)?(?:这个|这里的)?(?:后台|页面|结果)"
 )
 
 
@@ -51,9 +58,11 @@ def topic_intro(text: str) -> str:
 
 
 def handoff_state(text: str) -> str:
-    """Return asserted, negated, or none for an automation handoff."""
+    """Return asserted, negated, prior, or none for an automation handoff."""
     if HANDOFF_NEGATED_RE.search(text):
         return "negated"
+    if HANDOFF_PRIOR_RE.search(text):
+        return "prior"
     if HANDOFF_ASSERTED_RE.search(text):
         return "asserted"
     return "none"
@@ -69,6 +78,390 @@ def is_explanation_claim(text: str) -> bool:
 
 def is_proof_context(text: str) -> bool:
     return PROOF_CONTEXT_RE.search(text) is not None
+
+
+NUMERIC_METRIC_CHINESE_RE = re.compile(
+    r"百分之[零〇一二两三四五六七八九十百千万亿点\d]+"
+    r"|[一二两三四五六七八九十百千万亿]+(?:倍|万|亿|人|道题|题|个|条|张|套|页|分钟|秒|份|账号)"
+)
+NUMERIC_METRIC_ARABIC_RE = re.compile(
+    r"[+\-]?\d+(?:\.\d+)?\s*(?:%|倍|万|亿|[KkMmGg]|人|道题|题|个|条|张|套|页|分钟|秒|份|账号)?"
+)
+NUMERIC_METRIC_CONTEXT_TERMS = [
+    "提升", "增长", "比例", "指标", "数据", "效率", "转化率", "数量", "规模",
+    "省下", "批量", "处理", "扩到", "生成", "完成", "做好", "产出", "输出",
+    "一共", "总共", "共计", "分辨率", "清晰",
+]
+
+
+def numeric_metric_token(text: str) -> str | None:
+    """Return the source-authored numeric token without dropping Chinese or K/M/G suffixes."""
+    chinese_matches = list(NUMERIC_METRIC_CHINESE_RE.finditer(text))
+    candidates: list[tuple[int, int, str]] = [
+        (match.start(), match.end(), match.group(0).strip()) for match in chinese_matches
+    ]
+    for match in NUMERIC_METRIC_ARABIC_RE.finditer(text):
+        token = match.group(0).strip()
+        if not token:
+            continue
+        if any(match.start() < item.end() and item.start() < match.end() for item in chinese_matches):
+            continue
+        has_unit = bool(re.search(
+            r"(?:%|倍|万|亿|[KkMmGg]|人|道题|题|个|条|张|套|页|分钟|秒|份|账号)$",
+            token,
+        ))
+        context = text[max(0, match.start() - 10):match.end() + 10]
+        if has_unit or any(term in context for term in NUMERIC_METRIC_CONTEXT_TERMS):
+            product_prefix = text[max(0, match.start() - 12):match.start()]
+            if not re.search(r"(?:Codex|GPT|Claude|OpenAI|版本|\bv)\s*$", product_prefix, re.IGNORECASE):
+                candidates.append((match.start(), match.end(), token))
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: (item[0], item[1]))
+    prefer_target = len(candidates) > 1 and any(
+        term in text for term in ["变成", "生成", "扩到", "提升到", "增长到", "增加到", "到"]
+    )
+    return (candidates[-1] if prefer_target else candidates[0])[2]
+
+
+def numeric_metric_is_meaningful(text: str, token: str | None = None) -> bool:
+    token = token or numeric_metric_token(text)
+    if not token:
+        return False
+    compact_token = re.sub(r"\s+", "", token)
+    compact_text = re.sub(r"\s+", "", text)
+    if compact_token.endswith("个") and re.search(
+        rf"{re.escape(compact_token)}(?:指标|步骤|方向|动作|要点|问题|方法|原因|功能|模块|选项|部分|事项|件事)",
+        compact_text,
+    ):
+        return False
+    if compact_token.endswith(("张", "页")):
+        if re.search(rf"第\s*{re.escape(compact_token)}", compact_text):
+            return False
+        if any(term in text for term in NUMERIC_METRIC_CONTEXT_TERMS):
+            return True
+        number_text = compact_token[:-1]
+        if re.fullmatch(r"\d+(?:\.\d+)?", number_text):
+            return float(number_text) >= 2
+        return any(char in number_text for char in "二两三四五六七八九十百千万亿")
+    if re.search(r"(?:%|倍|万|亿|[KkMmGg]|分钟|秒|道题|题|人|账号)$", compact_token):
+        return True
+    return any(term in text for term in NUMERIC_METRIC_CONTEXT_TERMS)
+
+
+CHINESE_NUMBER_DIGITS = {"零": 0, "〇": 0, "一": 1, "二": 2, "两": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9}
+CHINESE_NUMBER_UNITS = {"十": 10, "百": 100, "千": 1000, "万": 10000, "亿": 100000000}
+NUMERIC_TOKEN_SUFFIXES = ("道题", "分钟", "账号", "%", "倍", "万", "亿", "K", "k", "M", "m", "G", "g", "人", "题", "个", "条", "张", "套", "页", "秒", "份")
+
+
+def _chinese_integer_value(value: str) -> int | None:
+    if not value or any(char not in CHINESE_NUMBER_DIGITS and char not in CHINESE_NUMBER_UNITS for char in value):
+        return None
+    total = 0
+    section = 0
+    number = 0
+    for char in value:
+        if char in CHINESE_NUMBER_DIGITS:
+            number = CHINESE_NUMBER_DIGITS[char]
+            continue
+        unit = CHINESE_NUMBER_UNITS[char]
+        if unit < 10000:
+            section += (number or 1) * unit
+        else:
+            section = (section + number) * unit
+            total += section
+            section = 0
+        number = 0
+    return total + section + number
+
+
+def numeric_event_fields(text: str) -> dict[str, Any]:
+    """Return source-faithful renderer fields for Arabic or Chinese numeric tokens."""
+    token = numeric_metric_token(text)
+    if not token:
+        return {}
+    compact = re.sub(r"\s+", "", token)
+    percent = compact.startswith("百分之")
+    if percent:
+        number_text = compact[3:]
+        suffix = "%"
+    else:
+        suffix = next((item for item in NUMERIC_TOKEN_SUFFIXES if compact.endswith(item)), "")
+        number_text = compact[:-len(suffix)] if suffix else compact
+    arabic = re.fullmatch(r"([+\-]?)(\d+(?:\.\d+)?)", number_text)
+    if arabic:
+        value: float | int = float(arabic.group(2))
+        if value.is_integer():
+            value = int(value)
+        normalized_suffix = suffix.upper() if suffix in {"k", "m", "g"} else suffix
+        return {"numericValue": value, "numericPrefix": "+" if arabic.group(1) == "+" else "", "numericSuffix": normalized_suffix}
+    if "点" in number_text:
+        integer_text, decimal_text = number_text.split("点", 1)
+        integer_value = _chinese_integer_value(integer_text)
+        decimal_digits = "".join(str(CHINESE_NUMBER_DIGITS[char]) for char in decimal_text if char in CHINESE_NUMBER_DIGITS)
+        if integer_value is not None and decimal_digits:
+            return {"numericValue": float(f"{integer_value}.{decimal_digits}"), "numericPrefix": "", "numericSuffix": suffix}
+    chinese_value = _chinese_integer_value(number_text)
+    if chinese_value is not None:
+        return {"numericValue": chinese_value, "numericPrefix": "", "numericSuffix": suffix}
+    return {"numericText": token}
+
+
+ORDERED_WORKFLOW_MARKERS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("first", re.compile(r"^\s*(?:首先|第一步|第一|先)(?:是|要|把|将)?\s*")),
+    ("middle", re.compile(r"^\s*(?:然后|接着|随后|其次|第二步|第二|再)(?:是|要|把|将)?\s*")),
+    ("final", re.compile(r"^\s*(?:最后|最终|第三步|第三)(?:是|要|把|将)?\s*")),
+)
+ORDERED_WORKFLOW_ICON_RULES: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("读取", "逐字稿", "文案", "文件"), "FileText"),
+    (("判断", "分析", "识别", "语义"), "BrainCircuit"),
+    (("写入", "时间线", "排入", "编排"), "Clock3"),
+    (("检查", "确认", "验证"), "ShieldCheck"),
+    (("生成", "渲染", "剪辑"), "Cpu"),
+    (("输出", "导出", "发布"), "SendHorizontal"),
+)
+ORDERED_WORKFLOW_FALLBACK_ICONS = ("CircleDot", "Workflow", "CheckCircle2", "ListChecks", "Sparkles")
+
+
+def _ordered_workflow_marker(text: str) -> tuple[str, re.Match[str]] | None:
+    for role, pattern in ORDERED_WORKFLOW_MARKERS:
+        match = pattern.search(text)
+        if match:
+            return role, match
+    return None
+
+
+def _ordered_workflow_icon(label: str, used: set[str]) -> str:
+    for terms, icon in ORDERED_WORKFLOW_ICON_RULES:
+        if icon not in used and any(term in label for term in terms):
+            return icon
+    return next((icon for icon in ORDERED_WORKFLOW_FALLBACK_ICONS if icon not in used), "Workflow")
+
+
+def ordered_workflow_window(
+    cues: list[dict[str, Any]],
+    cursor: int,
+    *,
+    max_gap_frames: int,
+    max_duration_frames: int,
+    max_cues: int = 5,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]] | None:
+    """Extract an explicit first/middle/final workflow without crossing hard semantic boundaries."""
+    if cursor < 0 or cursor >= len(cues):
+        return None
+    first_signal = _ordered_workflow_marker(str(cues[cursor].get("text") or ""))
+    if not first_signal or first_signal[0] != "first":
+        return None
+    scene_id = str(cues[cursor].get("sceneId") or "")
+    group: list[dict[str, Any]] = []
+    steps: list[dict[str, Any]] = []
+    used_icons: set[str] = set()
+    seen_middle = False
+    start_frame = int(cues[cursor].get("startFrame", 0) or 0)
+    previous_end = start_frame
+    for cue in cues[cursor:cursor + max_cues]:
+        if str(cue.get("sceneId") or "") != scene_id:
+            break
+        cue_start = int(cue.get("startFrame", previous_end) or previous_end)
+        cue_end = int(cue.get("endFrame", cue_start) or cue_start)
+        if group and cue_start > previous_end + max_gap_frames:
+            break
+        if cue_end - start_frame > max_duration_frames:
+            break
+        text = str(cue.get("text") or "").strip()
+        signal = _ordered_workflow_marker(text)
+        if not signal:
+            break
+        role, marker = signal
+        if not group and role != "first":
+            return None
+        if group and role == "first":
+            break
+        if role == "middle":
+            seen_middle = True
+        if role == "final" and not seen_middle:
+            return None
+        if parse_cta_provenance(text) or is_proof_context(text):
+            return None
+        token = numeric_metric_token(text)
+        if token and numeric_metric_is_meaningful(text, token):
+            return None
+        label = text[marker.end():].strip(" ，。；：:、")[:12]
+        cue_id = str(cue.get("id") or "")
+        if not label or not cue_id or label not in text:
+            return None
+        icon = _ordered_workflow_icon(label, used_icons)
+        used_icons.add(icon)
+        group.append(cue)
+        steps.append({
+            "id": f"workflow-step-{len(steps) + 1:02d}",
+            "label": label,
+            "text": text,
+            "sourceCueIds": [cue_id],
+            "iconName": icon,
+        })
+        previous_end = cue_end
+        if role == "final":
+            return (group, steps) if len(group) >= 3 else None
+    return None
+
+
+AUTOMATION_HANDOFF_ICON_RULES: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("网页", "页面", "链接", "网址"), "Link2"),
+    (("合同", "文件", "文档", "文案", "脚本"), "FileText"),
+    (("图片", "主图", "详情图", "封面", "海报"), "Images"),
+    (("视频", "录屏"), "Video"),
+    (("素材", "资料"), "Package"),
+    (("参数", "数据", "数量"), "Hash"),
+    (("读取", "查看", "看"), "ScanSearch"),
+    (("提取", "识别", "解析", "分析"), "TextCursorInput"),
+    (("检查", "审核", "风险", "确认"), "ShieldCheck"),
+    (("整理", "汇总", "答案", "摘要"), "ListChecks"),
+    (("生成", "制作", "渲染", "剪辑"), "Cpu"),
+    (("输出", "发布", "上传", "提交"), "SendHorizontal"),
+    (("接管", "执行", "跑下去", "流程"), "Workflow"),
+)
+AUTOMATION_HANDOFF_FALLBACK_ICONS = ("FileText", "Link2", "ScanSearch", "ListChecks", "Workflow", "Package", "Bot", "SendHorizontal")
+AUTOMATION_HANDOFF_OBJECT_RE = re.compile(
+    r"(?P<body>[^，。；！？!?]{1,64}?)(?:都|全部|一起)?"
+    r"(?:交给|丢给|发给|提交给|交由)\s*(?:Codex|系统|AI|自动化流程|它)"
+)
+AUTOMATION_HANDOFF_PRIMARY_SEPARATOR_RE = re.compile(r"(?:以及|并且|、|,|，|/)")
+AUTOMATION_HANDOFF_ACTION_RE = re.compile(
+    r"(?:自己|自动|继续)?"
+    r"(?:读取|查看|解析|提取|检查|审核|整理|汇总|生成|剪辑|输出|发布|上传|确认|填写|补充|制作|渲染|分析|识别|处理|执行|接管|完成|读|看|跑下去)"
+    r"[^、，。；！？!?\s并再]{0,8}"
+)
+AUTOMATION_HANDOFF_OBJECT_TERMS = (
+    "网页", "页面", "链接", "合同", "文件", "文档", "文案", "脚本", "图片", "主图", "详情图",
+    "封面", "海报", "视频", "录屏", "素材", "资料", "参数", "数据", "卖点", "名单", "题目",
+    "答案", "摘要", "标题", "简介", "标签", "检查", "审核", "输出", "发布", "要求", "用户画像", "竞品分析",
+)
+AUTOMATION_HANDOFF_FALLBACK_TERMS = (
+    "交给 Codex", "交给Codex", "丢给 Codex", "丢给Codex", "Codex 接管", "Codex接管",
+    "系统执行", "自动接管", "交给系统", "交给自动化", "自动化流程", "接管",
+)
+
+
+def _trim_handoff_span(text: str, start: int, end: int) -> tuple[int, int] | None:
+    while start < end and text[start] in " \t，把将，。；：:、":
+        start += 1
+    while end > start and text[end - 1] in " \t，。；：:、":
+        end -= 1
+    for suffix in ("全部", "一起", "都"):
+        if text[start:end].endswith(suffix):
+            end -= len(suffix)
+            break
+    span = text[start:end]
+    marker = max(span.rfind("把"), span.rfind("将"))
+    if marker >= 0:
+        start += marker + 1
+    for prefix in ("后面的", "剩下的", "接下来的", "这些", "这份", "这组", "你只负责", "只负责", "我直接"):
+        if text.startswith(prefix, start, end):
+            start += len(prefix)
+            break
+    while start < end and text[start] in " \t，。；：:、":
+        start += 1
+    return (start, end) if start < end else None
+
+
+def _handoff_icon(text: str, used: set[str]) -> str:
+    for terms, icon in AUTOMATION_HANDOFF_ICON_RULES:
+        if icon not in used and any(term in text for term in terms):
+            return icon
+    return next((icon for icon in AUTOMATION_HANDOFF_FALLBACK_ICONS if icon not in used), "Bot")
+
+
+def _handoff_action_is_prior_or_negated(text: str, start: int) -> bool:
+    prefix = text[max(0, start - 16):start]
+    if re.search(
+        r"(?:不要|不再|不必|无需|不用|禁止|不能|不会|不应|还没|没有|(?:^|[，。；！？!?\s]|先|请|Codex)别(?:再)?).{0,5}$",
+        prefix,
+    ):
+        return True
+    return re.search(r"之前.{0,6}$", prefix) is not None
+
+
+def _looks_like_handoff_object(text: str) -> bool:
+    return any(term in text for term in AUTOMATION_HANDOFF_OBJECT_TERMS)
+
+
+def _split_handoff_object_range(body: str, start: int, end: int) -> list[tuple[int, int]]:
+    segment = body[start:end]
+    for conjunction in re.finditer(r"[和与及]", segment):
+        split_at = start + conjunction.start()
+        left = body[start:split_at]
+        right = body[split_at + 1:end]
+        if _looks_like_handoff_object(left) and _looks_like_handoff_object(right):
+            return [
+                *_split_handoff_object_range(body, start, split_at),
+                *_split_handoff_object_range(body, split_at + 1, end),
+            ]
+    return [(start, end)]
+
+
+def extract_automation_handoff_steps(text: str) -> list[dict[str, str]]:
+    """Extract ordered handoff objects/actions from exact source text without sample defaults."""
+    candidates: list[tuple[int, int]] = []
+    for clause_match in CLAUSE_RE.finditer(text):
+        clause = clause_match.group(0)
+        object_match = AUTOMATION_HANDOFF_OBJECT_RE.search(clause)
+        if not object_match:
+            continue
+        body_start = clause_match.start() + object_match.start("body")
+        body = object_match.group("body")
+        primary_ranges: list[tuple[int, int]] = []
+        part_cursor = 0
+        for separator in AUTOMATION_HANDOFF_PRIMARY_SEPARATOR_RE.finditer(body):
+            primary_ranges.append((part_cursor, separator.start()))
+            part_cursor = separator.end()
+        primary_ranges.append((part_cursor, len(body)))
+        part_ranges = [
+            split_range
+            for primary_start, primary_end in primary_ranges
+            for split_range in _split_handoff_object_range(body, primary_start, primary_end)
+        ]
+        for part_start, part_end in part_ranges:
+            trimmed = _trim_handoff_span(text, body_start + part_start, body_start + part_end)
+            if trimmed and text[trimmed[0]:trimmed[1]].strip() not in {"先", "再", "然后", "接着", "之后", "后面"}:
+                candidates.append(trimmed)
+    actor_match = re.search(r"Codex|自动化流程|系统|AI|它", text)
+    action_start = actor_match.start() if actor_match else 0
+    for action_match in AUTOMATION_HANDOFF_ACTION_RE.finditer(text, action_start):
+        if _handoff_action_is_prior_or_negated(text, action_match.start()):
+            continue
+        trimmed = _trim_handoff_span(text, action_match.start(), action_match.end())
+        if trimmed:
+            candidates.append(trimmed)
+    if not candidates:
+        for term in AUTOMATION_HANDOFF_FALLBACK_TERMS:
+            start = text.find(term)
+            if start >= 0:
+                candidates.append((start, start + len(term)))
+                break
+    ordered: list[tuple[int, int]] = []
+    for start, end in sorted(candidates, key=lambda item: (item[0], item[1])):
+        value = text[start:end].strip()
+        if not value or any(start < prior_end and prior_start < end for prior_start, prior_end in ordered):
+            continue
+        if any(text[prior_start:prior_end].strip() == value for prior_start, prior_end in ordered):
+            continue
+        ordered.append((start, end))
+        if len(ordered) == 5:
+            break
+    steps: list[dict[str, str]] = []
+    used_icons: set[str] = set()
+    for start, end in ordered:
+        source_text = text[start:end].strip()
+        icon = _handoff_icon(source_text, used_icons)
+        used_icons.add(icon)
+        steps.append({
+            "id": f"handoff-step-{len(steps) + 1:02d}",
+            "label": source_text[:12],
+            "text": source_text,
+            "iconName": icon,
+        })
+    return steps
 
 
 # This is the single completion vocabulary used by both routers. Keep longer
@@ -222,13 +615,16 @@ def _completion_is_partial_or_unresolved(clause: str, start: int, end: int) -> b
 
 
 def _has_unresolved_completion_failure(text: str) -> bool:
+    evaluation = result_evaluation(text)
+    if evaluation is not None:
+        return evaluation.get("polarity") == "negative"
     if any(term in text for term in COMPLETION_HARD_FAILURE_TERMS):
         return True
     for term in COMPLETION_SOFT_FAILURE_TERMS:
         for match in re.finditer(re.escape(term), text):
             prefix = text[max(0, match.start() - 10):match.start()]
             suffix = text[match.end():match.end() + 10]
-            if re.search(r"(?:没有|并无|无(?:任何)?|未发现|不存在|不再)\s*$", prefix):
+            if re.search(r"(?:没有|并无|无(?:任何)?|未发现|不存在|不再|避免|防止|以免|可能|容易)\s*$", prefix):
                 continue
             if re.match(r"(?:项|数|数量)?\s*(?:为|是|[:：])?\s*(?:0|零)(?:\D|$)", suffix):
                 continue

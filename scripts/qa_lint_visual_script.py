@@ -276,7 +276,7 @@ def audio_policy_checks(data: dict[str, Any]) -> tuple[list[str], list[str]]:
                     f"audio-sfx-volume failed: {cue_id} volumeDb={cue.get('volumeDb')} exceeds "
                     f"the allowed ceiling {max_volume_db:g} dB for sfxId={sfx_id or 'unregistered'}"
                 )
-            if duration and duration > round(fps * 1.2):
+            if duration and duration > round(fps * 1.2) and sfx_id not in MASTERED_LIBRARY_SFX_IDS:
                 warnings.append(
                     f"audio-sfx-duration warning: {cue_id} lasts {duration / fps:.2f}s; V4 SFX should usually be short"
                 )

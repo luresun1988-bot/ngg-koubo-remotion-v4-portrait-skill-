@@ -33,6 +33,20 @@ def actual_for(case: dict[str, Any]) -> Any:
         return guards.is_process_context(text)
     if check == "proof":
         return guards.is_proof_context(text)
+    if check == "numeric-token":
+        return guards.numeric_metric_token(text)
+    if check == "numeric-meaningful":
+        return guards.numeric_metric_is_meaningful(text)
+    if check == "numeric-fields":
+        return guards.numeric_event_fields(text)
+    if check == "ordered-workflow":
+        cues = [
+            {"id": "cap-001", "sceneId": "scene-001", "startFrame": 0, "endFrame": 75, "text": "首先读取逐字稿"},
+            {"id": "cap-002", "sceneId": "scene-001", "startFrame": 75, "endFrame": 150, "text": "然后判断语义"},
+            {"id": "cap-003", "sceneId": "scene-001", "startFrame": 150, "endFrame": 225, "text": "最后写入时间线"},
+        ]
+        result = guards.ordered_workflow_window(cues, 0, max_gap_frames=65, max_duration_frames=500)
+        return [str(item.get("label") or "") for item in (result or ([], []))[1]]
     if check == "explanation":
         return guards.is_explanation_claim(text)
     if check == "cta":
@@ -54,20 +68,39 @@ CASES: list[dict[str, Any]] = [
     {"id": "complete-conditional", "check": "completion", "text": "如果完成设置，就可以导出", "expected": "prospective"},
     {"id": "complete-nominal", "check": "completion", "text": "完成按钮在右上角", "expected": "none"},
     {"id": "complete-handoff", "check": "completion", "text": "把素材交给 Codex 自动完成", "expected": "prospective"},
+    {"id": "complete-later-incorrect", "check": "completion", "text": "任务完成了，但结果不正确", "expected": "negated"},
+    {"id": "complete-latest-wins", "check": "completion", "text": "执行失败，但任务已经完成", "expected": "asserted"},
+    {"id": "complete-avoid-error", "check": "completion", "text": "任务完成了，接着检查以免出错", "expected": "asserted"},
     {"id": "result-positive-correct", "check": "result-evaluation", "text": "结果正确", "expected": "positive"},
     {"id": "result-positive-validation", "check": "result-evaluation", "text": "验证通过", "expected": "positive"},
     {"id": "result-positive-execution", "check": "result-evaluation", "text": "执行成功", "expected": "positive"},
     {"id": "result-positive-no-error", "check": "result-evaluation", "text": "没有错误", "expected": "positive"},
     {"id": "result-positive-zero-failure", "check": "result-evaluation", "text": "失败项为0", "expected": "positive"},
+    {"id": "result-positive-zero-error", "check": "result-evaluation", "text": "报错数为零", "expected": "positive"},
+    {"id": "result-positive-latest", "check": "result-evaluation", "text": "之前执行失败，现在验证通过", "expected": "positive"},
     {"id": "result-negative-error", "check": "result-evaluation", "text": "这一步出错了", "expected": "negative"},
     {"id": "result-negative-failure", "check": "result-evaluation", "text": "执行失败了", "expected": "negative"},
     {"id": "result-negative-incorrect", "check": "result-evaluation", "text": "结果不正确", "expected": "negative"},
+    {"id": "result-negative-judgement", "check": "result-evaluation", "text": "这是错误的", "expected": "negative"},
+    {"id": "result-negative-validation", "check": "result-evaluation", "text": "验证没有通过", "expected": "negative"},
+    {"id": "result-negative-no-success", "check": "result-evaluation", "text": "执行没有成功", "expected": "negative"},
     {"id": "result-negative-latest", "check": "result-evaluation", "text": "验证通过，但最终执行失败", "expected": "negative"},
     {"id": "result-none-question", "check": "result-evaluation", "text": "结果是否正确", "expected": "none"},
     {"id": "result-none-possible", "check": "result-evaluation", "text": "这一步可能出错", "expected": "none"},
     {"id": "result-none-avoid", "check": "result-evaluation", "text": "这里要避免错误", "expected": "none"},
+    {"id": "result-none-easy-error", "check": "result-evaluation", "text": "这个环节容易出错", "expected": "none"},
+    {"id": "result-none-meta-error", "check": "result-evaluation", "text": "这是错误的示例", "expected": "none"},
+    {"id": "result-none-meta-success", "check": "result-evaluation", "text": "成功按钮在右侧", "expected": "none"},
+    {"id": "result-none-conditional", "check": "result-evaluation", "text": "如果验证通过，就可以导出", "expected": "none"},
+    {"id": "result-none-prospective", "check": "result-evaluation", "text": "验证通过后再发布", "expected": "none"},
     {"id": "handoff-asserted", "check": "handoff", "text": "把素材交给 Codex 自动完成", "expected": "asserted"},
     {"id": "handoff-negated", "check": "handoff", "text": "Codex 还没有接管这一步", "expected": "negated"},
+    {"id": "handoff-prior", "check": "handoff", "text": "交给 Codex 之前，先检查素材", "expected": "prior"},
+    {"id": "numeric-chinese-token", "check": "numeric-token", "text": "十张详情图还没生成完", "expected": "十张"},
+    {"id": "numeric-chinese-meaningful", "check": "numeric-meaningful", "text": "十张详情图还没生成完", "expected": True},
+    {"id": "numeric-chinese-fields", "check": "numeric-fields", "text": "十张详情图已经生成好了", "expected": {"numericValue": 10, "numericPrefix": "", "numericSuffix": "张"}},
+    {"id": "proof-see-backend", "check": "proof", "text": "你看后台，十张详情图已经生成好了", "expected": True},
+    {"id": "ordered-workflow", "check": "ordered-workflow", "text": "首先读取逐字稿，然后判断语义，最后写入时间线", "expected": ["读取逐字稿", "判断语义", "写入时间线"]},
     {"id": "future-preview", "check": "future", "text": "下一期介绍 Codex 自动剪辑", "expected": True},
     {"id": "topic-intro", "check": "topic", "text": "这一期聊聊数字人为什么模糊", "expected": True},
     {"id": "explicit-cta", "check": "cta", "text": "评论区回复数字人领取模板", "expected": {"actionKind": "reply", "action": "评论区回复", "keyword": "数字人"}},

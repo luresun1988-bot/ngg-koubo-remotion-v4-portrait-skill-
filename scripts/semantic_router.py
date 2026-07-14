@@ -15,11 +15,15 @@ sys.path.insert(0, str(SCRIPT_DIR))
 from v4_utf8 import configure_utf8  # noqa: E402
 from semantic_guardrails import (  # noqa: E402
     completion_polarity,
+    extract_automation_handoff_steps,
     future_preview,
     handoff_state,
     is_explanation_claim,
     is_process_context,
     is_proof_context,
+    numeric_metric_is_meaningful,
+    numeric_metric_token,
+    ordered_workflow_window,
     parse_cta_provenance,
     result_evaluation,
     topic_intro,
@@ -161,6 +165,12 @@ def rule_result(intent: str, keywords: list[str], confidence: float = 0.82) -> d
     }
 
 
+def automation_handoff_result(text: str, keywords: list[str], confidence: float = 0.9) -> dict[str, Any]:
+    result = rule_result("automation-handoff", keywords, confidence)
+    result["internalSteps"] = extract_automation_handoff_steps(text)
+    return result
+
+
 def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[str, Any]:
     matched = {intent: contains_any(text, rule["terms"]) for intent, rule in RULES.items()}
     matched = {intent: hits for intent, hits in matched.items() if hits}
@@ -223,6 +233,16 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
             "confidence": 0.94,
         }
 
+    if handoff == "prior":
+        return {
+            "semanticIntent": "workflow-step",
+            "visualForm": "flowPath",
+            "keywords": ["先检查" if "先检查" in text else "前置检查"],
+            "requiredChecks": ["workflow-not-generic-card", "handoff-prerequisite-not-complete"],
+            "semanticModifiers": ["prerequisite"],
+            "confidence": 0.94,
+        }
+
     explicit_contrast = re.search(r"不是[^，。！？]{1,24}而是[^，。！？]{1,24}", text)
     if explicit_contrast and not any(term in text for term in FLOW_TRANSFORMATION_TERMS):
         return {
@@ -266,8 +286,8 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
     if "asset-variants" in matched and any(term in text for term in ["横屏", "竖屏", "方图", "多尺寸", "三尺寸", "多规格", "16:9", "4:3", "3:4", "比例", "横版", "竖版", "方形"]):
         return rule_result("asset-variants", matched["asset-variants"], 0.9)
 
-    numeric_match = NUMERIC_RE.search(text)
-    if numeric_match and any(term in text for term in ["提升", "增长", "比例", "指标", "数据", "分辨率", "清晰", "%", "倍", "万", "亿", "K", "k", "道题", "题", "张", "数量", "规模", "分钟", "秒", "小于", "省下", "批量", "处理", "账号", "扩到", "生成"]):
+    numeric_match = numeric_metric_token(text)
+    if numeric_match and numeric_metric_is_meaningful(text, numeric_match):
         checks = ["numeric-countup-required", "no-generic-card-fallback"]
         modifiers = ["numeric"]
         if is_proof_context(text):
@@ -282,7 +302,7 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
         return {
             "semanticIntent": "numeric-metric",
             "visualForm": "dataPunch",
-            "keywords": [numeric_match.group(0).strip()],
+            "keywords": [numeric_match],
             "requiredChecks": checks,
             "semanticModifiers": modifiers,
             "confidence": 0.92,
@@ -314,19 +334,17 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
         return rule_result(evaluation_intent, [source_text] if source_text else [], 0.94)
 
     if handoff == "asserted" and ENUMERATION_RE.search(text) is None:
-        return rule_result("automation-handoff", matched.get("automation-handoff", []) or ["自动交接"], 0.92)
+        return automation_handoff_result(text, matched.get("automation-handoff", []) or ["自动交接"], 0.92)
 
     if ("关键词" in text and is_process_context(text)) or completion_state == "prospective":
         return rule_result("workflow-step", ["流程"], 0.86)
 
     if any(term in text for term in AUTOMATION_HANDOFF_ACTION_TERMS):
-        return {
-            "semanticIntent": "automation-handoff",
-            "visualForm": "automationHandoff",
-            "keywords": [term for term in AUTOMATION_HANDOFF_ACTION_TERMS if term in text][:4],
-            "requiredChecks": RULES["automation-handoff"]["checks"],
-            "confidence": 0.9,
-        }
+        return automation_handoff_result(
+            text,
+            [term for term in AUTOMATION_HANDOFF_ACTION_TERMS if term in text][:4],
+            0.9,
+        )
 
     if "negative-friction" in matched and ("positive-confirm" in matched or "automation-handoff" in matched):
         positive_hits = matched.get("positive-confirm", []) + matched.get("automation-handoff", [])
@@ -377,7 +395,7 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
         return rule_result("platform-fanout", matched["platform-fanout"], 0.88)
 
     if "automation-handoff" in matched and any(term in text for term in ["交给", "丢给", "接管", "系统执行", "自动化流程"]):
-        return rule_result("automation-handoff", matched["automation-handoff"], 0.9)
+        return automation_handoff_result(text, matched["automation-handoff"], 0.9)
 
     if "manual-field" in matched and ("negative-friction" in matched or "positive-confirm" in matched):
         return rule_result("manual-field", matched["manual-field"], 0.9)
@@ -436,7 +454,8 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
 def semantic_metadata(text: str) -> dict[str, Any]:
     modifiers: list[str] = []
     completion_state = completion_polarity(text)
-    if NUMERIC_RE.search(text):
+    numeric_token = numeric_metric_token(text)
+    if numeric_token and numeric_metric_is_meaningful(text, numeric_token):
         modifiers.append("numeric")
     if completion_state == "asserted":
         modifiers.append("completed")
@@ -449,7 +468,7 @@ def semantic_metadata(text: str) -> dict[str, Any]:
     if any(term in text for term in ["不是", "别再", "风险", "手动", "低效", "麻烦"]):
         modifiers.append("negative")
     entities = [term for term in ENTITY_TERMS if term in text]
-    numbers = [match.group(0).strip() for match in NUMERIC_RE.finditer(text)]
+    numbers = [numeric_token.upper() if numeric_token and numeric_token[-1:] in "kmg" else numeric_token] if numeric_token else []
     return {
         "semanticModifiers": list(dict.fromkeys(modifiers)),
         "entities": list(dict.fromkeys(entities + numbers))[:8],
@@ -572,6 +591,41 @@ def build_semantic_beats(data: dict[str, Any]) -> list[dict[str, Any]]:
 
         cursor = 0
         while cursor < len(cues):
+            fps = int(data.get("composition", {}).get("fps") or 25)
+            ordered = ordered_workflow_window(
+                cues,
+                cursor,
+                max_gap_frames=round(fps * 2.6),
+                max_duration_frames=round(fps * 20.0),
+            )
+            if ordered:
+                group, internal_steps = ordered
+                start = int(group[0].get("startFrame", 0) or 0)
+                end = int(group[-1].get("endFrame", start + 1) or start + 1)
+                text = "，".join(str(cue.get("text") or "") for cue in group)
+                beat_id = f"beat-{beat_index:03d}"
+                beats.append(
+                    {
+                        "id": beat_id,
+                        "sceneId": scene_id,
+                        "beatGroupId": f"{scene_id}-{beat_id}",
+                        "startFrame": max(int(scene.get("startFrame", start) or start), start),
+                        "endFrame": min(int(scene.get("endFrame", end) or end), end),
+                        "text": text,
+                        "semanticIntent": "workflow-step",
+                        "visualForm": "flowPath",
+                        "confidence": 0.96,
+                        "keywords": [str(step.get("label") or "") for step in internal_steps[:3]],
+                        "requiredChecks": ["workflow-not-generic-card", "workflow-source-steps"],
+                        "semanticModifiers": ["ordered-workflow"],
+                        "sourceCueIds": [str(cue.get("id") or "") for cue in group if cue.get("id")],
+                        "internalSteps": internal_steps,
+                    }
+                )
+                cursor += len(group)
+                beat_index += 1
+                continue
+
             group = [cues[cursor]]
             start = int(cues[cursor].get("startFrame", 0) or 0)
             end = int(cues[cursor].get("endFrame", start + 1) or start + 1)
@@ -630,12 +684,22 @@ def build_semantic_beats(data: dict[str, Any]) -> list[dict[str, Any]]:
                 beat["ctaProvenance"] = info["ctaProvenance"]
             if isinstance(info.get("semanticModifiers"), list):
                 beat["semanticModifiers"] = info["semanticModifiers"]
+            if isinstance(info.get("internalSteps"), list):
+                beat["internalSteps"] = info["internalSteps"]
             beats.append(beat)
             beat_index += 1
 
     merged = merge_short_tail_beats(beats, scenes)
     for beat in merged:
-        beat.update(semantic_metadata(str(beat.get("text") or "")))
+        metadata = semantic_metadata(str(beat.get("text") or ""))
+        beat["semanticModifiers"] = list(dict.fromkeys(
+            [str(item) for item in beat.get("semanticModifiers", []) if str(item)]
+            + [str(item) for item in metadata.get("semanticModifiers", []) if str(item)]
+        ))
+        beat["entities"] = list(dict.fromkeys(
+            [str(item) for item in beat.get("entities", []) if str(item)]
+            + [str(item) for item in metadata.get("entities", []) if str(item)]
+        ))[:8]
     annotate_theme_thesis(merged, scenes)
     return merged
 

@@ -79,6 +79,29 @@ def assert_qa_ceiling(sfx_id: str, volume_db: float, should_pass: bool) -> None:
         )
 
 
+def assert_duration_policy(sfx_id: str, duration_frames: int, should_warn: bool) -> None:
+    data = {
+        "composition": {"fps": 25},
+        "visualEvents": [{"id": "event", "startFrame": 0, "endFrame": 5}],
+        "audioCues": [{
+            "id": "cue",
+            "type": "sfx",
+            "sfxId": sfx_id,
+            "startFrame": 0,
+            "durationFrames": duration_frames,
+            "volumeDb": -14 if sfx_id not in EXPECTED_IDS else APPROVED_CUE_DB,
+            "status": "active",
+        }],
+    }
+    _errors, warnings = qa_lint_visual_script.audio_policy_checks(data)
+    has_duration_warning = any("audio-sfx-duration" in warning for warning in warnings)
+    if should_warn != has_duration_warning:
+        raise AssertionError(
+            f"QA duration mismatch for sfxId={sfx_id or 'unregistered'} "
+            f"durationFrames={duration_frames}: {warnings}"
+        )
+
+
 def main() -> int:
     manifest_path = SKILL_ROOT / "assets" / "remotion-template" / "public" / "input" / "audio" / "sfx_manifest.json"
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -128,6 +151,8 @@ def main() -> int:
     assert_qa_ceiling("confirm_ding_01", -4.9, False)
     assert_qa_ceiling("custom_unregistered_01", -14.0, True)
     assert_qa_ceiling("custom_unregistered_01", -13.9, False)
+    assert_duration_policy("confirm_ding_01", 50, False)
+    assert_duration_policy("custom_unregistered_01", 50, True)
     print("sfx mastering regression: PASS")
     return 0
 

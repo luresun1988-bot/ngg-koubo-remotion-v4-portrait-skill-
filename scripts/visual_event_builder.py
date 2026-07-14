@@ -13,6 +13,7 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 from v4_utf8 import configure_utf8  # noqa: E402
+from semantic_guardrails import numeric_event_fields  # noqa: E402
 
 configure_utf8()
 
@@ -167,6 +168,41 @@ def source_bound_steps(
             "sourceCueIds": [cue_id],
             "iconName": icon,
         })
+        if len(steps) == limit:
+            break
+    return steps
+
+
+def validated_beat_internal_steps(
+    beat: dict[str, Any], data: dict[str, Any], limit: int = 5,
+) -> list[dict[str, Any]]:
+    """Keep only beat-owned, exact-source internal rows supplied by the semantic router."""
+    raw_steps = beat.get("internalSteps") if isinstance(beat.get("internalSteps"), list) else []
+    cue_map = {str(cue.get("id") or ""): cue for cue in owned_source_cues(beat, data)}
+    steps: list[dict[str, Any]] = []
+    seen_labels: set[str] = set()
+    for raw in raw_steps:
+        if not isinstance(raw, dict):
+            continue
+        label = str(raw.get("label") or "").strip()[:12]
+        text = str(raw.get("text") or "").strip()
+        source_ids = [str(item) for item in raw.get("sourceCueIds", []) if str(item)]
+        if not label or not text or label in seen_labels or label not in text or not source_ids:
+            continue
+        if any(cue_id not in cue_map for cue_id in source_ids):
+            continue
+        if not all(text in str(cue_map[cue_id].get("text") or "") for cue_id in source_ids):
+            continue
+        step = dict(raw)
+        step.update({
+            "id": str(raw.get("id") or f"source-step-{len(steps) + 1:02d}"),
+            "label": label,
+            "text": text,
+            "sourceCueIds": source_ids,
+            "iconName": str(raw.get("iconName") or "Workflow"),
+        })
+        steps.append(step)
+        seen_labels.add(label)
         if len(steps) == limit:
             break
     return steps
@@ -426,20 +462,7 @@ def cta_copy(text: str, sourced_provenance: dict[str, Any] | None = None) -> tup
 
 
 def numeric_fields(text: str) -> dict[str, Any]:
-    match = re.search(r"([+\-]?)(\d+(?:\.\d+)?)\s*(%|倍|万|亿|[KkMmGg]|人|道|题|个|条|分钟|秒)?", text)
-    if not match:
-        return {"numericValue": 30, "numericPrefix": "+", "numericSuffix": "%"}
-    value = float(match.group(2))
-    if value.is_integer():
-        value = int(value)
-    suffix = match.group(3) or ""
-    if suffix in {"k", "m", "g"}:
-        suffix = suffix.upper()
-    return {
-        "numericValue": value,
-        "numericPrefix": "+" if match.group(1) == "+" else "",
-        "numericSuffix": suffix,
-    }
+    return numeric_event_fields(text)
 
 
 def chapter_label_for_scene(scene: dict[str, Any]) -> tuple[str, str]:
@@ -614,6 +637,9 @@ def poster_steps(beat: dict[str, Any], data: dict[str, Any]) -> list[dict[str, A
 
 
 def field_steps(beat: dict[str, Any], data: dict[str, Any]) -> list[dict[str, Any]]:
+    supplied = validated_beat_internal_steps(beat, data)
+    if len(supplied) >= 2:
+        return supplied
     return source_bound_steps(beat, data, [
         ("输入", "TextCursorInput"),
         ("关键词", "Hash"),
@@ -933,13 +959,23 @@ def platform_steps(beat: dict[str, Any], data: dict[str, Any]) -> list[dict[str,
 
 
 def automation_steps(beat: dict[str, Any], data: dict[str, Any]) -> list[dict[str, Any]]:
-    return source_bound_steps(beat, data, [
-        ("任务", "ClipboardList"), ("素材", "Image"), ("文案", "FileText"),
-        ("页面", "MonitorUp"), ("标题", "FileText"), ("简介", "AlignLeft"),
-        ("标签", "Tags"), ("封面", "Image"), ("视频", "Video"),
-        ("流程", "ListChecks"), ("Codex", "Bot"), ("系统", "Bot"),
-        ("自动执行", "Play"), ("接管", "Bot"), ("处理", "Cog"),
-    ], "handoff", 5)
+    supplied = validated_beat_internal_steps(beat, data)
+    if supplied:
+        return supplied
+    raw_steps = beat.get("internalSteps") if isinstance(beat.get("internalSteps"), list) else []
+    candidates = [
+        (str(step.get("text") or step.get("label") or ""), str(step.get("iconName") or "Bot"))
+        for step in raw_steps if isinstance(step, dict) and str(step.get("text") or step.get("label") or "")
+    ]
+    if not candidates:
+        candidates = [
+            ("任务", "ClipboardList"), ("素材", "Image"), ("文案", "FileText"),
+            ("页面", "MonitorUp"), ("标题", "FileText"), ("简介", "AlignLeft"),
+            ("标签", "Tags"), ("封面", "Image"), ("视频", "Video"),
+            ("流程", "ListChecks"), ("Codex", "Bot"), ("系统", "Bot"),
+            ("自动执行", "Play"), ("接管", "Bot"), ("处理", "Cog"),
+        ]
+    return source_bound_steps(beat, data, candidates, "handoff", 5)
 
 
 def topic_keyword(text: str, beat: dict[str, Any]) -> str:
@@ -1669,6 +1705,8 @@ def sfx_intent_for_event(beat: dict[str, Any], event: dict[str, Any]) -> str | N
         return "confirm"
     if semantic_intent == "automation-handoff":
         return "automation_handoff"
+    if semantic_intent == "numeric-metric" and "completed" in [str(item) for item in beat.get("semanticModifiers", [])]:
+        return "confirm"
     if semantic_intent == "numeric-metric" or event_type in {"dataPunch", "metricSpotlight"}:
         return "data_count"
     if semantic_intent == "proof-material" or semantic_role in {"proof-material", "proof-focus", "material-main"}:
