@@ -26,6 +26,7 @@ REGRESSIONS = [
     "semantic_component_contract_regression.py",
     "component_provenance_regression.py",
     "transformation_evidence_regression.py",
+    "example_asset_regression.py",
     "sfx_mastering_regression.py",
     "sfx_semantic_routing_regression.py",
     "visual_density_regression.py",

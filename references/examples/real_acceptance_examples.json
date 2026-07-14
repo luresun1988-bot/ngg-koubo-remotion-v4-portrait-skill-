@@ -1,0 +1,87 @@
+{
+  "schema": "ngg-v4-real-acceptance-examples",
+  "version": 1,
+  "format": "portrait",
+  "purpose": "Small, repository-owned examples distilled from confirmed real projects. These are regression fixtures, not render templates and not user-facing media assets.",
+  "sourceEvidence": {
+    "qaRun": "E:/MyProject/koubo_jianji/qa_runs/v4_real_acceptance_examples_20260714",
+    "notes": [
+      "Do not copy large MP4 assets into the Skill repository.",
+      "Do not use historical mojibake labels as authoritative text.",
+      "Use these examples to protect portrait component coverage when routing or registry code changes."
+    ]
+  },
+  "projects": [
+    {
+      "id": "portrait_0712",
+      "description": "2026-07-12 portrait digital-human HD topic project.",
+      "format": "9:16",
+      "fps": 30,
+      "expectedComponentFamilies": [
+        "topicKeyword",
+        "semanticProblemMap",
+        "dataPunch",
+        "ctaTitle"
+      ],
+      "motionPreviewEvidence": [
+        "01_topic_and_problem.mp4",
+        "02_2k_to_1k.mp4",
+        "03_cta.mp4"
+      ]
+    }
+  ],
+  "examples": [
+    {
+      "id": "topic-keyword",
+      "category": "topic keyword",
+      "semanticRole": "topic-intro",
+      "eventType": "topicKeyword",
+      "visualForm": "topicKeyword",
+      "notes": "Portrait opening topic keyword example from the confirmed 0712 project."
+    },
+    {
+      "id": "problem-limitation-map",
+      "category": "problem/limitation map",
+      "semanticRole": "semantic-problem-map",
+      "eventType": "semanticProblemMap",
+      "visualForm": "redWarningCard",
+      "notes": "Portrait problem/limitation mapping example."
+    },
+    {
+      "id": "numeric-data-punch",
+      "category": "dataPunch/numeric result",
+      "semanticRole": "numeric-metric",
+      "eventType": "statusSticker",
+      "visualForm": "dataPunch",
+      "requiresNumericSource": true
+    },
+    {
+      "id": "cta-title",
+      "category": "CTA",
+      "semanticRole": "cta-resolve",
+      "eventType": "ctaTitle",
+      "visualForm": "ctaTitle",
+      "requiresCtaProvenance": true
+    }
+  ],
+  "sfxExamples": [
+    {
+      "id": "title-impact-library-available",
+      "intent": "title_impact",
+      "path": "input/audio/sfx/title_impact_whoosh_01.wav",
+      "notes": "Library availability check only; the selected portrait real project did not include activated SFX."
+    },
+    {
+      "id": "confirm-library-available",
+      "intent": "confirm",
+      "path": "input/audio/sfx/confirm_ding_01.wav",
+      "notes": "Library availability check only; activation remains governed by semantic routing."
+    },
+    {
+      "id": "negative-warning-library-available",
+      "intent": "negative_warning",
+      "path": "input/audio/sfx/negative_warning_01.wav",
+      "notes": "Library availability check only; activation remains governed by semantic routing."
+    }
+  ]
+}
