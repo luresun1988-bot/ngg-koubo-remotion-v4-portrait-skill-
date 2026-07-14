@@ -67,11 +67,13 @@ def run_case(case_id: str, index: int) -> dict[str, Any]:
     actual_sfx_id = str((cue or {}).get("sfxId") or "")
     actual_status = str((cue or {}).get("status") or "")
     actual_path = str((cue or {}).get("path") or "")
+    actual_volume_db = (cue or {}).get("volumeDb")
     ok = (
         cue is not None
         and actual_sfx_id == expected["sfxId"]
         and actual_status == "suggested"
         and bool(actual_path)
+        and actual_volume_db == -5
     )
     return {
         "id": case_id,
@@ -82,6 +84,7 @@ def run_case(case_id: str, index: int) -> dict[str, Any]:
         "actualSfxId": actual_sfx_id,
         "status": actual_status,
         "path": actual_path,
+        "volumeDb": actual_volume_db,
         "ok": ok,
     }
 
@@ -99,12 +102,14 @@ def run_direct_result_case(case: dict[str, str], index: int) -> dict[str, Any]:
     actual_semantic_intent = str(data["semanticBeats"][0].get("semanticIntent") or "")
     actual_sfx_intent = str((cue or {}).get("sfxIntent") or "")
     actual_sfx_id = str((cue or {}).get("sfxId") or "")
+    actual_volume_db = (cue or {}).get("volumeDb")
     if expected_intent:
         ok = (
             actual_semantic_intent == case["semanticIntent"]
             and actual_sfx_intent == expected_intent
             and actual_sfx_id == case["sfxId"]
             and str((cue or {}).get("status") or "") == "suggested"
+            and actual_volume_db == -5
         )
     else:
         ok = not sfx_cues
@@ -117,6 +122,7 @@ def run_direct_result_case(case: dict[str, str], index: int) -> dict[str, Any]:
         "actualSfxId": actual_sfx_id,
         "status": str((cue or {}).get("status") or ""),
         "path": str((cue or {}).get("path") or ""),
+        "volumeDb": actual_volume_db,
         "ok": ok,
     }
 

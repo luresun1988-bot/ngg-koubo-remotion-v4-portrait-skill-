@@ -606,7 +606,7 @@ Semantic SFX routing may emit review-only cues:
   "sfxIntent": "data_count",
   "sfxId": "data_count_01",
   "path": "input/audio/sfx/data_count_01.wav",
-  "volumeDb": -26,
+  "volumeDb": -5,
   "duckUnderVoice": true,
   "status": "suggested",
   "sourceBeatId": "beat-003",
@@ -636,7 +636,7 @@ Rules:
 - `status: "suggested"` means the router recommends a confirmed library sound, but it must not render until reviewed and changed to `active`.
 - The Remotion template renders only `sfx`/`bgm` cues that have a real `path` and are not `suggested`, `pending-selection`, `pending-generation`, `disabled`, or `muted`.
 - `path` is relative to Remotion `public/`, for example `input/audio/sfx/ui_tick_01.wav`.
-- Default SFX volume is about `-23 dB`; prominent SFX must stay at or below `-14 dB`.
+- The six registered mastered SFX default to `-5 dB`; unregistered or ad hoc SFX must stay at or below `-14 dB` until separately auditioned and approved.
 - Default BGM volume is about `-30 dB`; BGM louder than `-20 dB` is a QA failure.
 - Use `fadeInFrames` and `fadeOutFrames` for longer BGM or whoosh cues. Short tick/click SFX may use tiny fades or none.
 - Active SFX should land near a visual event boundary and should not be added to every minor visual change.

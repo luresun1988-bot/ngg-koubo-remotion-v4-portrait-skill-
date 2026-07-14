@@ -54,7 +54,7 @@ Rules:
 - If no manifest is configured, write `sfxIntent` and leave selection pending.
 - If no audio `path` is present, set `status` to `pending-selection`, `pending-generation`, `disabled`, or `muted`; the Remotion template will not render that cue.
 - Align active SFX near a visual event boundary, usually within 8 frames of the event start or internal step impact.
-- Default SFX `volumeDb` is about `-23`. Prominent SFX must stay at or below `-14 dB`.
+- The six manifest-backed mastered library SFX default to `-5 dB`, matching the user-approved audition. Unregistered or ad hoc SFX must stay at or below `-14 dB` until separately auditioned and approved.
 - Keep most SFX under 1.2 seconds. Longer risers or whooshes need an explicit reason in `notes`.
 
 Recommended `sfxIntent` values:
@@ -93,19 +93,21 @@ Confirmed default SFX:
 
 | sfxId | Intent | Default volume | Use |
 | --- | --- | --- | --- |
-| `automation_handoff_01` | `automation_handoff` | `-25 dB` | Manual task handed to Codex/AI/system, workflow takeover, or automation start. |
-| `confirm_ding_01` | `confirm` | `-25 dB` | Positive completion, correct result, green check, workflow completed, or recommendation confirmed. |
-| `data_count_01` | `data_count` | `-26 dB` | Numeric count-up, percentage growth, 5x, question count, or data punch HUD. |
-| `negative_warning_01` | `negative_warning` | `-28 dB` | Red warning card, failed status, account problem, risk, wrong path, or blocked workflow. |
-| `proof_reveal_01` | `proof_reveal` | `-30 dB` | Screenshot, recording, evidence window, result board, or Before/Now comparison reveal. |
-| `title_impact_whoosh_01` | `title_impact` | `-24 dB` | Opening big-opinion title, major judgement, or keyword scale-up landing. Trigger slightly before the keyword/title visual landing. |
+| `automation_handoff_01` | `automation_handoff` | `-5 dB` | Manual task handed to Codex/AI/system, workflow takeover, or automation start. |
+| `confirm_ding_01` | `confirm` | `-5 dB` | Positive completion, correct result, green check, workflow completed, or recommendation confirmed. |
+| `data_count_01` | `data_count` | `-5 dB` | Numeric count-up, percentage growth, 5x, question count, or data punch HUD. |
+| `negative_warning_01` | `negative_warning` | `-5 dB` | Red warning card, failed status, account problem, risk, wrong path, or blocked workflow. |
+| `proof_reveal_01` | `proof_reveal` | `-5 dB` | Screenshot, recording, evidence window, result board, or Before/Now comparison reveal. |
+| `title_impact_whoosh_01` | `title_impact` | `-5 dB` | Opening big-opinion title, major judgement, or keyword scale-up landing. Trigger slightly before the keyword/title visual landing. |
 
 `automation_handoff_01` is a user-confirmed AI-generated WAV. Use it for handoff/takeover semantics, not final completion, title impact, or generic transition sweeps.
 `data_count_01` is a user-confirmed AI-generated WAV. Use it for numeric/data semantics, not generic card entrances.
-`proof_reveal_01` is a user-confirmed AI-generated WAV. The source is loud, so keep the default volume low and use it only when real proof material appears.
+`proof_reveal_01` is a user-confirmed AI-generated WAV. Use it only when real proof material appears.
 `title_impact_whoosh_01` is a user-confirmed AI-generated WAV. It is longer than most SFX at about 2 seconds, so use it sparingly and only for major opening or chapter-level beats.
 `confirm_ding_01` is a user-confirmed AI-generated WAV. Use it for success/completion semantics, not for title impact, warning, or ordinary list ticks.
-`negative_warning_01` is a user-confirmed AI-generated WAV. The source is loud, so keep the default volume low and use it only once per spoken warning/error beat.
+`negative_warning_01` is a user-confirmed AI-generated WAV. Use it only once per spoken warning/error beat.
+
+All six library WAVs are mastered with `+18 dB` pre-gain and a `-1 dBFS` peak limiter before the `-5 dB` cue gain is applied. This asset-plus-cue combination is the approved contract; replacing a WAV requires a new loudness test and audition.
 
 ## BGM
 
@@ -174,7 +176,7 @@ Check:
 - Source sound is preserved only where intended.
 - SFX and BGM paths exist if enabled.
 - Every non-original SFX or BGM has a source or generation record when used in final output.
-- `audio-sfx-volume`: prominent SFX is not louder than `-14 dB`.
+- `audio-sfx-volume`: the six registered mastered SFX are not louder than `-5 dB`; unregistered SFX are not louder than `-14 dB`.
 - `audio-bgm-volume`: BGM is not louder than `-20 dB`.
 - `audio-sfx-sync`: active SFX is close to a semantic visual event boundary.
 - `audio-sfx-density`: SFX are not stacked on every small motion beat.

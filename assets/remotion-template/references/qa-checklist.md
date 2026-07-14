@@ -213,7 +213,7 @@ Check:
 - Active SFX has a real `path` under Remotion `public/`; pending SFX uses `status: pending-selection`.
 - `audio-sfx-sync`: active SFX lands near a visual event boundary or an intentional internal step.
 - `audio-sfx-density`: SFX are not closer than about half a second unless the sequence explicitly needs rapid UI ticks.
-- `audio-sfx-volume`: prominent SFX stays at or below `-14 dB`; default SFX should be around `-23 dB`.
+- `audio-sfx-volume`: the six registered mastered SFX stay at or below `-5 dB`; unregistered SFX stay at or below `-14 dB`. Reduce a registered cue further whenever it masks narration.
 - BGM is absent unless enabled and configured.
 - BGM path exists if enabled.
 - Pending BGM uses `status: pending-generation`; do not render an invented path.

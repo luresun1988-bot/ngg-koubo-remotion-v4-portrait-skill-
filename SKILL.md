@@ -79,7 +79,7 @@ Produce or modify 9:16 Chinese vertical talking-head Remotion edits in the NGG V
 ### Audio and Output
 
 - Keep voice primary. Render added audio only from active `audioCues` with existing paths; pending, suggested, disabled, muted, or pathless cues remain silent.
-- Follow the portrait mix values and semantic cue policy in `references/audio-policy.md`; do not activate SFX for every visual change.
+- Follow the portrait mix values and semantic cue policy in `references/audio-policy.md`; the six manifest-backed mastered SFX default to `-5 dB`, while unregistered or ad hoc SFX stay at or below `-14 dB`. Reduce any cue that masks narration, and do not activate SFX for every visual change.
 - Require final output to decode completely with expected video frames and audio, requested codecs, yuv420p/tv/BT.709 metadata, no black gaps, and no audio truncation.
 
 ## Reference Routing

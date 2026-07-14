@@ -5,9 +5,16 @@
   "license": "user-provided AI-generated audio; approved by user for V4 library use",
   "defaultPolicy": {
     "voiceFirst": true,
-    "defaultVolumeDb": -23,
-    "prominentMaxVolumeDb": -14,
+    "defaultVolumeDb": -5,
+    "prominentMaxVolumeDb": -5,
     "renderOnlyWhenReferencedByAudioCue": true
+  },
+  "mastering": {
+    "preGainDb": 18,
+    "limiterPeakDb": -1,
+    "cueVolumeDb": -5,
+    "approvedByUser": true,
+    "approvedDate": "2026-07-14"
   },
   "items": [
     {
@@ -25,7 +32,7 @@
       "path": "input/audio/sfx/title_impact_whoosh_01.wav",
       "durationFrames": 50,
       "durationSec": 2.0,
-      "defaultVolumeDb": -24,
+      "defaultVolumeDb": -5,
       "duckUnderVoice": true,
       "source": "user-confirmed AI-generated SFX",
       "sourceFileName": "Short_clean_airy_who_#4-1783399157005.wav",
@@ -47,7 +54,7 @@
       "path": "input/audio/sfx/confirm_ding_01.wav",
       "durationFrames": 50,
       "durationSec": 2.0,
-      "defaultVolumeDb": -25,
+      "defaultVolumeDb": -5,
       "duckUnderVoice": true,
       "source": "user-confirmed AI-generated SFX",
       "sourceFileName": "user-provided-complete.wav",
@@ -68,11 +75,11 @@
       "path": "input/audio/sfx/negative_warning_01.wav",
       "durationFrames": 25,
       "durationSec": 1.0,
-      "defaultVolumeDb": -28,
+      "defaultVolumeDb": -5,
       "duckUnderVoice": true,
       "source": "user-confirmed AI-generated SFX",
       "sourceFileName": "user-provided-error.wav",
-      "notes": "Negative warning/error sound for red warning cards, failed status, account problems, risks, wrong path, or blocked workflows. Use sparingly because the source is loud."
+      "notes": "Negative warning/error sound for red warning cards, failed status, account problems, risks, wrong path, or blocked workflows. The mastered library asset is user-approved at -5 dB; reduce it per project if it masks narration."
     },
     {
       "sfxId": "automation_handoff_01",
@@ -90,7 +97,7 @@
       "path": "input/audio/sfx/automation_handoff_01.wav",
       "durationFrames": 50,
       "durationSec": 2.0,
-      "defaultVolumeDb": -25,
+      "defaultVolumeDb": -5,
       "duckUnderVoice": true,
       "source": "user-confirmed AI-generated SFX",
       "sourceFileName": "user-provided-handoff.wav",
@@ -108,7 +115,7 @@
         "data-punch"
       ],
       "path": "input/audio/sfx/data_count_01.wav",
-      "defaultVolumeDb": -26,
+      "defaultVolumeDb": -5,
       "sourceFileName": "user-provided-data.wav",
       "notes": "Light numeric tick for count-up, percentages, growth metrics, 5x, question count, or data punch HUD. Do not use as generic UI tick.",
       "durationFrames": 25,
@@ -130,9 +137,9 @@
         "screen-recording-proof"
       ],
       "path": "input/audio/sfx/proof_reveal_01.wav",
-      "defaultVolumeDb": -30,
+      "defaultVolumeDb": -5,
       "sourceFileName": "user-provided-proof.wav",
-      "notes": "Proof material reveal for screenshot, recording, evidence window, result board, or Before/Now comparison. Source is loud, keep default volume low.",
+      "notes": "Proof material reveal for screenshot, recording, evidence window, result board, or Before/Now comparison. The mastered library asset is user-approved at -5 dB; reduce it per project if it masks narration.",
       "durationFrames": 25,
       "durationSec": 1.0,
       "duckUnderVoice": true,

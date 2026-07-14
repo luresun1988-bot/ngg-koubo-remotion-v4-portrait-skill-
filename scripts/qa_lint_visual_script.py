@@ -38,6 +38,16 @@ CARD_LIKE_MAIN_EVENT_TYPES = {
 RENDERED_AUDIO_TYPES = {"sfx", "bgm"}
 PENDING_AUDIO_STATUSES = {"pending-selection", "pending-generation", "disabled", "muted"}
 SFX_VISUAL_SYNC_WINDOW_FRAMES = 8
+MASTERED_LIBRARY_SFX_IDS = {
+    "automation_handoff_01",
+    "confirm_ding_01",
+    "data_count_01",
+    "negative_warning_01",
+    "proof_reveal_01",
+    "title_impact_whoosh_01",
+}
+GENERIC_SFX_MAX_VOLUME_DB = -14.0
+MASTERED_LIBRARY_SFX_MAX_VOLUME_DB = -5.0
 NUMERIC_VALUE_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|[KkMmGg]|x|X)?")
 NUMERIC_UNIT_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|[KkMmGg]|x|X)")
 FLOW_TEXT_RE = re.compile(r"(第一|第二|第三|第1|第2|第3|步骤|流程|结论|行动|最后|step|Step|01|02|03)")
@@ -255,9 +265,16 @@ def audio_policy_checks(data: dict[str, Any]) -> tuple[list[str], list[str]]:
 
         if cue_type == "sfx":
             sfx_cues.append(cue)
-            if cue.get("volumeDb") is not None and float(cue.get("volumeDb")) > -14:
+            sfx_id = str(cue.get("sfxId") or "")
+            max_volume_db = (
+                MASTERED_LIBRARY_SFX_MAX_VOLUME_DB
+                if sfx_id in MASTERED_LIBRARY_SFX_IDS
+                else GENERIC_SFX_MAX_VOLUME_DB
+            )
+            if cue.get("volumeDb") is not None and float(cue.get("volumeDb")) > max_volume_db:
                 errors.append(
-                    f"audio-sfx-volume failed: {cue_id} volumeDb={cue.get('volumeDb')} is too loud for voice-first V4; keep prominent SFX <= -14 dB"
+                    f"audio-sfx-volume failed: {cue_id} volumeDb={cue.get('volumeDb')} exceeds "
+                    f"the allowed ceiling {max_volume_db:g} dB for sfxId={sfx_id or 'unregistered'}"
                 )
             if duration and duration > round(fps * 1.2):
                 warnings.append(
