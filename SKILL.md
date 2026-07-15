@@ -1,6 +1,6 @@
 ---
 name: ngg-koubo-remotion-v4-portrait
-description: "Full-process 9:16 Chinese vertical talking-head Remotion editing skill. Use when Codex needs to plan, build, render, or QA high-energy koubo/digital-human videos with semantic research, transcript/timecode gating, visual_script.json, V4 Remotion template implementation, bold kinetic titles, captions, cards, icons, presenter repositioning, proof materials, SFX/BGM planning, thumbnails, and layered QA."
+description: "Full-process 9:16 Chinese vertical talking-head Remotion editing skill. Use when Codex needs to plan, build, render, or QA high-energy koubo/digital-human videos with semantic research, transcript/timecode gating, visual_script.json, V4 Remotion template implementation, bold kinetic titles, captions, cards, icons, stable presenter framing, sparse impact punches, proof materials, SFX/BGM planning, thumbnails, and layered QA."
 ---
 
 # NGG Koubo Remotion V4 Portrait
@@ -66,6 +66,7 @@ Produce or modify 9:16 Chinese vertical talking-head Remotion edits in the NGG V
 ### Portrait Visual and Material Integrity
 
 - Default to fullscreen presenter. Use PiP only when readable proof material becomes the main screen; use a vertical 9:16 rounded presenter PiP by default and return to fullscreen after proof ends.
+- Never move the portrait presenter sideways automatically to make room for a HUD. Keep `presenterLayout=side` only as an explicit `manual-approved` choice or a `legacy-project` compatibility state; semantic routing and event building must not select it. Side HUDs use face-safe overlay lanes while the presenter remains fullscreen.
 - Protect the center face/eye/mouth band, hand gestures, captions, and material readability. Use compact top-safe or side-rail HUD forms in fullscreen presenter scenes; reserve large complex panels for proof/material-main/PiP scenes.
 - Keep one bottom caption layer. `embedded` renders complete authoritative cue text in one or two all-white lines with adaptive dark backing; `none` preserves the full timecoded caption data but renders no caption layer. Never truncate or fabricate timing.
 - Keep source brightness by default. Use semantic colors, uniform dark translucent HUD backing, and neutral shadows; do not use colored glow, directional card gradients, generic edge masks, or more than three simultaneous information cards.
@@ -78,6 +79,7 @@ Produce or modify 9:16 Chinese vertical talking-head Remotion edits in the NGG V
 - Create only an approval-required theme-thesis candidate automatically. Promote `depthKeyword` only after explicit user approval and approval of a transparent, composition-aligned presenter foreground cutout.
 - Use one sourced white keyword of at most six Chinese characters on one line behind the presenter. Do not split it around the head or add semantic colors or a numeric subline.
 - Keep the base camera stable. Reserve `presenter-impact-punch` for strong source-bound questions, judgements, reversals, warnings, or asserted results. Prefer lifecycle sync: match one visible semantic companion by scene, `sourceBeatId`, and exact half-open range; push to peak in 4–6 FPS-scaled frames, hold at peak with no rebound, then return during the companion's exit and finish on the same frame. Use the short standalone fallback only when no companion can be synchronized. Keep starts about eight seconds apart, at most three in a rolling minute, and separate from fullscreen/PiP geometry transitions, material focus, CTA, and ordinary explanation.
+- Treat the legacy event name `presenterReposition` as scale-only `presenter-impact-punch` metadata. It must not translate the portrait presenter horizontally or activate the manual `side` layout.
 
 ### Audio and Output
 

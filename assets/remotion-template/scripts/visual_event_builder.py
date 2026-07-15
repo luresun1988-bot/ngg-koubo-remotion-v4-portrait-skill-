@@ -87,7 +87,16 @@ def load_presentation_sfx_intents() -> dict[str, str]:
     return mapping
 
 
+def load_presenter_layout_policy() -> dict[str, Any]:
+    data = json.loads(presentation_rules_path().read_text(encoding="utf-8-sig"))
+    policy = data.get("presenterLayoutPolicy")
+    if not isinstance(policy, dict):
+        raise ValueError("presentation_rules.json missing presenterLayoutPolicy")
+    return policy
+
+
 PRESENTATION_SFX_INTENTS = load_presentation_sfx_intents()
+PRESENTER_LAYOUT_POLICY = load_presenter_layout_policy()
 PUNCTUATION = " ，。？！、；;：:.!?"
 NUMERIC_VALUE_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|[KkMmGg]|个|张|条|分钟|秒)?")
 
@@ -101,6 +110,25 @@ def load_json(path: Path) -> dict[str, Any]:
 
 def save_json(path: Path, data: dict[str, Any]) -> None:
     path.write_text(json.dumps(data, ensure_ascii=True, indent=2), encoding="utf-8")
+
+
+def validate_presenter_layout_policy(data: dict[str, Any]) -> None:
+    automatic_allowed = {
+        str(value) for value in PRESENTER_LAYOUT_POLICY.get("automaticAllowed", [])
+    }
+    manual_only = {
+        str(value) for value in PRESENTER_LAYOUT_POLICY.get("manualOnly", [])
+    }
+    for index, scene in enumerate(data.get("scenes", [])):
+        if not isinstance(scene, dict):
+            continue
+        layout = str(scene.get("presenterLayout") or "")
+        source = str(scene.get("presenterLayoutSource") or "")
+        if source == "automatic" and (layout in manual_only or layout not in automatic_allowed):
+            raise ValueError(
+                f"scenes[{index}] automatic presenter layout cannot use {layout!r}; "
+                "portrait side layout is manual/legacy compatibility only"
+            )
 
 
 def normalize_hud_source(text: str) -> str:
@@ -1955,6 +1983,7 @@ def merge_sfx_suggestions(existing_cues: list[Any], suggestions: list[dict[str, 
 
 
 def apply_visual_events(data: dict[str, Any]) -> dict[str, Any]:
+    validate_presenter_layout_policy(data)
     data["visualEvents"] = build_visual_events(data)
     data["audioCues"] = merge_sfx_suggestions(data.get("audioCues", []), build_sfx_suggestions(data))
     qa_frames = [frame for frame in data.get("qaFrames", []) if isinstance(frame, dict)]

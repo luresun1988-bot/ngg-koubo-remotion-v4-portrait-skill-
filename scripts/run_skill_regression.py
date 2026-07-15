@@ -33,6 +33,7 @@ REGRESSIONS = [
     "visual_density_regression.py",
     "portrait_hud_duration_regression.py",
     "presenter_impact_regression.py",
+    "portrait_presenter_layout_policy_regression.py",
     "keyword_hold_regression.py",
     "dynamic_continuity_regression.py",
     "presenter_media_regression.py",

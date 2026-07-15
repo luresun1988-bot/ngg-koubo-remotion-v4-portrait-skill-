@@ -17,6 +17,7 @@ V4 Portrait uses high-energy short-video packaging for 9:16 Chinese vertical tal
 Use this branch for fullscreen presenter edits with semantic HUD packaging.
 
 - Presenter is fullscreen by default.
+- Side HUDs do not move the presenter. Keep the presenter fullscreen and place compact overlays in face-safe lanes; `presenterLayout=side` is manual-approved/legacy compatibility only.
 - In 9:16 fullscreen presenter scenes, face safety beats component completeness. Do not place large panels, dashboards, network graphs, or wide card groups across the center face band. Use compact HUD rails, top timelines, right-side field lists, and short caption-safe strips instead.
 - Complex full panels are allowed by default only in proof/material-main/PiP scenes where the presenter has already yielded the center screen to readable material.
 - Do not add artificial colored room lights.
@@ -117,7 +118,7 @@ Cards explain one point each.
 Apply a visible outer ring shadow to all packaging surfaces except bottom captions:
 
 - HUD panels, cards, process boards, contrast boards, status stickers, and flow panels.
-- Presenter PiP windows and side presenter windows.
+- Presenter PiP windows and manually approved or legacy side presenter windows.
 - Material windows, proof boards, gallery cards, and screenshot/recording frames.
 - Non-caption large text should use neutral text shadow as its highlight.
 - Default HUD surface shadow should be visibly separated, using `0 30px 72px rgba(0,0,0,0.68), 0 10px 24px rgba(0,0,0,0.54)` or a stronger equivalent.
@@ -239,3 +240,4 @@ Protect face, mouth, eyes, and key hand gestures.
 - Process: presenter may remain fullscreen unless a large material or diagram needs the main screen.
 - CTA: presenter returns to a dominant or clear speaking layout.
 - Presenter movement must be semantic by scene type, not arbitrary empty-space chasing.
+- Do not move the portrait presenter horizontally to fill space beside a HUD. Use compact top/bottom/side overlays, a full material scene with PiP, or a stable fullscreen hold.

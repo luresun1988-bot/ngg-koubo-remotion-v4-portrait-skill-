@@ -3,6 +3,13 @@
   "version": 1,
   "format": "portrait",
   "sourceOfTruth": "scripts/visual_event_builder.py",
+  "presenterLayoutPolicy": {
+    "automaticAllowed": ["fullscreen", "large", "pip", "none"],
+    "manualOnly": ["side"],
+    "manualSources": ["manual-approved", "legacy-project"],
+    "sideHudMovesPresenter": false,
+    "impactEventChangesPosition": false
+  },
   "semanticToPresentation": [
     {"semanticIntent": "topic-intro", "eventTypes": ["topicKeyword"], "semanticRole": "topic-intro", "primarySfxIntent": null},
     {"semanticIntent": "explanation-claim", "eventTypes": ["claimStrip", "statusSticker"], "semanticRole": "explanation-claim", "primarySfxIntent": null},

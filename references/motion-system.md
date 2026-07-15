@@ -192,13 +192,16 @@ Presenter movement follows scene type:
 - Explanation, Process, Contrast: presenter remains fullscreen unless a large material or diagram needs the main screen.
 - Proof: source material main screen, presenter rounded PiP.
 - CTA: presenter returns to a clear speaking layout.
+- Side HUDs: presenter stays fullscreen; HUD lane selection must not trigger horizontal presenter movement.
 
 Movement style:
 
-- Scale and translate with easing.
+- Interpolate fullscreen/PiP geometry with easing. Do not translate the fullscreen presenter sideways for ordinary portrait HUD layout.
 - Keep the base camera stable. Do not use presenter scale to fill a semantic refresh quota; cards, icons, numbers, and labels provide ordinary refreshes.
 - A slow symmetric `1 -> peak -> 1` zoom lasting longer than one second reads as drift and is forbidden for semantic emphasis.
 - Fullscreen/PiP geometry transitions are not semantic camera punches. Interpolate left/top/width/height/radius for about 0.8 seconds while keeping one video instance mounted. Begin PiP-to-fullscreen return during the final 0.8 seconds of proof so it lands exactly at the next scene boundary.
+- Keep `presenterLayout=side` rendering only for `manual-approved` or `legacy-project` scenes. Automatic semantic routing and visual-event building must not create it.
+- Treat `type=presenterReposition` as the legacy name for scale-only `presenter-impact-punch`; it must not change presenter X/Y placement.
 
 ## Dynamic Motion QA
 

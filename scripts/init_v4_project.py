@@ -1607,6 +1607,7 @@ def starter_visual_script(
                 "endFrame": end,
                 "semanticRole": semantic_role,
                 "presenterLayout": "large",
+                "presenterLayoutSource": "automatic",
                 "materialLayout": "none",
                 "intent": "Semantic V4 scene generated from real caption timeline." if timeline_cues else "Semantic V4 scene generated from source segment timing.",
                 "sourceVideo": source_video,

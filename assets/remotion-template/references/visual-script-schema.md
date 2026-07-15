@@ -119,6 +119,7 @@ Scene types:
   "endFrame": 125,
   "semanticRole": "pain-question",
   "presenterLayout": "large",
+  "presenterLayoutSource": "automatic",
   "materialLayout": "none",
   "intent": "Open with the viewer pain.",
   "sourceVideo": "input/main.mp4",
@@ -130,7 +131,8 @@ Presenter layout guidance:
 
 - Use `large` for default fullscreen digital-human scenes.
 - Use `pip` only when `materialLayout` is `main` or `clean` and the material is the primary screen.
-- Use `side` sparingly; prefer fullscreen presenter plus side HUD overlays for the `dark-fullscreen-semantic-hud` branch.
+- Automatic routing may use `fullscreen`/`large` and proof-driven `pip`; it must never select `side` to make room for a HUD.
+- `side` is compatibility-only. A new explicitly approved side layout records `presenterLayoutSource: "manual-approved"`; a marked historical scene may use `"legacy-project"`. An unmarked legacy side scene remains renderable but emits a migration warning. `presenterLayoutSource: "automatic"` with `presenterLayout: "side"` is invalid.
 - When `presenterLayout` is `pip` and `materialLayout` is `main` or `clean`, treat the scene as material focus mode. Avoid unrelated `infoCard`, `platform-fanout`, `automation-handoff`, `semantic-problem-map`, and generic `kineticTitle` events in that same frame range.
 
 ## captionCues
@@ -158,7 +160,7 @@ Rules:
 - `captionRenderMode` is `embedded` or `none`. `none` disables only the rendered caption layer; `captionCues` and `captionTimeline` remain mandatory and authoritative.
 - `presenterAudio.mode` is `embedded`, `normalized-wav`, or `none`. `normalized-wav` requires `path`, `sampleRate=48000`, `normalizationReportPath`, and optional measured `syncOffsetFrames` with `syncEvidence` when non-zero. Optional `volumeDb` is a finite narration gain from `-96` to `+6`; omission preserves `0 dB`. Segmented presenter output uses a video-only MP4 and mounts the WAV once.
 - Mount one reusable `V4AudioLayers` in the composition. Active BGM/SFX must come from `audioCues`, never from a second hard-coded audio list in a custom composition.
-- A presenter camera impact uses `type=presenterReposition`, `motionType=presenter-impact-punch`, a strong `semanticRole`, `sourceBeatId`, and optional `presenterPeakScale`. In the preferred lifecycle-synced form, add one visible semantic companion in the same scene with the same `sourceBeatId` and exact `[startFrame,endFrame)` range; total duration may be up to six seconds. The renderer pushes quickly, holds the peak with no rebound, and uses the companion's exit window as the return clock. Without an exact companion, the event is a standalone fallback and scales from composition FPS: 18–28 frames at 30 fps or about 15–23 at 25 fps. Portrait peak scale is 1.06–1.10. `presenterSettleScale` is retained only for old project compatibility and is ignored by the current renderer. Keep impact starts about eight seconds apart and no more than three times in a rolling minute.
+- A presenter camera impact uses `type=presenterReposition`, `motionType=presenter-impact-punch`, a strong `semanticRole`, `sourceBeatId`, and optional `presenterPeakScale`. The compatibility event name is scale-only and must not change horizontal position or activate `presenterLayout=side`. In the preferred lifecycle-synced form, add one visible semantic companion in the same scene with the same `sourceBeatId` and exact `[startFrame,endFrame)` range; total duration may be up to six seconds. The renderer pushes quickly, holds the peak with no rebound, and uses the companion's exit window as the return clock. Without an exact companion, the event is a standalone fallback and scales from composition FPS: 18–28 frames at 30 fps or about 15–23 at 25 fps. Portrait peak scale is 1.06–1.10. `presenterSettleScale` is retained only for old project compatibility and is ignored by the current renderer. Keep impact starts about eight seconds apart and no more than three times in a rolling minute.
 - `packagingDensity=light` is the default for `precomposed-video`, because the source may already contain subtitles, PiP, screen demos, or HUD overlays.
 - Forbidden methods include `proportional-scene-split`, `scene-proportional`, `estimated`, and `character-ratio-scene-fill`.
 - When a finished source video has no SRT/VTT/alignment, run ASR and use ASR cue start/end times.

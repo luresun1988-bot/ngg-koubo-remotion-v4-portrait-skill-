@@ -42,6 +42,7 @@ ALLOWED_SCENE_TYPES = {
 }
 
 ALLOWED_AUDIO_TYPES = {"sfx", "bgm", "source", "silence"}
+ALLOWED_PRESENTER_LAYOUT_SOURCES = {"automatic", "manual-approved", "legacy-project"}
 PENDING_AUDIO_STATUSES = {"pending-selection", "pending-generation", "disabled", "muted", "suggested"}
 FORBIDDEN_CAPTION_TIMING_METHODS = {
     "proportional-scene-split",
@@ -360,7 +361,23 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
         if scene.get("type") not in ALLOWED_SCENE_TYPES:
             errors.append(f"scenes[{idx}] has invalid type: {scene.get('type')}")
         presenter_layout = scene.get("presenterLayout")
+        presenter_layout_source = str(scene.get("presenterLayoutSource") or "")
         material_layout = scene.get("materialLayout")
+        if presenter_layout_source and presenter_layout_source not in ALLOWED_PRESENTER_LAYOUT_SOURCES:
+            errors.append(
+                f"scenes[{idx}] has invalid presenterLayoutSource={presenter_layout_source!r}"
+            )
+        if presenter_layout == "side":
+            if presenter_layout_source == "automatic":
+                errors.append(
+                    f"scenes[{idx}] automatic presenterLayout=side is forbidden in portrait; "
+                    "keep the presenter fullscreen for side HUDs"
+                )
+            elif presenter_layout_source not in {"manual-approved", "legacy-project"}:
+                warnings.append(
+                    f"scenes[{idx}] uses unmarked presenterLayout=side; retain only for a legacy project "
+                    "or record presenterLayoutSource=manual-approved after explicit approval"
+                )
         if presenter_layout == "pip" and material_layout not in {"main", "clean"}:
             warnings.append(
                 f"scenes[{idx}] uses presenterLayout=pip without materialLayout=main/clean; "

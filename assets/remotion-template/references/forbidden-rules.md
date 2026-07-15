@@ -13,6 +13,7 @@ Use this reference before finalizing any V4 visual script, template change, or Q
 - Do not truncate bottom captions with ellipsis or hide the tail text. Captions must stay complete, readable, and within the portrait two-line maximum.
 - Do not make every explanatory beat look like the same compact card group. Rotate between title blocks, red warning cards, numbered rows, icon tiles, data panels, poster stacks, material proof, and transformation stacks.
 - Do not use a compact generic card layout for reference-style process or list beats when a vertical numbered list, layered data panel, or source-driver-result layout better matches the meaning.
+- Do not move the portrait presenter sideways automatically to create HUD space. `presenterLayout=side` is allowed only for an explicitly `manual-approved` scene or marked `legacy-project` compatibility; ordinary side HUDs keep the presenter fullscreen.
 
 ## Semantic Prohibitions
 
@@ -38,6 +39,7 @@ Use this reference before finalizing any V4 visual script, template change, or Q
 - Do not remount or restart the primary presenter video/audio at scene boundaries. PiP and fullscreen are layouts of one continuous source, not separate playback instances.
 - Do not stream-copy or concatenate segmented presenter MP4 containers that retain independent AAC tracks. Normalize to one video-only stream plus one 48 kHz PCM WAV and verify exact frame/sample counts.
 - Do not use slow symmetric presenter zooms, rebound, continuous scale drift, or repeated breathing camera motion. Do not count presenter zoom as a semantic-density refresh. A lifecycle-synced `presenter-impact-punch` must exactly match a same-scene, same-`sourceBeatId` visible semantic companion and may last at most six seconds; otherwise scale the fallback from composition FPS: 18–28 frames at 30 fps or about 15–23 at 25 fps. Keep impact starts about eight seconds apart and at most three in any rolling minute. Never trigger it from CTA or ordinary explanation.
+- Do not interpret the compatibility event name `presenterReposition` as horizontal movement. In portrait output it is scale-only impact metadata.
 - Do not force behind-presenter text at frame 0 when the opening is result/proof material or before the presenter states the theme thesis.
 - Do not auto-create `depthKeyword` from a theme-thesis candidate. Require explicit approval and a transparent, composition-aligned foreground cutout asset.
 - Do not map unknown or low-confidence explanation copy to a fabricated workflow diagram. Keep the strongest scene claim as `claimStrip`, downgrade a short sourced claim to a lightweight sticker, or record an audited `intentionalCleanHold`.

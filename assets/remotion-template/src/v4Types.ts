@@ -15,6 +15,7 @@ export type Scene = {
   endFrame: number;
   semanticRole: string;
   presenterLayout: 'fullscreen' | 'large' | 'side' | 'pip' | 'none';
+  presenterLayoutSource?: 'automatic' | 'manual-approved' | 'legacy-project';
   materialLayout: 'none' | 'main' | 'stack' | 'clean';
   intent?: string;
   sourceVideo: string;

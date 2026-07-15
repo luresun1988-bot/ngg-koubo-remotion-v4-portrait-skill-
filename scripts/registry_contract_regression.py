@@ -126,6 +126,19 @@ def main() -> int:
     rules = presentation_rules.get("semanticToPresentation")
     if not isinstance(rules, list):
         fail("presentation_rules.semanticToPresentation must be a list")
+    layout_policy = presentation_rules.get("presenterLayoutPolicy")
+    if not isinstance(layout_policy, dict):
+        fail("presentation_rules.presenterLayoutPolicy must be an object")
+    if layout_policy.get("automaticAllowed") != ["fullscreen", "large", "pip", "none"]:
+        fail("portrait automatic presenter layouts changed unexpectedly")
+    if layout_policy.get("manualOnly") != ["side"]:
+        fail("portrait side layout must remain manual-only")
+    if set(layout_policy.get("manualSources") or []) != {"manual-approved", "legacy-project"}:
+        fail("portrait manual presenter layout sources are incomplete")
+    if layout_policy.get("sideHudMovesPresenter") is not False:
+        fail("portrait side HUDs must not move the presenter")
+    if layout_policy.get("impactEventChangesPosition") is not False:
+        fail("portrait presenter impact must remain scale-only")
     for rule in rules:
         if not isinstance(rule, dict):
             fail("presentation rule must be an object")
