@@ -14,6 +14,7 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 from v4_utf8 import configure_utf8  # noqa: E402
+from presentation_registry import get_registry, presentation_sfx_intents  # noqa: E402
 from semantic_guardrails import numeric_event_fields  # noqa: E402
 
 configure_utf8()
@@ -63,39 +64,16 @@ def load_sfx_suggestions() -> dict[str, dict[str, Any]]:
 SFX_SUGGESTIONS: dict[str, dict[str, Any]] = load_sfx_suggestions()
 
 
-def presentation_rules_path() -> Path:
-    candidates = [
-        SCRIPT_DIR.parent / "references" / "registries" / "presentation_rules.json",
-        SCRIPT_DIR.parent.parent / "references" / "registries" / "presentation_rules.json",
-    ]
-    for path in candidates:
-        if path.is_file():
-            return path
-    raise FileNotFoundError("missing V4 portrait presentation_rules.json")
-
-
-def load_presentation_sfx_intents() -> dict[str, str]:
-    data = json.loads(presentation_rules_path().read_text(encoding="utf-8-sig"))
-    mapping: dict[str, str] = {}
-    for item in data.get("semanticToPresentation", []):
-        if not isinstance(item, dict):
-            continue
-        intent = str(item.get("semanticIntent") or "")
-        sfx_intent = item.get("primarySfxIntent")
-        if intent and sfx_intent:
-            mapping[intent] = str(sfx_intent)
-    return mapping
-
-
 def load_presenter_layout_policy() -> dict[str, Any]:
-    data = json.loads(presentation_rules_path().read_text(encoding="utf-8-sig"))
+    data = get_registry().presentation_rules
     policy = data.get("presenterLayoutPolicy")
     if not isinstance(policy, dict):
         raise ValueError("presentation_rules.json missing presenterLayoutPolicy")
     return policy
 
 
-PRESENTATION_SFX_INTENTS = load_presentation_sfx_intents()
+PRESENTATION_REGISTRY = get_registry()
+PRESENTATION_SFX_INTENTS = presentation_sfx_intents()
 PRESENTER_LAYOUT_POLICY = load_presenter_layout_policy()
 PUNCTUATION = " ，。？！、；;：:.!?"
 NUMERIC_VALUE_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|[KkMmGg]|个|张|条|分钟|秒)?")

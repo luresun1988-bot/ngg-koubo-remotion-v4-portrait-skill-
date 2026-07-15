@@ -16,6 +16,7 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 from v4_utf8 import configure_utf8  # noqa: E402
+from presentation_registry import semantic_allowed_event_types  # noqa: E402
 
 configure_utf8()
 
@@ -143,33 +144,7 @@ VISUAL_FAMILY_BY_TYPE = {
     "historicalGreenConclusion": "historical-green-conclusion",
 }
 
-SEMANTIC_ALLOWED_EVENT_TYPES = {
-    "negative-friction": {"semanticProblemMap", "highlightBox", "kineticTitle", "statusSticker"},
-    "negative-to-positive": {"semanticProblemMap", "highlightBox"},
-    "result-promise": {"kineticTitle", "bigJudgement"},
-    "positive-confirm": {"captionHighlight", "statusSticker"},
-    "automation-handoff": {"automationHandoff", "captionHighlight", "flowPath", "statusStack"},
-    "numeric-metric": {"dataPunch", "metricSpotlight"},
-    "enumeration": {"flowPath", "statusStack"},
-    "workflow-fields": {"flowPath", "statusStack", "captionHighlight"},
-    "manual-field": {"infoCard"},
-    "capability-share": {"capabilityShare"},
-    "scene-lock": {"sceneLockGrid"},
-    "transformation-stack": {"transformationStack"},
-    "asset-variants": {"ratioGallery", "flowPath", "materialMain"},
-    "platform-fanout": {"transitionPushZoom", "platformFanout"},
-    "proof-material": {"materialMain", "statusSticker"},
-    "cta-resolve": {"ctaTitle", "ctaRecommend"},
-    "workflow-step": {"flowPath", "statusStack", "compactPipeline", "captionHighlight"},
-    "topic-intro": {"topicKeyword"},
-    "explanation-claim": {"claimStrip", "quoteSource", "statusSticker"},
-    "paired-inputs": {"pairedInputRail"},
-    "parallel-factors": {"factorTrinity"},
-    "causal-driver": {"causalDriver"},
-    "factor-priority": {"factorPriority"},
-    "limitation-boundary": {"limitationWarning"},
-    "prerequisite": {"priorityConclusion", "historicalGreenConclusion"},
-}
+SEMANTIC_ALLOWED_EVENT_TYPES = semantic_allowed_event_types()
 
 
 def load_validator():

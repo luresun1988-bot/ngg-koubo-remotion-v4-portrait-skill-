@@ -15,6 +15,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 
 import semantic_router  # noqa: E402
 import visual_event_builder  # noqa: E402
+from presentation_registry import get_registry  # noqa: E402
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -107,13 +108,19 @@ def main() -> int:
     components = component_map(component_registry)
     icons = icon_ids(icon_registry)
     manifest_by_intent = sfx_manifest_items()
+    runtime_registry = get_registry()
     assert_template_registry_mirrors()
+
+    if runtime_registry.format != "portrait":
+        fail(f"runtime registry loaded wrong format: {runtime_registry.format}")
 
     for intent, rule in semantic_router.RULES.items():
         if intent not in roles:
             fail(f"router RULES intent missing from semantic_contract: {intent}")
         if roles[intent].get("visualForm") != rule.get("visualForm"):
             fail(f"{intent} visualForm registry={roles[intent].get('visualForm')} runtime={rule.get('visualForm')}")
+        if runtime_registry.default_visual_form(intent) != roles[intent].get("visualForm"):
+            fail(f"{intent} runtime registry default does not match semantic contract")
 
     for role in roles.values():
         form = str(role.get("visualForm") or "")
@@ -148,6 +155,8 @@ def main() -> int:
         sfx_intent = rule.get("primarySfxIntent")
         if sfx_intent is not None and str(sfx_intent) not in visual_event_builder.SFX_SUGGESTIONS:
             fail(f"presentation rule unknown SFX intent: {sfx_intent}")
+        if runtime_registry.primary_sfx_intent(intent) != (str(sfx_intent) if sfx_intent else None):
+            fail(f"presentation runtime SFX mismatch for {intent}")
 
     for intent, suggestion in visual_event_builder.SFX_SUGGESTIONS.items():
         item = manifest_by_intent.get(intent)

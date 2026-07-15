@@ -13,6 +13,7 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 from v4_utf8 import configure_utf8  # noqa: E402
+from presentation_registry import semantic_default_visual_form  # noqa: E402
 from semantic_guardrails import (  # noqa: E402
     completion_polarity,
     extract_automation_handoff_steps,
@@ -385,7 +386,7 @@ def rule_result(intent: str, keywords: list[str], confidence: float = 0.82) -> d
     rule = RULES[intent]
     return {
         "semanticIntent": intent,
-        "visualForm": rule["visualForm"],
+        "visualForm": semantic_default_visual_form(intent),
         "keywords": keywords[:4],
         "requiredChecks": rule["checks"],
         "confidence": confidence,

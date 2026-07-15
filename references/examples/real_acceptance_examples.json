@@ -28,6 +28,23 @@
         "02_2k_to_1k.mp4",
         "03_cta.mp4"
       ]
+    },
+    {
+      "id": "portrait_0712_seven_templates",
+      "description": "User-approved A/B/C comparison: templates 1-6 use C; prerequisite keeps B and C, with green restricted to manual-approved historical use.",
+      "format": "9:16",
+      "fps": 30,
+      "evidenceRoot": "E:/MyProject/koubo_jianji/qa_runs/0712_portrait_template_comparison_20260715",
+      "expectedComponentFamilies": [
+        "pairedInputRail",
+        "factorTrinity",
+        "causalDriver",
+        "factorPriority",
+        "compactPipeline",
+        "limitationWarning",
+        "priorityConclusion",
+        "historicalGreenConclusion"
+      ]
     }
   ],
   "examples": [
@@ -62,6 +79,71 @@
       "eventType": "ctaTitle",
       "visualForm": "ctaTitle",
       "requiresCtaProvenance": true
+    },
+    {
+      "id": "paired-input-rail",
+      "category": "paired inputs",
+      "semanticRole": "paired-inputs",
+      "eventType": "pairedInputRail",
+      "visualForm": "pairedInputRail",
+      "requiresExactSourceCount": 2
+    },
+    {
+      "id": "factor-trinity",
+      "category": "parallel factors",
+      "semanticRole": "parallel-factors",
+      "eventType": "factorTrinity",
+      "visualForm": "factorTrinity",
+      "requiresExactSourceCount": 3
+    },
+    {
+      "id": "causal-driver",
+      "category": "causal driver",
+      "semanticRole": "causal-driver",
+      "eventType": "causalDriver",
+      "visualForm": "causalDriver",
+      "requiresRoles": ["target", "driver"]
+    },
+    {
+      "id": "factor-priority",
+      "category": "factor priority",
+      "semanticRole": "factor-priority",
+      "eventType": "factorPriority",
+      "visualForm": "factorPriority",
+      "requiresPriorityEvidence": true
+    },
+    {
+      "id": "compact-pipeline",
+      "category": "compact pipeline",
+      "semanticRole": "workflow-step",
+      "eventType": "compactPipeline",
+      "visualForm": "compactPipeline",
+      "requiresExactSourceCount": 3
+    },
+    {
+      "id": "limitation-warning",
+      "category": "limitation boundary",
+      "semanticRole": "limitation-boundary",
+      "eventType": "limitationWarning",
+      "visualForm": "limitationWarning",
+      "requiresRoles": ["capability", "limitation"]
+    },
+    {
+      "id": "priority-conclusion",
+      "category": "prerequisite conclusion",
+      "semanticRole": "prerequisite",
+      "eventType": "priorityConclusion",
+      "visualForm": "priorityConclusion",
+      "automaticDefault": true
+    },
+    {
+      "id": "historical-green-conclusion",
+      "category": "prerequisite historical green",
+      "semanticRole": "prerequisite",
+      "eventType": "historicalGreenConclusion",
+      "visualForm": "historicalGreenConclusion",
+      "automaticDefault": false,
+      "requiresPresentationVariant": "manual-approved"
     }
   ],
   "sfxExamples": [

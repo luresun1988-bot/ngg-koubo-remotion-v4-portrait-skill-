@@ -34,5 +34,18 @@
     {"visualForm": "statusSticker", "eventTypes": ["statusSticker"], "renderer": "StatusSticker", "formats": ["9:16"], "requires": ["text"], "fallback": "captionHighlight"},
     {"visualForm": "ctaTitle", "eventTypes": ["ctaTitle"], "renderer": "CtaTitle", "formats": ["9:16"], "requires": ["text", "ctaProvenance"], "fallback": "captionHighlight"},
     {"visualForm": "captionHighlight", "eventTypes": ["captionHighlight"], "renderer": "CaptionHighlight", "formats": ["9:16"], "requires": ["text"], "fallback": "captionHighlight"}
-  ]
+  ],
+  "qaPolicy": {
+    "defaultCopyBudget": {"text": 16, "title": 14, "subtext": 22},
+    "eventCopyBudgets": {
+      "topicKeyword": {"text": 6, "title": 8, "subtext": 12},
+      "claimStrip": {"text": 14, "title": 12, "subtext": 18},
+      "infoCard": {"text": 14, "title": 14, "subtext": 20},
+      "captionHighlight": {"text": 16, "title": 14, "subtext": 22},
+      "flowPath": {"text": 14, "title": 14, "subtext": 18},
+      "statusStack": {"text": 14, "title": 14, "subtext": 18},
+      "ctaTitle": {"text": 12, "title": 12, "subtext": 18}
+    },
+    "safeAreaRequiredEventTypes": ["topicKeyword", "claimStrip", "infoCard", "captionHighlight", "flowPath", "statusStack", "automationHandoff", "pairedInputRail", "factorTrinity", "causalDriver", "factorPriority", "compactPipeline", "limitationWarning", "priorityConclusion", "historicalGreenConclusion", "ctaTitle"]
+  }
 }

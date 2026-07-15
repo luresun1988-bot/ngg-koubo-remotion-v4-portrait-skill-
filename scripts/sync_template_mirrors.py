@@ -18,12 +18,16 @@ TEMPLATE_REFERENCES = TEMPLATE_ROOT / "references"
 TEMPLATE_REGISTRIES = TEMPLATE_REFERENCES / "registries"
 
 REQUIRED_TEMPLATE_SCRIPTS = {
+    "audio_cue_audibility_qa.py",
     "final_media_qa.py",
     "make_contact_sheet.py",
+    "presentation_registry.py",
+    "presentation_copy_qa.py",
     "proof_motion_qa.py",
     "render_final_and_qa.ps1",
     "semantic_contract_cases.json",
     "semantic_guardrails.py",
+    "semantic_review_report.py",
     "upgrade_existing_project.py",
 }
 TEXT_SUFFIXES = {".py", ".ps1", ".json", ".md", ".ts", ".tsx"}

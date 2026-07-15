@@ -23,6 +23,9 @@ REGRESSIONS = [
     "semantic_render_regression.py",
     "semantic_guardrails_regression.py",
     "registry_contract_regression.py",
+    "semantic_review_report_regression.py",
+    "presentation_copy_qa_regression.py",
+    "audio_cue_audibility_qa_regression.py",
     "semantic_component_contract_regression.py",
     "portrait_semantic_templates_regression.py",
     "component_provenance_regression.py",
@@ -79,6 +82,7 @@ def main() -> int:
     parser.add_argument("--gallery", action="store_true")
     parser.add_argument("--skip-typecheck", action="store_true")
     parser.add_argument("--real-corpus-manifest", help="Optional local historical-project corpus manifest.")
+    parser.add_argument("--browser-executable", help="Optional existing Chrome/Edge executable for offline Remotion smoke tests.")
     args = parser.parse_args()
 
     for path in sorted(SCRIPT_DIR.glob("*.py")):
@@ -100,23 +104,28 @@ def main() -> int:
     powershell = shutil.which("powershell")
     if not powershell:
         raise SystemExit("powershell is required for Portrait component render smoke")
+    gallery_command = [
+        powershell,
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        str(SKILL_ROOT / "assets" / "component-gallery" / "render_gallery.ps1"),
+        "-SkipVideo",
+    ]
+    if not args.gallery:
+        gallery_command.append("-Smoke")
+    if args.browser_executable:
+        gallery_command.extend(["-BrowserExecutable", str(Path(args.browser_executable).resolve())])
     if args.gallery:
         run_check(
             "component-gallery",
-            [
-                powershell,
-                "-ExecutionPolicy",
-                "Bypass",
-                "-File",
-                str(SKILL_ROOT / "assets" / "component-gallery" / "render_gallery.ps1"),
-                "-SkipVideo",
-            ],
+            gallery_command,
             cwd=SKILL_ROOT,
         )
     else:
         run_check(
             "component-render-smoke",
-            [powershell, "-ExecutionPolicy", "Bypass", "-File", str(SKILL_ROOT / "assets" / "component-gallery" / "render_gallery.ps1"), "-SkipVideo", "-Smoke"],
+            gallery_command,
             cwd=SKILL_ROOT,
         )
 

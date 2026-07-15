@@ -18,6 +18,14 @@ REQUIRED_PORTRAIT_CATEGORIES = {
     "problem/limitation map",
     "dataPunch/numeric result",
     "CTA",
+    "paired inputs",
+    "parallel factors",
+    "causal driver",
+    "factor priority",
+    "compact pipeline",
+    "limitation boundary",
+    "prerequisite conclusion",
+    "prerequisite historical green",
 }
 REQUIRED_LIBRARY_INTENTS = {
     "title_impact",
@@ -94,7 +102,7 @@ def main() -> int:
             raise AssertionError(f"SFX default volume is above approved maximum: {intent}")
 
     project_ids = {str(item.get("id")) for item in fixture.get("projects", [])}
-    if "portrait_0712" not in project_ids:
+    if not {"portrait_0712", "portrait_0712_seven_templates"}.issubset(project_ids):
         raise AssertionError(f"missing portrait source project record: {project_ids}")
 
     print(

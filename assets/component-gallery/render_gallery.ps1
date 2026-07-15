@@ -2,7 +2,8 @@ param(
   [switch]$SkipVideo,
   [switch]$SkipStills,
   [switch]$Clean,
-  [switch]$Smoke
+  [switch]$Smoke,
+  [string]$BrowserExecutable
 )
 
 $ErrorActionPreference = "Stop"
@@ -28,13 +29,15 @@ $RenderRoot = Join-Path $GalleryRoot "renders"
 $KeyframeRoot = Join-Path $RenderRoot "keyframes"
 $VisualScript = Join-Path $GalleryRoot "visual_script.gallery.json"
 $GallerySpec = Get-Content -LiteralPath $VisualScript -Raw -Encoding utf8 | ConvertFrom-Json
-$BrowserExecutable = @(
-  "C:\Program Files\Google\Chrome\Application\chrome.exe",
-  "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
-  "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe",
-  "C:\Program Files\Microsoft\Edge\Application\msedge.exe",
-  "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-) | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
+if (-not $BrowserExecutable) {
+  $BrowserExecutable = @(
+    "C:\Program Files\Google\Chrome\Application\chrome.exe",
+    "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+    "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe",
+    "C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+    "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+  ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
+}
 
 if (-not (Test-Path -LiteralPath $VisualScript)) {
   throw "Missing gallery visual script: $VisualScript"
