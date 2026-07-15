@@ -524,6 +524,12 @@ def semantic_role_for_beat(beat: dict[str, Any]) -> str:
         "topic-intro": "topic-intro",
         "explanation-claim": "explanation-claim",
         "workflow-step": "workflow-step",
+        "paired-inputs": "paired-inputs",
+        "parallel-factors": "parallel-factors",
+        "causal-driver": "causal-driver",
+        "factor-priority": "factor-priority",
+        "limitation-boundary": "limitation-boundary",
+        "prerequisite": "prerequisite",
         "positive-confirm": "automation-handoff",
         "automation-handoff": "automation-handoff",
         "numeric-metric": "metric-growth",
@@ -560,7 +566,11 @@ def lane_for_event(event: dict[str, Any]) -> str | None:
         return "right" if "right" in safe_area else "left"
     if event_type in {"semanticProblemMap", "highlightBox"} or role == "semantic-problem-map":
         return "right" if "right" in safe_area else "left"
-    if event_type in {"flowPath", "statusStack", "transitionPushZoom", "platformFanout"} or role in {"platform-fanout", "workflow-step", "manual-field"}:
+    if event_type in {
+        "flowPath", "statusStack", "transitionPushZoom", "platformFanout",
+        "pairedInputRail", "factorTrinity", "factorPriority", "compactPipeline",
+        "priorityConclusion", "historicalGreenConclusion",
+    } or role in {"platform-fanout", "workflow-step", "manual-field"}:
         return "right"
     return "left"
 
@@ -609,7 +619,12 @@ def desired_duration_for_event(event: dict[str, Any], scene: dict[str, Any] | No
         fps = composition_fps(data or {})
         return max(current, round(fps * 1.8))
     base = PREFERRED_MAIN_HUD_FRAMES
-    if event_type in {"highlightBox", "captionHighlight", "flowPath", "statusStack", "capabilityShare", "sceneLockGrid", "transformationStack"}:
+    if event_type in {
+        "highlightBox", "captionHighlight", "flowPath", "statusStack", "capabilityShare",
+        "sceneLockGrid", "transformationStack", "pairedInputRail", "factorTrinity",
+        "causalDriver", "factorPriority", "compactPipeline", "limitationWarning",
+        "priorityConclusion", "historicalGreenConclusion",
+    }:
         base = 135
     if event_type in {"kineticTitle", "ctaTitle"}:
         base = 120
@@ -1214,6 +1229,140 @@ def event_for_beat(beat: dict[str, Any], data: dict[str, Any]) -> dict[str, Any]
             "timingClass": "short-lightweight",
         }
 
+    if intent == "paired-inputs":
+        steps = validated_beat_internal_steps(beat, data, 2)
+        if len(steps) != 2:
+            return provenance_fallback(
+                base, intent, text, provenance_reason(beat, data, "needs-exactly-two-sourced-inputs")
+            )
+        return {
+            **base,
+            "type": "pairedInputRail",
+            "text": " / ".join(str(step.get("label") or "") for step in steps),
+            "title": "两类核心素材",
+            "status": "先准备好",
+            "internalSteps": steps,
+            "motionType": "paired-input-stagger",
+            "safeArea": "right avoid-face-caption",
+        }
+
+    if intent == "parallel-factors":
+        steps = validated_beat_internal_steps(beat, data, 3)
+        if len(steps) != 3:
+            return provenance_fallback(
+                base, intent, text, provenance_reason(beat, data, "needs-exactly-three-sourced-factors")
+            )
+        return {
+            **base,
+            "type": "factorTrinity",
+            "text": " / ".join(str(step.get("label") or "") for step in steps),
+            "title": "三个都重要",
+            "status": "并列要素",
+            "internalSteps": steps,
+            "motionType": "factor-trinity-stagger",
+            "safeArea": "right avoid-face-caption",
+        }
+
+    if intent == "causal-driver":
+        steps = validated_beat_internal_steps(beat, data, 2)
+        target = next((step for step in steps if str(step.get("role") or "") == "target"), None)
+        driver = next((step for step in steps if str(step.get("role") or "") == "driver"), None)
+        if len(steps) != 2 or not target or not driver:
+            return provenance_fallback(
+                base, intent, text, provenance_reason(beat, data, "missing-sourced-driver-or-target")
+            )
+        return {
+            **base,
+            "type": "causalDriver",
+            "text": str(target.get("label") or ""),
+            "subtext": str(driver.get("label") or ""),
+            "title": "核心机制",
+            "status": "因果驱动",
+            "internalSteps": steps,
+            "motionType": "causal-driver-lock",
+            "safeArea": "left avoid-face-caption",
+        }
+
+    if intent == "factor-priority":
+        steps = validated_beat_internal_steps(beat, data, 3)
+        if not 1 <= len(steps) <= 3:
+            return provenance_fallback(
+                base, intent, text, provenance_reason(beat, data, "missing-sourced-priority-factors")
+            )
+        return {
+            **base,
+            "type": "factorPriority",
+            "text": " / ".join(str(step.get("label") or "") for step in steps),
+            "title": "真正影响效果",
+            "status": "关键因素",
+            "internalSteps": steps,
+            "motionType": "factor-priority-build",
+            "safeArea": "right avoid-face-caption",
+        }
+
+    if intent == "workflow-step" and str(beat.get("visualForm") or "") == "compactPipeline":
+        steps = validated_beat_internal_steps(beat, data, 3)
+        if len(steps) != 3:
+            return provenance_fallback(
+                base, "workflow-step", text, provenance_reason(beat, data, "needs-exactly-three-sourced-steps")
+            )
+        return {
+            **base,
+            "type": "compactPipeline",
+            "text": " → ".join(str(step.get("label") or "") for step in steps),
+            "title": "三阶段流程",
+            "status": "按顺序推进",
+            "internalSteps": steps,
+            "motionType": "compact-pipeline-stagger",
+            "safeArea": "right avoid-face-caption",
+        }
+
+    if intent == "limitation-boundary":
+        steps = validated_beat_internal_steps(beat, data, 4)
+        capability = next((step for step in steps if str(step.get("role") or "") == "capability"), None)
+        limitations = [step for step in steps if str(step.get("role") or "") == "limitation"]
+        if not capability or not limitations:
+            return provenance_fallback(
+                base, intent, text, provenance_reason(beat, data, "missing-sourced-capability-or-limitation")
+            )
+        return {
+            **base,
+            "type": "limitationWarning",
+            "text": str(capability.get("label") or ""),
+            "subtext": " / ".join(str(step.get("label") or "") for step in limitations),
+            "title": "能力边界",
+            "status": "不能解决",
+            "emphasisWords": ["不能解决"],
+            "internalSteps": steps,
+            "motionType": "limitation-warning-stagger",
+            "safeArea": "left avoid-face-caption",
+            "iconName": "CircleX",
+        }
+
+    if intent == "prerequisite":
+        steps = validated_beat_internal_steps(beat, data, 1)
+        if len(steps) != 1:
+            return provenance_fallback(
+                base, intent, text, provenance_reason(beat, data, "missing-sourced-prerequisite")
+            )
+        manual_historical = (
+            str(beat.get("visualForm") or "") == "historicalGreenConclusion"
+            and str(beat.get("presentationVariant") or "") == "manual-approved"
+        )
+        support_text = str(beat.get("supportText") or "").strip()
+        return {
+            **base,
+            "type": "historicalGreenConclusion" if manual_historical else "priorityConclusion",
+            "text": str(steps[0].get("label") or ""),
+            "subtext": support_text,
+            "title": "前提条件",
+            "status": "必须先满足",
+            "internalSteps": steps,
+            "motionType": "priority-conclusion-build",
+            "safeArea": "right avoid-face-caption",
+            "presentationVariant": "manual-approved" if manual_historical else "automatic-default",
+        }
+
     if intent in {"negative-to-positive", "negative-friction"}:
         negative, positive, emphasis_words = compact_negative_positive(text)
         event = {
@@ -1715,6 +1864,8 @@ def sfx_intent_for_event(beat: dict[str, Any], event: dict[str, Any]) -> str | N
         return PRESENTATION_SFX_INTENTS.get("result-promise")
     if semantic_intent in {"negative-friction", "negative-to-positive"}:
         return PRESENTATION_SFX_INTENTS.get(semantic_intent)
+    if semantic_intent == "limitation-boundary":
+        return PRESENTATION_SFX_INTENTS.get("limitation-boundary")
     if semantic_intent == "positive-confirm":
         return PRESENTATION_SFX_INTENTS.get("positive-confirm")
     if semantic_intent == "automation-handoff":

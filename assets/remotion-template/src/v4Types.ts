@@ -95,7 +95,15 @@ export type VisualEvent = {
     | 'topicKeyword'
     | 'claimStrip'
     | 'ratioGallery'
-    | 'depthKeyword';
+    | 'depthKeyword'
+    | 'pairedInputRail'
+    | 'factorTrinity'
+    | 'causalDriver'
+    | 'factorPriority'
+    | 'compactPipeline'
+    | 'limitationWarning'
+    | 'priorityConclusion'
+    | 'historicalGreenConclusion';
   startFrame: number;
   endFrame: number;
   text?: string;
@@ -135,6 +143,7 @@ export type VisualEvent = {
   assetStack?: string[];
   foregroundAssetPath?: string;
   approvalStatus?: 'candidate' | 'approved' | 'rejected';
+  presentationVariant?: 'automatic-default' | 'manual-approved' | string;
   ctaProvenance?: {
     kind: 'action' | 'keyword' | 'claim' | string;
     sourceText: string;

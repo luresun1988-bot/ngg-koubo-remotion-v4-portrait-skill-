@@ -11,9 +11,11 @@ from pathlib import Path
 SKILL_ROOT = Path(__file__).resolve().parents[1]
 ROOT_SCRIPTS = SKILL_ROOT / "scripts"
 ROOT_REFERENCES = SKILL_ROOT / "references"
+ROOT_REGISTRIES = ROOT_REFERENCES / "registries"
 TEMPLATE_ROOT = SKILL_ROOT / "assets" / "remotion-template"
 TEMPLATE_SCRIPTS = TEMPLATE_ROOT / "scripts"
 TEMPLATE_REFERENCES = TEMPLATE_ROOT / "references"
+TEMPLATE_REGISTRIES = TEMPLATE_REFERENCES / "registries"
 
 REQUIRED_TEMPLATE_SCRIPTS = {
     "final_media_qa.py",
@@ -48,6 +50,8 @@ def mirror_pairs() -> list[tuple[Path, Path]]:
         pairs.append((ROOT_SCRIPTS / name, TEMPLATE_SCRIPTS / name))
     for source in sorted(ROOT_REFERENCES.glob("*.md")):
         pairs.append((source, TEMPLATE_REFERENCES / source.name))
+    for source in sorted(ROOT_REGISTRIES.glob("*.json")):
+        pairs.append((source, TEMPLATE_REGISTRIES / source.name))
     return pairs
 
 

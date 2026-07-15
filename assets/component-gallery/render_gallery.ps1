@@ -28,6 +28,13 @@ $RenderRoot = Join-Path $GalleryRoot "renders"
 $KeyframeRoot = Join-Path $RenderRoot "keyframes"
 $VisualScript = Join-Path $GalleryRoot "visual_script.gallery.json"
 $GallerySpec = Get-Content -LiteralPath $VisualScript -Raw -Encoding utf8 | ConvertFrom-Json
+$BrowserExecutable = @(
+  "C:\Program Files\Google\Chrome\Application\chrome.exe",
+  "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+  "$env:LOCALAPPDATA\Google\Chrome\Application\chrome.exe",
+  "C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+  "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+) | Where-Object { $_ -and (Test-Path -LiteralPath $_) } | Select-Object -First 1
 
 if (-not (Test-Path -LiteralPath $VisualScript)) {
   throw "Missing gallery visual script: $VisualScript"
@@ -112,7 +119,12 @@ try {
   if (-not $SkipStills) {
     foreach ($FrameSpec in $Frames) {
       $OutPath = Join-Path $KeyframeRoot $FrameSpec.Name
-      Invoke-Checked { npx remotion still src/index.ts NGGKouboV4Portrait $OutPath --frame=$($FrameSpec.Frame) --gl=angle } "remotion still $($FrameSpec.Name)"
+      if ($BrowserExecutable) {
+        Invoke-Checked { npx remotion still src/index.ts NGGKouboV4Portrait $OutPath --frame=$($FrameSpec.Frame) --gl=angle --browser-executable=$BrowserExecutable } "remotion still $($FrameSpec.Name)"
+      }
+      else {
+        Invoke-Checked { npx remotion still src/index.ts NGGKouboV4Portrait $OutPath --frame=$($FrameSpec.Frame) --gl=angle } "remotion still $($FrameSpec.Name)"
+      }
       $RenderedFile = Get-Item -LiteralPath $OutPath
       if ($RenderedFile.Length -lt 4096) { throw "Still render is unexpectedly small: $OutPath" }
       $Dimensions = (& ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=s=x:p=0 $OutPath).Trim()
@@ -137,7 +149,12 @@ try {
   }
 
   if (-not $SkipVideo) {
-    Invoke-Checked { npx remotion render src/index.ts NGGKouboV4Portrait (Join-Path $RenderRoot "component_gallery.mp4") --gl=angle } "remotion render component_gallery"
+    if ($BrowserExecutable) {
+      Invoke-Checked { npx remotion render src/index.ts NGGKouboV4Portrait (Join-Path $RenderRoot "component_gallery.mp4") --gl=angle --browser-executable=$BrowserExecutable } "remotion render component_gallery"
+    }
+    else {
+      Invoke-Checked { npx remotion render src/index.ts NGGKouboV4Portrait (Join-Path $RenderRoot "component_gallery.mp4") --gl=angle } "remotion render component_gallery"
+    }
   }
 }
 finally {

@@ -21,6 +21,8 @@ python scripts/qa_lint_visual_script.py --visual-script 06_remotion/visual_scrip
 
 Stop before rendering if the lint reports errors.
 
+For the approved portrait structured set, verify exact cardinality and provenance before render: two items for `pairedInputRail`, three for `factorTrinity`, exactly three ordered steps for `compactPipeline`, driver/target roles for `causalDriver`, an explicit priority signal for `factorPriority`, capability/limitation roles for `limitationWarning`, and a sourced prerequisite for `priorityConclusion`. `historicalGreenConclusion` is a hard failure unless `presentationVariant=manual-approved` is present.
+
 For template or Skill changes that touch visual scheduling, also run:
 
 ```text

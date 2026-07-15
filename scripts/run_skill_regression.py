@@ -24,6 +24,7 @@ REGRESSIONS = [
     "semantic_guardrails_regression.py",
     "registry_contract_regression.py",
     "semantic_component_contract_regression.py",
+    "portrait_semantic_templates_regression.py",
     "component_provenance_regression.py",
     "transformation_evidence_regression.py",
     "example_asset_regression.py",

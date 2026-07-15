@@ -13,6 +13,12 @@ export const RemotionRoot: React.FC = () => {
       width={visualScript.composition.width}
       height={visualScript.composition.height}
       defaultProps={{visualScript}}
+      calculateMetadata={({props}) => ({
+        durationInFrames: props.visualScript.composition.durationFrames,
+        fps: props.visualScript.composition.fps,
+        width: props.visualScript.composition.width,
+        height: props.visualScript.composition.height,
+      })}
     />
   );
 };

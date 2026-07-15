@@ -29,6 +29,16 @@ import {
   TopicKeyword,
   V4Caption,
 } from './components/V4Primitives';
+import {
+  CausalDriverPanel,
+  CompactPipelinePanel,
+  FactorPriorityPanel,
+  FactorTrinityPanel,
+  HistoricalGreenConclusionPanel,
+  LimitationWarningPanel,
+  PairedInputRailPanel,
+  PriorityConclusionPanel,
+} from './components/PortraitSemanticTemplates';
 import {colors, fontStack, mediaWindowShadow} from './v4Styles';
 import type {AudioCue, PresenterAudio, Scene, VisualEvent, VisualScript} from './v4Types';
 
@@ -416,7 +426,20 @@ const eventShadeSide = (event: VisualEvent, scene: Scene): ShadeSide | null => {
 
   if (event.type === 'kineticTitle' || event.type === 'bigJudgement' || event.type === 'dataPunch' || event.type === 'quoteSource' || event.type === 'metricSpotlight' || event.type === 'topicKeyword') return explicitSide ?? 'left';
   if (event.type === 'claimStrip') return explicitSide ?? 'right';
-  if (event.type === 'flowPath' || event.type === 'statusStack' || event.type === 'platformFanout' || event.type === 'workflowDashboard' || event.type === 'ratioGallery') return explicitSide ?? 'right';
+  if (
+    event.type === 'flowPath' ||
+    event.type === 'statusStack' ||
+    event.type === 'platformFanout' ||
+    event.type === 'workflowDashboard' ||
+    event.type === 'ratioGallery' ||
+    event.type === 'pairedInputRail' ||
+    event.type === 'factorTrinity' ||
+    event.type === 'factorPriority' ||
+    event.type === 'compactPipeline' ||
+    event.type === 'priorityConclusion' ||
+    event.type === 'historicalGreenConclusion'
+  ) return explicitSide ?? 'right';
+  if (event.type === 'causalDriver' || event.type === 'limitationWarning') return explicitSide ?? 'left';
   if (event.type === 'capabilityShare' || event.type === 'sceneLockGrid' || event.type === 'transformationStack') return explicitSide ?? 'left';
   if (event.type === 'semanticProblemMap' || (event.type === 'highlightBox' && event.semanticRole === 'semantic-problem-map')) return explicitSide ?? 'right';
   if (event.type === 'transitionPushZoom' && event.semanticRole === 'platform-fanout') return 'right';
@@ -594,6 +617,14 @@ export const V4Composition: React.FC<{visualScript: VisualScript}> = ({visualScr
   const capabilityShares = events.filter((event) => event.type === 'capabilityShare');
   const sceneLockGrids = events.filter((event) => event.type === 'sceneLockGrid');
   const transformationStacks = events.filter((event) => event.type === 'transformationStack');
+  const pairedInputRails = events.filter((event) => event.type === 'pairedInputRail');
+  const factorTrinities = events.filter((event) => event.type === 'factorTrinity');
+  const causalDrivers = events.filter((event) => event.type === 'causalDriver');
+  const factorPriorities = events.filter((event) => event.type === 'factorPriority');
+  const compactPipelines = events.filter((event) => event.type === 'compactPipeline');
+  const limitationWarnings = events.filter((event) => event.type === 'limitationWarning');
+  const priorityConclusions = events.filter((event) => event.type === 'priorityConclusion');
+  const historicalGreenConclusions = events.filter((event) => event.type === 'historicalGreenConclusion');
   const titles = events.filter(
     (event) => ['kineticTitle', 'bigJudgement', 'ctaTitle', 'ctaRecommend'].includes(event.type),
   );
@@ -612,6 +643,14 @@ export const V4Composition: React.FC<{visualScript: VisualScript}> = ({visualScr
   const visibleCapabilityShares = suppressCompetingHud ? [] : capabilityShares;
   const visibleSceneLockGrids = suppressCompetingHud ? [] : sceneLockGrids;
   const visibleTransformationStacks = suppressCompetingHud ? [] : transformationStacks;
+  const visiblePairedInputRails = suppressCompetingHud ? [] : pairedInputRails;
+  const visibleFactorTrinities = suppressCompetingHud ? [] : factorTrinities;
+  const visibleCausalDrivers = suppressCompetingHud ? [] : causalDrivers;
+  const visibleFactorPriorities = suppressCompetingHud ? [] : factorPriorities;
+  const visibleCompactPipelines = suppressCompetingHud ? [] : compactPipelines;
+  const visibleLimitationWarnings = suppressCompetingHud ? [] : limitationWarnings;
+  const visiblePriorityConclusions = suppressCompetingHud ? [] : priorityConclusions;
+  const visibleHistoricalGreenConclusions = suppressCompetingHud ? [] : historicalGreenConclusions;
   const visibleTopicKeywords = suppressCompetingHud ? [] : topicKeywords;
   const visibleClaimStrips = suppressCompetingHud ? [] : claimStrips;
   const visibleRatioGalleries = suppressCompetingHud ? [] : ratioGalleries;
@@ -743,6 +782,38 @@ export const V4Composition: React.FC<{visualScript: VisualScript}> = ({visualScr
 
       {visibleTransformationStacks.map((event) => (
         <TransformationStackPanel key={event.id} event={event} side={eventHudSide(event, currentScene, 'left')} />
+      ))}
+
+      {visiblePairedInputRails.map((event) => (
+        <PairedInputRailPanel key={event.id} event={event} />
+      ))}
+
+      {visibleFactorTrinities.map((event) => (
+        <FactorTrinityPanel key={event.id} event={event} />
+      ))}
+
+      {visibleCausalDrivers.map((event) => (
+        <CausalDriverPanel key={event.id} event={event} />
+      ))}
+
+      {visibleFactorPriorities.map((event) => (
+        <FactorPriorityPanel key={event.id} event={event} />
+      ))}
+
+      {visibleCompactPipelines.map((event) => (
+        <CompactPipelinePanel key={event.id} event={event} />
+      ))}
+
+      {visibleLimitationWarnings.map((event) => (
+        <LimitationWarningPanel key={event.id} event={event} />
+      ))}
+
+      {visiblePriorityConclusions.map((event) => (
+        <PriorityConclusionPanel key={event.id} event={event} />
+      ))}
+
+      {visibleHistoricalGreenConclusions.map((event) => (
+        <HistoricalGreenConclusionPanel key={event.id} event={event} />
       ))}
 
       {visibleStickers.map((event) => (

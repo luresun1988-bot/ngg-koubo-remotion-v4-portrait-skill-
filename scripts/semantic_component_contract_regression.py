@@ -279,7 +279,12 @@ def main() -> int:
         failures.append(f"event type contract mismatch: missing={missing}, extra={extra}")
 
     renderer = (TEMPLATE_ROOT / "src" / "V4Composition.tsx").read_text(encoding="utf-8")
-    for canonical in ["semanticProblemMap", "automationHandoff", "platformFanout", "topicKeyword", "claimStrip", "ratioGallery", "depthKeyword"]:
+    for canonical in [
+        "semanticProblemMap", "automationHandoff", "platformFanout", "topicKeyword", "claimStrip",
+        "ratioGallery", "depthKeyword", "pairedInputRail", "factorTrinity", "causalDriver",
+        "factorPriority", "compactPipeline", "limitationWarning", "priorityConclusion",
+        "historicalGreenConclusion",
+    ]:
         if canonical not in renderer:
             failures.append(f"renderer missing canonical event type: {canonical}")
 

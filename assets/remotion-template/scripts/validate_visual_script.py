@@ -122,6 +122,14 @@ FOCUS_FORBIDDEN_TYPES = {
     "claimStrip",
     "ratioGallery",
     "depthKeyword",
+    "pairedInputRail",
+    "factorTrinity",
+    "causalDriver",
+    "factorPriority",
+    "compactPipeline",
+    "limitationWarning",
+    "priorityConclusion",
+    "historicalGreenConclusion",
 }
 RENDERABLE_EVENT_TYPES = {
     "kineticTitle", "captionHighlight", "cornerChapterLabel", "infoCard", "statusSticker", "iconPulse",
@@ -129,6 +137,8 @@ RENDERABLE_EVENT_TYPES = {
     "bigJudgement", "dataPunch", "quoteSource", "flowPath", "statusStack", "platformFanout", "evidenceWindow",
     "ctaRecommend", "metricSpotlight", "workflowDashboard", "capabilityShare", "sceneLockGrid", "transformationStack",
     "semanticProblemMap", "automationHandoff", "topicKeyword", "claimStrip", "ratioGallery", "depthKeyword",
+    "pairedInputRail", "factorTrinity", "causalDriver", "factorPriority", "compactPipeline",
+    "limitationWarning", "priorityConclusion", "historicalGreenConclusion",
 }
 FOCUS_FORBIDDEN_ROLES = {
     "semantic-problem-map",
@@ -546,6 +556,11 @@ def validate(path: Path) -> tuple[list[str], list[str]]:
             scene = scene_by_id.get(scene_id, {})
             if str(scene.get("presenterLayout") or "") not in {"fullscreen", "large"}:
                 errors.append(f"visualEvents[{idx}] depthKeyword requires fullscreen/large presenter")
+        if event_type == "historicalGreenConclusion" and event.get("presentationVariant") != "manual-approved":
+            errors.append(
+                f"visualEvents[{idx}] historicalGreenConclusion is manual-only and requires "
+                "presentationVariant=manual-approved"
+            )
         if event_type == "infoCard":
             card_events_by_scene.setdefault(scene_id, []).append(event)
         if event_type == "materialMain":

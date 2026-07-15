@@ -276,6 +276,14 @@ Common event types:
 - `claimStrip`
 - `ratioGallery`
 - `depthKeyword`
+- `pairedInputRail`
+- `factorTrinity`
+- `causalDriver`
+- `factorPriority`
+- `compactPipeline`
+- `limitationWarning`
+- `priorityConclusion`
+- `historicalGreenConclusion`
 
 Each significant event should declare semantic role and motion type.
 
@@ -303,6 +311,16 @@ Process/enumeration fulfillment fields:
 - Use `type: "flowPath"` or `type: "statusStack"` for first/second/third, numbered lists, steps, stages, and workflows.
 - Put rows/nodes in `internalSteps`; each step needs `label` and `iconName`.
 - Do not collapse a process or enumeration into one ordinary `infoCard`.
+- In portrait output, exactly three explicit ordered source steps may use `type: "compactPipeline"` while retaining `semanticIntent: "workflow-step"`. Fewer, more, or incompletely ordered steps must use the registered fallback.
+
+Approved portrait structured fields:
+
+- `pairedInputRail` requires exactly two source-bound `internalSteps`.
+- `factorTrinity` requires exactly three source-bound equal-factor steps.
+- `causalDriver` requires sourced `driver` and `target` roles and their cue provenance.
+- `factorPriority` requires an explicit priority/decisive signal plus sourced factors.
+- `limitationWarning` requires a sourced capability and at least one explicit limitation; uncertainty alone is insufficient.
+- `priorityConclusion` is the automatic prerequisite event. `historicalGreenConclusion` is valid only with `presentationVariant: "manual-approved"`; without that value the builder and validator must fall back to `priorityConclusion`.
 
 Negative/friction fulfillment fields:
 

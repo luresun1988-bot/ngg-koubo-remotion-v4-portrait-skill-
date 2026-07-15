@@ -34,6 +34,14 @@ CARD_LIKE_MAIN_EVENT_TYPES = {
     "sceneLockGrid",
     "transformationStack",
     "automationHandoff",
+    "pairedInputRail",
+    "factorTrinity",
+    "causalDriver",
+    "factorPriority",
+    "compactPipeline",
+    "limitationWarning",
+    "priorityConclusion",
+    "historicalGreenConclusion",
 }
 RENDERED_AUDIO_TYPES = {"sfx", "bgm"}
 PENDING_AUDIO_STATUSES = {"pending-selection", "pending-generation", "disabled", "muted"}
@@ -52,7 +60,7 @@ NUMERIC_VALUE_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|[KkMmGg]|
 NUMERIC_UNIT_RE = re.compile(r"[+\-]?\d+(?:\.\d+)?\s*(?:%|万|亿|倍|[KkMmGg]|x|X)")
 FLOW_TEXT_RE = re.compile(r"(第一|第二|第三|第1|第2|第3|步骤|流程|结论|行动|最后|step|Step|01|02|03)")
 NUMERIC_FULFILLMENT_TYPES = {"dataPunch", "metricSpotlight", "capabilityShare", "transformationStack"}
-FLOW_FULFILLMENT_TYPES = {"flowPath", "statusStack", "platformFanout", "transitionPushZoom", "automationHandoff", "captionHighlight", "sceneLockGrid", "transformationStack"}
+FLOW_FULFILLMENT_TYPES = {"flowPath", "statusStack", "platformFanout", "transitionPushZoom", "automationHandoff", "captionHighlight", "sceneLockGrid", "transformationStack", "compactPipeline"}
 MAIN_HUD_DURATION_BUDGET_TYPES = {
     "kineticTitle",
     "highlightBox",
@@ -74,6 +82,14 @@ MAIN_HUD_DURATION_BUDGET_TYPES = {
     "topicKeyword",
     "claimStrip",
     "ratioGallery",
+    "pairedInputRail",
+    "factorTrinity",
+    "causalDriver",
+    "factorPriority",
+    "compactPipeline",
+    "limitationWarning",
+    "priorityConclusion",
+    "historicalGreenConclusion",
 }
 
 HUD_COPY_LIMITS = {
@@ -116,6 +132,14 @@ VISUAL_FAMILY_BY_TYPE = {
     "claimStrip": "claim-strip",
     "ratioGallery": "ratio-gallery",
     "depthKeyword": "depth-keyword",
+    "pairedInputRail": "paired-input-rail",
+    "factorTrinity": "factor-trinity",
+    "causalDriver": "causal-driver",
+    "factorPriority": "factor-priority",
+    "compactPipeline": "compact-pipeline",
+    "limitationWarning": "limitation-warning",
+    "priorityConclusion": "priority-conclusion",
+    "historicalGreenConclusion": "historical-green-conclusion",
 }
 
 SEMANTIC_ALLOWED_EVENT_TYPES = {
@@ -135,9 +159,15 @@ SEMANTIC_ALLOWED_EVENT_TYPES = {
     "platform-fanout": {"transitionPushZoom", "platformFanout"},
     "proof-material": {"materialMain", "statusSticker"},
     "cta-resolve": {"ctaTitle", "ctaRecommend"},
-    "workflow-step": {"flowPath", "statusStack", "captionHighlight"},
+    "workflow-step": {"flowPath", "statusStack", "compactPipeline", "captionHighlight"},
     "topic-intro": {"topicKeyword"},
     "explanation-claim": {"claimStrip", "quoteSource", "statusSticker"},
+    "paired-inputs": {"pairedInputRail"},
+    "parallel-factors": {"factorTrinity"},
+    "causal-driver": {"causalDriver"},
+    "factor-priority": {"factorPriority"},
+    "limitation-boundary": {"limitationWarning"},
+    "prerequisite": {"priorityConclusion", "historicalGreenConclusion"},
 }
 
 
@@ -662,6 +692,8 @@ def _transformation_provenance_errors(
 SOURCE_BOUND_COMPONENT_INTENTS = {
     "capability-share", "scene-lock", "platform-fanout", "manual-field",
     "asset-variants", "automation-handoff", "workflow-step", "workflow-fields", "enumeration",
+    "paired-inputs", "parallel-factors", "causal-driver", "factor-priority",
+    "limitation-boundary", "prerequisite",
 }
 
 
@@ -685,7 +717,16 @@ def _component_provenance_errors(
 
     errors: list[str] = []
     steps = event.get("internalSteps")
-    minimum = 1 if intent == "automation-handoff" else 2
+    minimum_by_intent = {
+        "automation-handoff": 1,
+        "factor-priority": 1,
+        "prerequisite": 1,
+        "paired-inputs": 2,
+        "causal-driver": 2,
+        "limitation-boundary": 2,
+        "parallel-factors": 3,
+    }
+    minimum = minimum_by_intent.get(intent, 2)
     if not isinstance(steps, list) or len(steps) < minimum:
         return [
             "component-source-binding failed: "
@@ -760,6 +801,31 @@ def _component_provenance_errors(
                     f"{step_ref}.text={source_text!r} is out of linked-caption order"
                 )
             prior_position = max(prior_position, current_position)
+    exact_cardinality = {
+        "paired-inputs": 2,
+        "parallel-factors": 3,
+        "causal-driver": 2,
+        "prerequisite": 1,
+    }
+    expected_count = 3 if str(event.get("type") or "") == "compactPipeline" else exact_cardinality.get(intent)
+    if expected_count is not None and isinstance(steps, list) and len(steps) != expected_count:
+        errors.append(
+            "component-source-cardinality failed: "
+            f"{event_id} ({intent}) needs exactly {expected_count} source-bound steps; got {len(steps)}"
+        )
+    roles = [str(step.get("role") or "") for step in steps if isinstance(step, dict)] if isinstance(steps, list) else []
+    if intent == "causal-driver" and roles != ["target", "driver"]:
+        errors.append(
+            "causal-driver-role-contract failed: "
+            f"{event_id} roles must be target, driver; got {roles}"
+        )
+    if intent == "limitation-boundary" and (
+        roles[:1] != ["capability"] or not roles[1:] or any(role != "limitation" for role in roles[1:])
+    ):
+        errors.append(
+            "limitation-role-contract failed: "
+            f"{event_id} roles must be capability followed by one or more limitation items; got {roles}"
+        )
     return errors
 
 

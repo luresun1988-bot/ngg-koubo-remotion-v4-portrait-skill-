@@ -59,6 +59,36 @@ RULES: dict[str, dict[str, Any]] = {
         "terms": [],
         "checks": ["workflow-not-generic-card"],
     },
+    "paired-inputs": {
+        "visualForm": "pairedInputRail",
+        "terms": ["准备", "提供", "上传", "输入"],
+        "checks": ["paired-inputs-source-binding", "no-generic-card-fallback"],
+    },
+    "parallel-factors": {
+        "visualForm": "factorTrinity",
+        "terms": ["都很重要", "同样重要", "缺一不可", "三要素", "三项"],
+        "checks": ["factor-trinity-source-binding", "no-generic-card-fallback"],
+    },
+    "causal-driver": {
+        "visualForm": "causalDriver",
+        "terms": ["驱动", "带动", "决定"],
+        "checks": ["causal-driver-source-binding", "no-generic-card-fallback"],
+    },
+    "factor-priority": {
+        "visualForm": "factorPriority",
+        "terms": ["真正影响", "关键在于", "核心因素", "决定结果"],
+        "checks": ["factor-priority-source-binding", "no-generic-card-fallback"],
+    },
+    "limitation-boundary": {
+        "visualForm": "limitationWarning",
+        "terms": ["不能", "无法", "救不了", "解决不了", "不支持"],
+        "checks": ["limitation-source-binding", "negative-red-treatment"],
+    },
+    "prerequisite": {
+        "visualForm": "priorityConclusion",
+        "terms": ["必须", "一定要", "前提", "先满足", "先做好", "才能"],
+        "checks": ["prerequisite-source-binding", "prerequisite-non-green-default"],
+    },
     "negative-friction": {
         "visualForm": "redWarningCard",
         "terms": ["还在", "手动", "不是", "别再", "麻烦", "重复", "低效", "卡住", "风险", "不值得", "太慢", "人工成本"],
@@ -141,6 +171,203 @@ ENTITY_TERMS = [
 ]
 INELIGIBLE_DEPTH_KEYWORDS = {"Codex", "OpenAI", "Google", "Anthropic", "Topaz", "TopazVideoAI", "Topaz Video AI"}
 
+STRUCTURED_UNCERTAINTY_TERMS = ["可能", "也许", "或许", "大概", "如果", "假设", "不一定"]
+INPUT_TRIGGER_RE = re.compile(r"(?:准备|提供|上传|输入|需要)(?P<body>[^，。！？]{2,34})")
+PARALLEL_FACTOR_END_RE = re.compile(r"(?P<body>[^，。！？]{3,36}?)(?:都很重要|同样重要|缺一不可|是三要素|是三个要素)")
+PRIORITY_FACTOR_RE = re.compile(
+    r"(?:真正影响[^，。！？]{0,12}的是|决定[^，。！？]{0,12}的是|关键(?:因素)?在于|核心因素是)(?P<body>[^，。！？]{2,32})"
+)
+LIMITATION_RE = re.compile(
+    r"(?P<subject>[^，。！？]{1,14}?)(?P<marker>不能|无法|救不了|解决不了|不支持)(?P<body>[^，。！？]{1,30})"
+)
+CAUSAL_BY_RE = re.compile(
+    r"(?P<target>[^，。！？]{1,14}?)(?:是)?(?:靠|依靠)(?P<driver>[^，。！？]{1,12}?)(?:来)?(?:驱动|带动|决定)"
+)
+CAUSAL_DIRECT_RE = re.compile(
+    r"(?P<driver>[^，。！？]{1,12}?)(?:直接)?(?:驱动|带动|决定)(?P<target>[^，。！？]{1,14})"
+)
+PREREQUISITE_SUBJECT_RE = re.compile(
+    r"(?P<label>[^，。！？]{1,14}?)(?:必须|一定要|需要)先(?P<action>[^，。！？]{1,14})"
+)
+PREREQUISITE_EXPLICIT_RE = re.compile(
+    r"(?:前提(?:条件)?是|必须先满足)(?P<label>[^，。！？]{1,16})"
+)
+PREREQUISITE_BEFORE_RE = re.compile(
+    r"先(?P<label>[^，。！？]{1,16}?)(?:，|,)?才(?:能|可以|会)"
+)
+
+PIPELINE_KNOWN_ITEMS: list[tuple[str, str]] = [
+    ("读取逐字稿", "FileText"), ("判断语义", "BrainCircuit"), ("写入时间线", "Workflow"),
+    ("上传素材", "UploadCloud"), ("填写标题", "FileText"), ("输出视频", "Video"),
+    ("高清放大", "Maximize2"), ("增强软件", "WandSparkles"), ("成片", "Film"),
+]
+
+SEMANTIC_ICON_HINTS: list[tuple[str, str]] = [
+    ("图片", "Image"), ("照片", "Image"), ("画面", "Image"), ("音频", "AudioLines"),
+    ("声音", "AudioWaveform"), ("音色", "AudioWaveform"), ("情绪", "HeartPulse"),
+    ("语速", "Gauge"), ("视频", "Video"), ("成片", "Film"), ("软件", "WandSparkles"),
+    ("放大", "Maximize2"), ("口型", "ScanFace"), ("表情", "CircleX"),
+    ("参数", "SlidersHorizontal"), ("模型", "Boxes"), ("文案", "FileText"),
+    ("脚本", "FileText"), ("素材", "Package"), ("流程", "Workflow"),
+]
+
+
+def semantic_icon(label: str, fallback: str = "CircleDot") -> str:
+    return next((icon for term, icon in SEMANTIC_ICON_HINTS if term in label), fallback)
+
+
+def _trim_source_item(value: str) -> str:
+    item = value.strip(" \t\r\n，。！？、；;：:,.!?/")
+    item = re.sub(r"^(?:先|再|然后|接着|最后|以及|还有|并且|把|用|使用|准备|提供|上传|输入|需要)+", "", item)
+    item = re.sub(r"^(?:一张|一段|一个|一份|一种|一条|两类|两个|三个|三项)", "", item)
+    item = re.sub(r"(?:都很重要|同样重要|缺一不可|这三项|三个要素)$", "", item)
+    return item.strip(" \t\r\n，。！？、；;：:,.!?/")[:12]
+
+
+def _split_source_items(body: str, limit: int = 4) -> list[str]:
+    normalized = re.sub(r"(?:以及|还有|并且|或者|和|与)", "、", body)
+    raw_items = re.split(r"[、,/；;]", normalized)
+    items: list[str] = []
+    for raw in raw_items:
+        item = _trim_source_item(raw)
+        if 1 < len(item) <= 12 and item not in items:
+            items.append(item)
+        if len(items) == limit:
+            break
+    return items
+
+
+def _structured_items(labels: list[str], *, roles: list[str] | None = None) -> list[dict[str, str]]:
+    items: list[dict[str, str]] = []
+    for index, label in enumerate(labels):
+        item = {"label": label, "iconName": semantic_icon(label)}
+        if roles and index < len(roles):
+            item["role"] = roles[index]
+        items.append(item)
+    return items
+
+
+def structured_rule_result(
+    intent: str,
+    labels: list[str],
+    *,
+    roles: list[str] | None = None,
+    confidence: float = 0.94,
+) -> dict[str, Any]:
+    result = rule_result(intent, labels, confidence)
+    result["structuredItems"] = _structured_items(labels, roles=roles)
+    return result
+
+
+def extract_paired_inputs(text: str) -> list[str]:
+    match = INPUT_TRIGGER_RE.search(text)
+    if not match:
+        return []
+    body = re.split(r"(?:作为|用于|就能|即可|就可以)", match.group("body"), maxsplit=1)[0]
+    items = _split_source_items(body, 3)
+    if len(items) != 2:
+        return []
+    asset_evidence = sum(
+        any(term in item for term in ["图", "照片", "音频", "声音", "视频", "文案", "脚本", "素材", "录屏", "文件", "模型"])
+        for item in items
+    )
+    return items if asset_evidence == 2 else []
+
+
+def extract_parallel_factors(text: str) -> list[str]:
+    match = PARALLEL_FACTOR_END_RE.search(text)
+    if not match:
+        explicit = re.search(r"(?:三要素|三个要素|三项)(?:是|包括|分别是)?(?P<body>[^，。！？]{3,30})", text)
+        if not explicit:
+            return []
+        body = explicit.group("body")
+    else:
+        body = match.group("body")
+    if "包括" in body:
+        body = body.split("包括", 1)[1]
+    items = _split_source_items(body, 4)
+    return items if len(items) == 3 else []
+
+
+def extract_causal_pair(text: str) -> tuple[str, str] | None:
+    if any(term in text for term in STRUCTURED_UNCERTAINTY_TERMS + ["不是靠", "并非靠", "不能靠", "无法靠"]):
+        return None
+    match = CAUSAL_BY_RE.search(text)
+    if match:
+        target = _trim_source_item(match.group("target"))
+        driver = _trim_source_item(match.group("driver"))
+        return (target, driver) if target and driver else None
+    match = CAUSAL_DIRECT_RE.search(text)
+    if match:
+        driver = _trim_source_item(match.group("driver"))
+        target = _trim_source_item(match.group("target"))
+        return (target, driver) if target and driver else None
+    return None
+
+
+def extract_priority_factors(text: str) -> list[str]:
+    match = PRIORITY_FACTOR_RE.search(text)
+    if not match:
+        return []
+    return _split_source_items(match.group("body"), 4)
+
+
+def extract_compact_pipeline(text: str) -> list[str]:
+    known = [
+        (position, label, icon)
+        for label, icon in PIPELINE_KNOWN_ITEMS
+        for position in [text.find(label)]
+        if position >= 0
+    ]
+    known.sort(key=lambda item: item[0])
+    labels = [label for _position, label, _icon in known]
+    if len(labels) == 3:
+        return labels
+    if not all(marker in text for marker in ["首先", "最后"]) or not any(marker in text for marker in ["然后", "接着", "其次"]):
+        return []
+    parts = re.split(r"(?:首先|然后|接着|其次|最后)", text)
+    labels = [_trim_source_item(part) for part in parts if _trim_source_item(part)]
+    return labels if len(labels) == 3 else []
+
+
+def extract_limitation_items(text: str) -> list[tuple[str, str]]:
+    if any(term in text for term in STRUCTURED_UNCERTAINTY_TERMS):
+        return []
+    match = LIMITATION_RE.search(text)
+    if not match:
+        return []
+    subject = _trim_source_item(match.group("subject"))
+    targets = _split_source_items(match.group("body"), 3)
+    if not subject or not targets:
+        return []
+    body = match.group("body")
+    if any(phrase in text for phrase in ["不能再手填", "不能手填", "不能再手动"]):
+        return []
+    capability_terms = ["工具", "功能", "模型", "软件", "算法", "放大", "增强", "剪辑", "生成", "修复", "系统", "能力"]
+    limited_target_terms = ["口型", "表情", "问题", "错误", "画质", "声音", "字幕", "内容", "文件", "数据", "缺陷", "故障"]
+    if not any(term in subject for term in capability_terms) or not any(term in body for term in limited_target_terms):
+        return []
+    return [(subject, "capability"), *[(target, "limitation") for target in targets]]
+
+
+def extract_prerequisite(text: str) -> tuple[str, str] | None:
+    if any(term in text for term in STRUCTURED_UNCERTAINTY_TERMS):
+        return None
+    match = PREREQUISITE_SUBJECT_RE.search(text)
+    if match:
+        label = _trim_source_item(match.group("label"))
+        action = ("先" + match.group("action").strip(" ，。！？"))[:12]
+        return (label, action) if label and action else None
+    match = PREREQUISITE_EXPLICIT_RE.search(text)
+    if match:
+        label = _trim_source_item(match.group("label"))
+        return (label, "") if label else None
+    match = PREREQUISITE_BEFORE_RE.search(text)
+    if match:
+        label = _trim_source_item(match.group("label"))
+        return (label, "") if label else None
+    return None
+
 
 def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8-sig"))
@@ -169,6 +396,33 @@ def automation_handoff_result(text: str, keywords: list[str], confidence: float 
     result = rule_result("automation-handoff", keywords, confidence)
     result["internalSteps"] = extract_automation_handoff_steps(text)
     return result
+
+
+def bind_structured_items(
+    cues: list[dict[str, Any]], structured_items: list[dict[str, Any]], prefix: str,
+) -> list[dict[str, Any]]:
+    """Bind every proposed label to the exact caption cue that contains it."""
+    bound: list[dict[str, Any]] = []
+    for raw in structured_items:
+        if not isinstance(raw, dict):
+            continue
+        label = str(raw.get("label") or "").strip()
+        if not label:
+            continue
+        cue = next((item for item in cues if label in str(item.get("text") or "")), None)
+        if cue is None or not cue.get("id"):
+            continue
+        step = {
+            "id": f"{prefix}-{len(bound) + 1:02d}",
+            "label": label,
+            "text": label,
+            "sourceCueIds": [str(cue["id"])],
+            "iconName": str(raw.get("iconName") or semantic_icon(label)),
+        }
+        if raw.get("role"):
+            step["role"] = str(raw["role"])
+        bound.append(step)
+    return bound
 
 
 def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[str, Any]:
@@ -223,6 +477,50 @@ def classify_text(text: str, frame_midpoint: int, duration_frames: int) -> dict[
             "requiredChecks": RULES["topic-intro"]["checks"],
             "confidence": 0.9,
         }
+
+    paired_inputs = extract_paired_inputs(text)
+    if paired_inputs:
+        return structured_rule_result("paired-inputs", paired_inputs, confidence=0.96)
+
+    parallel_factors = extract_parallel_factors(text)
+    if parallel_factors:
+        return structured_rule_result("parallel-factors", parallel_factors, confidence=0.96)
+
+    causal_pair = extract_causal_pair(text)
+    if causal_pair:
+        target, driver = causal_pair
+        return structured_rule_result(
+            "causal-driver", [target, driver], roles=["target", "driver"], confidence=0.96
+        )
+
+    priority_factors = extract_priority_factors(text)
+    if priority_factors:
+        return structured_rule_result("factor-priority", priority_factors, confidence=0.96)
+
+    compact_pipeline = extract_compact_pipeline(text)
+    if compact_pipeline:
+        result = structured_rule_result("workflow-step", compact_pipeline, confidence=0.96)
+        result["visualForm"] = "compactPipeline"
+        result["requiredChecks"] = ["compact-pipeline-three-steps", "workflow-source-steps"]
+        return result
+
+    limitation_items = extract_limitation_items(text)
+    if limitation_items:
+        labels = [label for label, _role in limitation_items]
+        roles = [role for _label, role in limitation_items]
+        return structured_rule_result(
+            "limitation-boundary", labels, roles=roles, confidence=0.97
+        )
+
+    prerequisite = extract_prerequisite(text)
+    if prerequisite:
+        label, action = prerequisite
+        result = structured_rule_result(
+            "prerequisite", [label], roles=["prerequisite"], confidence=0.97
+        )
+        if action:
+            result["supportText"] = action
+        return result
 
     if handoff == "negated":
         return {
@@ -604,6 +902,7 @@ def build_semantic_beats(data: dict[str, Any]) -> list[dict[str, Any]]:
                 end = int(group[-1].get("endFrame", start + 1) or start + 1)
                 text = "，".join(str(cue.get("text") or "") for cue in group)
                 beat_id = f"beat-{beat_index:03d}"
+                compact = len(internal_steps) == 3
                 beats.append(
                     {
                         "id": beat_id,
@@ -613,10 +912,14 @@ def build_semantic_beats(data: dict[str, Any]) -> list[dict[str, Any]]:
                         "endFrame": min(int(scene.get("endFrame", end) or end), end),
                         "text": text,
                         "semanticIntent": "workflow-step",
-                        "visualForm": "flowPath",
+                        "visualForm": "compactPipeline" if compact else "flowPath",
                         "confidence": 0.96,
                         "keywords": [str(step.get("label") or "") for step in internal_steps[:3]],
-                        "requiredChecks": ["workflow-not-generic-card", "workflow-source-steps"],
+                        "requiredChecks": (
+                            ["compact-pipeline-three-steps", "workflow-source-steps"]
+                            if compact
+                            else ["workflow-not-generic-card", "workflow-source-steps"]
+                        ),
                         "semanticModifiers": ["ordered-workflow"],
                         "sourceCueIds": [str(cue.get("id") or "") for cue in group if cue.get("id")],
                         "internalSteps": internal_steps,
@@ -686,6 +989,10 @@ def build_semantic_beats(data: dict[str, Any]) -> list[dict[str, Any]]:
                 beat["semanticModifiers"] = info["semanticModifiers"]
             if isinstance(info.get("internalSteps"), list):
                 beat["internalSteps"] = info["internalSteps"]
+            if isinstance(info.get("structuredItems"), list):
+                beat["internalSteps"] = bind_structured_items(group, info["structuredItems"], info["semanticIntent"])
+            if info.get("supportText"):
+                beat["supportText"] = str(info["supportText"])
             beats.append(beat)
             beat_index += 1
 

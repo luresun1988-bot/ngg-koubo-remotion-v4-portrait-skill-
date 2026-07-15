@@ -142,6 +142,13 @@ Choose HUD patterns by semantic role:
 - `semantic-problem-map`: contrast panel for "not A, but B" or "the real bottleneck is X". In fullscreen/large portrait presenter scenes, use the compact top-safe horizontal contrast strip above the face band; reserve the full stacked panel for proof/material-main/PiP or explicit full-panel review samples.
 - `manual-field`: repeated task or repeated field filling, local directory checks, or field availability checks. Prefer the right-safe-zone `STATUS POLLING` timeline above a `FIELDS` file-tree/field-list: a bare status line with spaced labels/nodes, then a slim blue rail plus 2-3 row backings with semantic icons, status dots, checks, or `生成中`. Do not use a large outer card, stacked task-card container, or circular `AI/FILES` badge for this pattern.
 - `workflow-step`: `flowPath` or `statusStack`, with numbered rows/nodes and item-by-item reveal.
+- `paired-inputs`: `pairedInputRail`, a compact two-rail portrait comparison for exactly two sourced input assets.
+- `parallel-factors`: `factorTrinity`, three distinct icon factors with equal visual weight; do not use it for two or four items.
+- `causal-driver`: `causalDriver`, a sourced driver-to-target relation with a directional connector and no invented outcome.
+- `factor-priority`: `factorPriority`, one explicitly decisive sourced factor supported by the remaining sourced factors.
+- Three-step `workflow-step`: `compactPipeline`, a portrait-safe three-node pipeline used only when exactly three ordered source steps exist; other workflow cardinalities keep `flowPath` or `statusStack`.
+- `limitation-boundary`: `limitationWarning`, white base copy with red boundary emphasis, sourced capability and limitation labels, and no synthesized fix.
+- `prerequisite`: automatic `priorityConclusion` uses blue/gold recommendation treatment. The approved green `historicalGreenConclusion` variant is manual-only through `presentationVariant=manual-approved`; do not use green for an uncompleted prerequisite by default.
 - `platform-fanout`: one source package fans out to several platforms or channels.
 - `automation-handoff`: repeated/manual fields collapse into AI/system execution, on a uniform dark translucent panel with clean black shadow and no horizontal fade.
 - `proof-focus`: readable proof material with highlight boxes, arrows, highlight cues, and simplified overlays.

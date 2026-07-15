@@ -17,7 +17,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 SKILL_ROOT = SCRIPT_DIR.parent
 TEMPLATE_ROOT = SKILL_ROOT / "assets" / "remotion-template"
 FORMAT = "portrait" if "portrait" in SKILL_ROOT.name.lower() else "landscape"
-SELECTED_CASE_IDS = [
+BASE_SELECTED_CASE_IDS = [
     "numeric-complete",
     "numeric-incomplete",
     "automation-handoff",
@@ -25,6 +25,18 @@ SELECTED_CASE_IDS = [
     "tool-explanation",
     "explicit-cta",
 ]
+PORTRAIT_TEMPLATE_CASES = [
+    {"id": "portrait-paired-inputs", "text": "准备一张高清图片和一段参考音频", "intent": "paired-inputs", "adapters": {"portrait": {"visualForm": "pairedInputRail", "eventType": "pairedInputRail"}}},
+    {"id": "portrait-parallel-factors", "text": "音色、情绪和语速都很重要", "intent": "parallel-factors", "adapters": {"portrait": {"visualForm": "factorTrinity", "eventType": "factorTrinity"}}},
+    {"id": "portrait-causal-driver", "text": "数字人是靠声音驱动的", "intent": "causal-driver", "adapters": {"portrait": {"visualForm": "causalDriver", "eventType": "causalDriver"}}},
+    {"id": "portrait-factor-priority", "text": "真正影响效果的是素材质量和参数设置", "intent": "factor-priority", "adapters": {"portrait": {"visualForm": "factorPriority", "eventType": "factorPriority"}}},
+    {"id": "portrait-compact-pipeline", "text": "成片之后，再用增强软件做高清放大", "intent": "workflow-step", "adapters": {"portrait": {"visualForm": "compactPipeline", "eventType": "compactPipeline"}}},
+    {"id": "portrait-limitation-boundary", "text": "高清放大救不了错误口型和表情", "intent": "limitation-boundary", "adapters": {"portrait": {"visualForm": "limitationWarning", "eventType": "limitationWarning"}}},
+    {"id": "portrait-prerequisite", "text": "原视频一定要先做好", "intent": "prerequisite", "adapters": {"portrait": {"visualForm": "priorityConclusion", "eventType": "priorityConclusion"}}},
+]
+SELECTED_CASE_IDS = BASE_SELECTED_CASE_IDS + (
+    [str(case["id"]) for case in PORTRAIT_TEMPLATE_CASES] if FORMAT == "portrait" else []
+)
 CASE_SCENE_TYPES = {
     "numeric-complete": "Process",
     "numeric-incomplete": "Contrast",
@@ -32,6 +44,13 @@ CASE_SCENE_TYPES = {
     "keyword-process": "Process",
     "tool-explanation": "Explanation",
     "explicit-cta": "CTA",
+    "portrait-paired-inputs": "Process",
+    "portrait-parallel-factors": "Process",
+    "portrait-causal-driver": "Explanation",
+    "portrait-factor-priority": "Explanation",
+    "portrait-compact-pipeline": "Process",
+    "portrait-limitation-boundary": "Contrast",
+    "portrait-prerequisite": "Explanation",
 }
 FRAMES_PER_CASE = 125
 FPS = 25
@@ -129,6 +148,8 @@ def load_selected_cases() -> list[dict[str, Any]]:
     contract_path = SCRIPT_DIR / "semantic_contract_cases.json"
     contract = json.loads(contract_path.read_text(encoding="utf-8-sig"))
     cases_by_id = {str(item.get("id")): item for item in contract.get("cases", []) if isinstance(item, dict)}
+    if FORMAT == "portrait":
+        cases_by_id.update({str(item["id"]): item for item in PORTRAIT_TEMPLATE_CASES})
     missing = [case_id for case_id in SELECTED_CASE_IDS if case_id not in cases_by_id]
     if missing:
         raise AssertionError(f"shared semantic contract is missing selected cases: {missing}")
@@ -551,7 +572,7 @@ def main() -> int:
             "-i",
             str(concat_path),
             "-vf",
-            "scale=480:-1,tile=3x2:padding=8:margin=8:color=0x101010",
+            f"scale=480:-1,tile=3x{(len(case_results) + 2) // 3}:padding=8:margin=8:color=0x101010",
             "-frames:v",
             "1",
             "-update",

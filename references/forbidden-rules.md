@@ -25,6 +25,9 @@ Use this reference before finalizing any V4 visual script, template change, or Q
 - Do not invent CTA actions or keywords. Generated CTA copy must be traceable to `ctaProvenance.sourceText`, and a sourced CTA must not be discarded by lane scheduling.
 - Do not build a `transformationStack` from only an A→B phrase. Source, target, one or two drivers, and an explicit result must each cite caption cues owned by the same source beat and scene.
 - Do not borrow an uncited previous cue to fill a transformation driver or result, and do not synthesize result copy such as `目标状态达成`. Use the explicit `captionHighlight` fallback when the evidence contract is incomplete.
+- Do not route the portrait pair, trinity, causal, priority, compact-pipeline, limitation, or prerequisite templates from weak keyword matches. Enforce their registered cardinality, relation, polarity, and source-cue contracts.
+- Do not force a two-step or incomplete ordered workflow into `compactPipeline`; it is reserved for exactly three explicit ordered source steps.
+- Do not automatically render a prerequisite with `historicalGreenConclusion`. That green variant requires `presentationVariant=manual-approved`; otherwise use blue/gold `priorityConclusion` so green continues to mean asserted success, completion, or validation.
 
 ## Material Prohibitions
 
