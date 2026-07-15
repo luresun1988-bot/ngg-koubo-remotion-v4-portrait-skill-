@@ -96,6 +96,14 @@ def main() -> int:
         for key in ("videoDurationSec", "audioDurationSec", "formatDurationSec"):
             if abs(float(actual.get(key) or 0) - expected_duration) > 1e-6:
                 raise AssertionError(f"pipeline must trim {key} to {expected_duration:.6f}s: {actual}")
+        contact_sheet = root / "qa" / "final_encoded_contact_sheet.png"
+        contact_manifest = root / "qa" / "final_encoded_contact_sheet.json"
+        if not contact_sheet.is_file() or not contact_manifest.is_file():
+            raise AssertionError("pipeline did not generate final encoded contact-sheet evidence")
+        manifest = json.loads(contact_manifest.read_text(encoding="utf-8"))
+        selected = [item.get("frame") for item in manifest.get("frames", [])]
+        if selected != [0, 24]:
+            raise AssertionError(f"pipeline contact sheet must include exact first/last frames: {selected}")
     print("portrait render pipeline regression: PASS")
     return 0
 

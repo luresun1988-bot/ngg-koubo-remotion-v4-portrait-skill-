@@ -1,10 +1,8 @@
 import React from 'react';
 import {
   AbsoluteFill,
-  Audio,
   Easing,
   OffthreadVideo,
-  Sequence,
   interpolate,
   staticFile,
   useCurrentFrame,
@@ -40,7 +38,8 @@ import {
   PriorityConclusionPanel,
 } from './components/PortraitSemanticTemplates';
 import {colors, fontStack, mediaWindowShadow} from './v4Styles';
-import type {AudioCue, PresenterAudio, Scene, VisualEvent, VisualScript} from './v4Types';
+import {V4AudioLayers} from './V4Audio';
+import type {Scene, VisualEvent, VisualScript} from './v4Types';
 
 type ShadeSide = 'left' | 'right';
 type HudLane = ShadeSide | 'center' | 'proof';
@@ -306,81 +305,6 @@ const ContinuousPresenter: React.FC<{
         </div>
       )}
     </div>
-  );
-};
-
-const PresenterAudioLayer: React.FC<{
-  config?: PresenterAudio;
-  compositionDuration: number;
-}> = ({config, compositionDuration}) => {
-  if (config?.mode !== 'normalized-wav' || !config.path) return null;
-  const offset = Math.trunc(config.syncOffsetFrames ?? 0);
-  const sequenceStart = Math.max(0, offset);
-  const trimBefore = Math.max(0, -offset);
-  return (
-    <Sequence from={sequenceStart} durationInFrames={Math.max(1, compositionDuration - sequenceStart)}>
-      <Audio src={staticFile(config.path.replaceAll('\\', '/'))} trimBefore={trimBefore || undefined} />
-    </Sequence>
-  );
-};
-
-const dbToVolume = (volumeDb: number): number => Math.pow(10, volumeDb / 20);
-
-const cueVolume = (cue: AudioCue, localFrame: number, duration: number): number => {
-  const defaultDb = cue.type === 'bgm' ? -30 : cue.type === 'sfx' ? -23 : 0;
-  const base = dbToVolume(cue.volumeDb ?? defaultDb);
-  const fadeInFrames = Math.max(0, cue.fadeInFrames ?? 0);
-  const fadeOutFrames = Math.max(0, cue.fadeOutFrames ?? 0);
-  const fadeIn =
-    fadeInFrames > 0
-      ? interpolate(localFrame, [0, fadeInFrames], [0, 1], {
-          extrapolateLeft: 'clamp',
-          extrapolateRight: 'clamp',
-        })
-      : 1;
-  const fadeOut =
-    fadeOutFrames > 0
-      ? interpolate(localFrame, [Math.max(0, duration - fadeOutFrames), duration], [1, 0], {
-          extrapolateLeft: 'clamp',
-          extrapolateRight: 'clamp',
-        })
-      : 1;
-
-  return base * fadeIn * fadeOut;
-};
-
-const audioCueDuration = (cue: AudioCue, compositionDuration: number): number => {
-  const startFrame = cue.startFrame ?? 0;
-  if (typeof cue.durationFrames === 'number' && cue.durationFrames > 0) return cue.durationFrames;
-  if (typeof cue.endFrame === 'number' && cue.endFrame > startFrame) return cue.endFrame - startFrame;
-  if (cue.type === 'sfx') return 18;
-  return Math.max(1, compositionDuration - startFrame);
-};
-
-const shouldRenderAudioCue = (cue: AudioCue): boolean => {
-  if (cue.type === 'source' || cue.type === 'silence') return false;
-  if (cue.status === 'pending-selection' || cue.status === 'pending-generation' || cue.status === 'suggested') return false;
-  if (cue.status === 'disabled' || cue.status === 'muted') return false;
-  return Boolean(cue.path);
-};
-
-const AudioCueLayer: React.FC<{cue: AudioCue; compositionDuration: number}> = ({
-  cue,
-  compositionDuration,
-}) => {
-  if (!shouldRenderAudioCue(cue)) return null;
-
-  const startFrame = cue.startFrame ?? 0;
-  const duration = audioCueDuration(cue, compositionDuration);
-
-  return (
-    <Sequence from={startFrame} durationInFrames={duration}>
-      <Audio
-        src={staticFile(cue.path ?? '')}
-        loop={cue.loop}
-        volume={(frame) => cueVolume(cue, frame, duration)}
-      />
-    </Sequence>
   );
 };
 
@@ -695,17 +619,7 @@ export const V4Composition: React.FC<{visualScript: VisualScript}> = ({visualScr
       {depthKeywords.map((event) => (
         <DepthKeywordLayer key={event.id} event={event} />
       ))}
-      <PresenterAudioLayer
-        config={visualScript.presenterAudio}
-        compositionDuration={visualScript.composition.durationFrames}
-      />
-      {visualScript.audioCues.map((cue) => (
-        <AudioCueLayer
-          key={cue.id}
-          cue={cue}
-          compositionDuration={visualScript.composition.durationFrames}
-        />
-      ))}
+      <V4AudioLayers visualScript={visualScript} />
       <GridOverlay />
       {ENABLE_HUD_EDGE_SHADE ? (
         <>

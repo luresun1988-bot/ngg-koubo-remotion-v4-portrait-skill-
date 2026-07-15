@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -76,6 +77,47 @@ def decode_ok(path: Path) -> tuple[bool, str]:
     return result.returncode == 0, result.stderr.strip()
 
 
+def audio_level_metrics(path: Path) -> dict[str, Any]:
+    result = subprocess.run(
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-nostats",
+            "-i",
+            str(path),
+            "-map",
+            "0:a:0",
+            "-af",
+            "volumedetect",
+            "-f",
+            "null",
+            "-",
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    output = result.stderr
+
+    def parse_metric(label: str) -> float | None:
+        match = re.search(rf"{label}:\s*(-?inf|-?\d+(?:\.\d+)?)\s*dB", output, flags=re.IGNORECASE)
+        if not match or match.group(1).lower().endswith("inf"):
+            return None
+        return float(match.group(1))
+
+    mean_volume = parse_metric("mean_volume")
+    max_volume = parse_metric("max_volume")
+    analyzed = result.returncode == 0 and mean_volume is not None and max_volume is not None
+    return {
+        "analyzed": analyzed,
+        "meanVolumeDb": mean_volume,
+        "maxVolumeDb": max_volume,
+        "error": None if analyzed else (output.strip()[-1200:] or f"ffmpeg exit {result.returncode}"),
+    }
+
+
 def analyze(
     video: Path,
     visual_script: Path,
@@ -109,6 +151,12 @@ def analyze(
     video_duration = stream_duration(video_stream)
     video_start = stream_start_time(video_stream)
     audio_start = stream_start_time(audio_stream)
+    audio_levels = audio_level_metrics(video) if audio_stream else {
+        "analyzed": False,
+        "meanVolumeDb": None,
+        "maxVolumeDb": None,
+        "error": "no audio stream",
+    }
 
     if (int(video_stream.get("width") or 0), int(video_stream.get("height") or 0)) != (
         expected["width"],
@@ -143,6 +191,19 @@ def analyze(
         errors.append("final video must contain an audio stream")
     if audio_stream and audio_stream.get("codec_name") != "aac":
         errors.append(f"audio codec must be aac, got {audio_stream.get('codec_name') or 'missing'}")
+    if audio_stream and not audio_levels["analyzed"]:
+        errors.append(f"audio level analysis failed: {audio_levels['error'] or 'unknown ffmpeg error'}")
+    if audio_levels["analyzed"]:
+        max_volume_db = float(audio_levels["maxVolumeDb"])
+        mean_volume_db = float(audio_levels["meanVolumeDb"])
+        if max_volume_db >= -0.1:
+            errors.append(
+                f"audio clipping risk: decoded max volume {max_volume_db:.1f} dBFS must stay below -0.1 dBFS"
+            )
+        if mean_volume_db < -55:
+            warnings.append(
+                f"audio mix is unusually quiet: decoded mean volume {mean_volume_db:.1f} dBFS"
+            )
     duration_tolerance = max(0.12, 3 / expected["fps"]) if expected["fps"] else 0.12
     start_tolerance = max(0.04, 1.5 / expected["fps"]) if expected["fps"] else 0.06
     if abs(video_start) > start_tolerance:
@@ -167,7 +228,7 @@ def analyze(
         errors.append(f"full-file decode failed: {decode_error or 'unknown ffmpeg error'}")
 
     return {
-        "schemaVersion": "ngg-v4-portrait-final-media-qa-v1",
+        "schemaVersion": "ngg-v4-portrait-final-media-qa-v2",
         "passed": not errors,
         "errors": errors,
         "warnings": warnings,
@@ -181,6 +242,7 @@ def analyze(
             "videoCodec": video_stream.get("codec_name"),
             "pixelFormat": video_stream.get("pix_fmt"),
             "audioCodec": audio_stream.get("codec_name") if audio_stream else None,
+            "audioLevels": audio_levels,
             "videoStartSec": video_start,
             "audioStartSec": audio_start if audio_stream else None,
             "audioVideoStartDeltaSec": (audio_start - video_start) if audio_stream else None,
@@ -213,6 +275,7 @@ def markdown_report(report: dict[str, Any], video: Path, visual_script: Path) ->
         f"- {report['actual']['fpsText']} fps",
         f"- {report['actual']['decodedFrames']} decoded frames",
         f"- {report['actual']['videoCodec']} / {report['actual']['audioCodec']}",
+        f"- Audio levels: mean {report['actual']['audioLevels']['meanVolumeDb'] if report['actual']['audioLevels']['meanVolumeDb'] is not None else 'n/a'} dBFS / max {report['actual']['audioLevels']['maxVolumeDb'] if report['actual']['audioLevels']['maxVolumeDb'] is not None else 'n/a'} dBFS",
         f"- A/V start: {report['actual']['videoStartSec']:.6f}s / {report['actual']['audioStartSec'] if report['actual']['audioStartSec'] is not None else 'none'}s (delta {report['actual']['audioVideoStartDeltaSec'] if report['actual']['audioVideoStartDeltaSec'] is not None else 'n/a'}s)",
         f"- Full decode: {'PASS' if report['actual']['fullDecodePassed'] else 'FAIL'}",
     ]

@@ -140,7 +140,7 @@ def main() -> int:
         item = manifest_by_intent.get(intent)
         if not item:
             fail(f"SFX suggestion missing manifest item for intent {intent}")
-        for field in ("sfxId", "path", "durationFrames"):
+        for field in ("sfxId", "path", "durationFrames", "durationSec"):
             if suggestion.get(field) != item.get(field):
                 fail(f"SFX {intent}.{field} registry mismatch suggestion={suggestion.get(field)} manifest={item.get(field)}")
         if suggestion.get("volumeDb") != item.get("defaultVolumeDb"):

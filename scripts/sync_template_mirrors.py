@@ -19,6 +19,7 @@ TEMPLATE_REGISTRIES = TEMPLATE_REFERENCES / "registries"
 
 REQUIRED_TEMPLATE_SCRIPTS = {
     "final_media_qa.py",
+    "make_contact_sheet.py",
     "proof_motion_qa.py",
     "render_final_and_qa.ps1",
     "semantic_contract_cases.json",

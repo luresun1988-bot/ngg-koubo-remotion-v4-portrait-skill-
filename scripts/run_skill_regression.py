@@ -38,10 +38,13 @@ REGRESSIONS = [
     "presenter_media_regression.py",
     "fps_contract_regression.py",
     "final_media_qa_regression.py",
+    "final_contact_sheet_regression.py",
     "render_pipeline_regression.py",
     "proof_motion_qa_regression.py",
     "real_project_corpus_regression.py",
     "upgrade_existing_project_regression.py",
+    "audio_runtime_contract_regression.py",
+    "audio_sfx_duration_regression.py",
     "motion_preview_regression.py",
     "portrait_runtime_contract_regression.py",
 ]

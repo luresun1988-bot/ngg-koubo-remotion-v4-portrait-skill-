@@ -33,6 +33,11 @@ def main() -> int:
         for required_name in ["semantic_guardrails.py", "semantic_contract_cases.json"]:
             if not any(item["name"] == required_name and item["action"] == "add" for item in dry_run["operations"]):
                 raise AssertionError(f"dry-run omitted shared semantic dependency: {required_name}")
+        if not any(
+            item["group"] == "src" and item["name"] == "V4Audio.tsx" and item["action"] == "add"
+            for item in dry_run["operations"]
+        ):
+            raise AssertionError("dry-run omitted managed src/V4Audio.tsx")
         if stale.read_text(encoding="utf-8") != "old runtime":
             raise AssertionError("dry-run modified the project")
 
@@ -44,6 +49,14 @@ def main() -> int:
             copied = root / "scripts" / required_name
             if copied.read_bytes() != (source_scripts / required_name).read_bytes():
                 raise AssertionError(f"shared semantic dependency was not upgraded: {required_name}")
+        managed_audio = root / "src" / "V4Audio.tsx"
+        managed_source = next(
+            Path(item["source"])
+            for item in report["operations"]
+            if item["group"] == "src" and item["name"] == "V4Audio.tsx"
+        )
+        if not managed_audio.is_file() or managed_audio.read_bytes() != managed_source.read_bytes():
+            raise AssertionError("managed src/V4Audio.tsx was not installed")
         imported = subprocess.run(
             [sys.executable, "-c", "import semantic_router; print(semantic_router.classify_text('我刚刚关注你了', 75, 150)['semanticIntent'])"],
             cwd=root / "scripts",

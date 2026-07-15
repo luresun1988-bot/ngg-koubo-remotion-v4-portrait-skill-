@@ -31,16 +31,19 @@ def upgrade(remotion_root: Path, *, write: bool) -> dict[str, Any]:
     if not (root / "visual_script.json").is_file() or not (root / "src").is_dir():
         raise SystemExit(f"target is not a V4 Remotion root: {root}")
     source_scripts, source_references = source_directories()
+    source_runtime = SOURCE_ROOT / "assets" / "remotion-template" / "src" / "V4Audio.tsx"
     timestamp = dt.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     backup_root = root / "qa" / "runtime_upgrade_backup" / timestamp
     operations: list[dict[str, Any]] = []
 
     source_files = [
-        *sorted(path for path in source_scripts.iterdir() if path.is_file() and path.suffix.lower() in {".py", ".ps1", ".json"}),
-        *sorted(source_references.glob("*.md")),
+        *((path, "scripts") for path in sorted(source_scripts.iterdir()) if path.is_file() and path.suffix.lower() in {".py", ".ps1", ".json"}),
+        *((path, "references") for path in sorted(source_references.glob("*.md"))),
+        (source_runtime, "src"),
     ]
-    for source in source_files:
-        group = "scripts" if source.parent == source_scripts else "references"
+    for source, group in source_files:
+        if not source.is_file():
+            raise SystemExit(f"missing managed runtime source: {source}")
         target = root / group / source.name
         same = target.is_file() and sha256(source) == sha256(target)
         operation = {
@@ -69,7 +72,7 @@ def upgrade(remotion_root: Path, *, write: bool) -> dict[str, Any]:
         "operations": operations,
         "preserved": [
             "visual_script.json",
-            "src/",
+            "src/* except managed src/V4Audio.tsx",
             "public/",
             "config/",
             "package.json",

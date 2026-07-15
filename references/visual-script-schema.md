@@ -156,7 +156,8 @@ Rules:
 - `captionTimeline` must describe where caption timing came from.
 - `sourceVideoMode` records whether the source is raw presenter footage, segmented presenter clips, or an already precomposed video.
 - `captionRenderMode` is `embedded` or `none`. `none` disables only the rendered caption layer; `captionCues` and `captionTimeline` remain mandatory and authoritative.
-- `presenterAudio.mode` is `embedded`, `normalized-wav`, or `none`. `normalized-wav` requires `path`, `sampleRate=48000`, `normalizationReportPath`, and optional measured `syncOffsetFrames` with `syncEvidence` when non-zero. Segmented presenter output uses a video-only MP4 and mounts the WAV once.
+- `presenterAudio.mode` is `embedded`, `normalized-wav`, or `none`. `normalized-wav` requires `path`, `sampleRate=48000`, `normalizationReportPath`, and optional measured `syncOffsetFrames` with `syncEvidence` when non-zero. Optional `volumeDb` is a finite narration gain from `-96` to `+6`; omission preserves `0 dB`. Segmented presenter output uses a video-only MP4 and mounts the WAV once.
+- Mount one reusable `V4AudioLayers` in the composition. Active BGM/SFX must come from `audioCues`, never from a second hard-coded audio list in a custom composition.
 - A presenter camera impact uses `type=presenterReposition`, `motionType=presenter-impact-punch`, a strong `semanticRole`, `sourceBeatId`, and optional `presenterPeakScale`. In the preferred lifecycle-synced form, add one visible semantic companion in the same scene with the same `sourceBeatId` and exact `[startFrame,endFrame)` range; total duration may be up to six seconds. The renderer pushes quickly, holds the peak with no rebound, and uses the companion's exit window as the return clock. Without an exact companion, the event is a standalone fallback and scales from composition FPS: 18–28 frames at 30 fps or about 15–23 at 25 fps. Portrait peak scale is 1.06–1.10. `presenterSettleScale` is retained only for old project compatibility and is ignored by the current renderer. Keep impact starts about eight seconds apart and no more than three times in a rolling minute.
 - `packagingDensity=light` is the default for `precomposed-video`, because the source may already contain subtitles, PiP, screen demos, or HUD overlays.
 - Forbidden methods include `proportional-scene-split`, `scene-proportional`, `estimated`, and `character-ratio-scene-fill`.
@@ -655,6 +656,7 @@ Rules:
 - The Remotion template renders only `sfx`/`bgm` cues that have a real `path` and are not `suggested`, `pending-selection`, `pending-generation`, `disabled`, or `muted`.
 - `path` is relative to Remotion `public/`, for example `input/audio/sfx/ui_tick_01.wav`.
 - The six registered mastered SFX default to `-5 dB`; unregistered or ad hoc SFX must stay at or below `-14 dB` until separately auditioned and approved.
+- Generated manifest-backed SFX durations come from `ceil(manifest.durationSec × composition.fps)`. Do not copy the manifest's 25 fps catalog `durationFrames` into a 30/60 fps project or truncate the asset tail.
 - Default BGM volume is about `-30 dB`; BGM louder than `-20 dB` is a QA failure.
 - Use `fadeInFrames` and `fadeOutFrames` for longer BGM or whoosh cues. Short tick/click SFX may use tiny fades or none.
 - Active SFX should land near a visual event boundary and should not be added to every minor visual change.

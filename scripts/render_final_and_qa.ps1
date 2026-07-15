@@ -56,6 +56,8 @@ if ((Test-Path -LiteralPath $outputPath) -and $Force) {
 }
 $outputDir = Split-Path -Parent $outputPath
 New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
+$finalQaRoot = Join-Path (Split-Path -Parent $visualScriptPath) "qa"
+New-Item -ItemType Directory -Path $finalQaRoot -Force | Out-Null
 
 $generatedRaw = -not $PostprocessOnly
 if ($PostprocessOnly) {
@@ -135,6 +137,11 @@ try {
 
   Invoke-Step "final media QA" {
     & $python "scripts/final_media_qa.py" --video $outputPath --visual-script $visualScriptPath --out "qa/final_media_qa.md" --json-out "qa/final_media_qa.json"
+  }
+  Invoke-Step "final encoded contact sheet" {
+    & $python "scripts/make_contact_sheet.py" --video $outputPath --visual-script $visualScriptPath `
+      --out (Join-Path $finalQaRoot "final_encoded_contact_sheet.png") `
+      --manifest-out (Join-Path $finalQaRoot "final_encoded_contact_sheet.json")
   }
 } catch {
   if (Test-Path -LiteralPath $outputPath) {

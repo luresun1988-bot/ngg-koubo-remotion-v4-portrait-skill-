@@ -770,10 +770,15 @@ def main() -> int:
         raise RuntimeError(f"missing Remotion CLI: {remotion_cli}")
 
     composition_source = (TEMPLATE_ROOT / "src" / "V4Composition.tsx").read_text(encoding="utf-8")
+    audio_source = (TEMPLATE_ROOT / "src" / "V4Audio.tsx").read_text(encoding="utf-8")
     if composition_source.count("<OffthreadVideo") != 1:
         raise AssertionError("primary presenter must have exactly one OffthreadVideo mount in V4Composition.tsx")
-    if composition_source.count("<PresenterAudioLayer") != 1:
-        raise AssertionError("normalized presenter audio must be mounted exactly once")
+    if composition_source.count("<V4AudioLayers") != 1:
+        raise AssertionError("the composition must mount exactly one reusable V4AudioLayers")
+    if audio_source.count("<PresenterAudioLayer") != 1:
+        raise AssertionError("V4AudioLayers must mount normalized presenter narration exactly once")
+    if 'name="Normalized presenter narration"' not in audio_source:
+        raise AssertionError("V4AudioLayers is missing the authoritative normalized narration layer")
 
     no_caption_still = output_root / "caption_none.png"
     embedded_caption_still = output_root / "caption_embedded_control.png"

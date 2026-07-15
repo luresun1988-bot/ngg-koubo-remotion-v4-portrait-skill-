@@ -20,6 +20,7 @@ If an audio layer competes with voice clarity, reduce it or remove it.
 - Keep one continuous presenter playback source for the full composition.
 - For one source video, `presenterAudio.mode=embedded` may keep its original audio.
 - For segmented presenters, normalize every segment to the composition FPS, concatenate one video-only H.264 MP4, create one exact 48 kHz stereo PCM16 WAV, and mount that WAV once with the video muted.
+- Optional `presenterAudio.volumeDb` applies one explicit gain to normalized narration; omit it for the unchanged `0 dB` default. Keep it between `-96` and `+6 dB`.
 - Do not stream-copy multiple MP4 containers with independent AAC tracks. AAC encoder delay and padding can accumulate at segment boundaries and cause lip-sync drift.
 - Use a non-zero `syncOffsetFrames` only for a measured constant offset, only with `normalized-wav`, and record `syncEvidence`. Never use it to hide cumulative drift.
 - Require `qa/media/presenter_normalization.json` with exact decoded video-frame and WAV-sample evidence before rendering segmented presenters.
@@ -88,6 +89,8 @@ Example manifest shape:
 ```
 
 When a manifest is configured, project scripts may map `sfxIntent` to `sfxId` and `path`, then keep the original `sfxIntent` for QA readability. Semantic routing defaults to `status: "suggested"` for generated SFX cues; suggested cues are review records and must not render audio until a human changes the cue to `status: "active"`.
+
+Treat each manifest item's `durationSec` as authoritative. Convert it with `ceil(durationSec × composition.fps)` when creating an `audioCue`, so the complete asset survives 25/30/60 fps timelines; the manifest's `durationFrames` is only the 25 fps catalog value. Scale title pre-roll and fade windows from seconds as well.
 
 Confirmed default SFX:
 
@@ -160,6 +163,7 @@ Default mix policy:
 
 Current template support:
 
+- `V4AudioLayers` is the only runtime renderer for normalized narration and `audioCues`; custom compositions must mount it once instead of rebuilding hard-coded `Audio`/`Sequence` lists.
 - SFX and BGM cues with real `path` values render through Remotion `Audio`.
 - `volumeDb` is converted to linear volume.
 - `fadeInFrames` and `fadeOutFrames` are frame-driven.
@@ -171,10 +175,12 @@ Current template support:
 Check:
 
 - Final render has an audio stream when expected.
+- Final decoded mean/max levels are recorded; decoded max must stay below `-0.1 dBFS` to reject clipping risk.
 - Audio duration covers the full video.
 - Voice is not masked by SFX/BGM.
 - Source sound is preserved only where intended.
 - SFX and BGM paths exist if enabled.
+- Every active SFX cue covers the real source asset duration at the composition FPS within one-frame tolerance; suggested/disabled cues remain silent and are not treated as rendered.
 - Every non-original SFX or BGM has a source or generation record when used in final output.
 - `audio-sfx-volume`: the six registered mastered SFX are not louder than `-5 dB`; unregistered SFX are not louder than `-14 dB`.
 - `audio-bgm-volume`: BGM is not louder than `-20 dB`.

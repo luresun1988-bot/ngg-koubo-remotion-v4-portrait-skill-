@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Create a contact sheet from a rendered video and visual_script qaFrames."""
+"""Create an exact-frame contact sheet from the final encoded video."""
 
 from __future__ import annotations
 
@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
@@ -18,34 +19,166 @@ from v4_utf8 import configure_utf8  # noqa: E402
 
 configure_utf8()
 
+HIGH_RISK_EVENT_TYPES = {
+    "depthTitle",
+    "depthKeyword",
+    "presenterReposition",
+    "materialMain",
+    "materialZoom",
+    "transitionPushZoom",
+    "ctaTitle",
+    "ctaRecommend",
+}
+
 
 def load_qa_selection(path: Path) -> tuple[list[int], int]:
-    data = json.loads(path.read_text(encoding="utf-8"))
-    frames = []
-    for item in data.get("qaFrames", []):
-        if isinstance(item, dict) and isinstance(item.get("frame"), int):
-            frames.append(max(0, item["frame"]))
+    """Backward-compatible qaFrames/FPS loader used by motion-preview tooling."""
+    data = json.loads(path.read_text(encoding="utf-8-sig"))
+    frames = sorted(
+        {
+            max(0, int(item["frame"]))
+            for item in data.get("qaFrames", [])
+            if isinstance(item, dict) and isinstance(item.get("frame"), int)
+        }
+    )
     composition = data.get("composition", {}) if isinstance(data.get("composition"), dict) else {}
     fps = max(1, int(composition.get("fps") or 25))
-    return sorted(set(frames)), fps
+    return frames, fps
 
 
-def extract_frame(video: Path, frame: int, fps: int, out: Path) -> None:
-    timestamp = frame / fps
-    cmd = [
-        "ffmpeg",
+def _add_frame(
+    records: dict[int, dict[str, Any]],
+    frame: int,
+    duration_frames: int,
+    *,
+    reason: str,
+    source: str,
+) -> None:
+    if duration_frames <= 0:
+        return
+    bounded = max(0, min(duration_frames - 1, int(frame)))
+    record = records.setdefault(
+        bounded,
+        {"frame": bounded, "reasons": [], "sources": []},
+    )
+    if reason not in record["reasons"]:
+        record["reasons"].append(reason)
+    if source not in record["sources"]:
+        record["sources"].append(source)
+
+
+def build_frame_plan(data: dict[str, Any], max_frames: int = 36) -> dict[str, Any]:
+    composition = data.get("composition", {}) if isinstance(data.get("composition"), dict) else {}
+    duration_frames = int(composition.get("durationFrames") or 0)
+    fps = int(composition.get("fps") or 0)
+    if duration_frames <= 0 or fps <= 0:
+        raise ValueError("composition must define positive fps and durationFrames")
+    if max_frames < 2:
+        raise ValueError("max_frames must be at least 2")
+
+    records: dict[int, dict[str, Any]] = {}
+    _add_frame(records, 0, duration_frames, reason="first encoded frame", source="boundary:first")
+    _add_frame(
+        records,
+        duration_frames - 1,
+        duration_frames,
+        reason="last encoded frame",
+        source="boundary:last",
+    )
+
+    for index, item in enumerate(data.get("qaFrames", [])):
+        if isinstance(item, dict) and isinstance(item.get("frame"), int):
+            reason = str(item.get("reason") or "visual_script qaFrames")
+            _add_frame(
+                records,
+                item["frame"],
+                duration_frames,
+                reason=reason,
+                source=f"qaFrames[{index}]",
+            )
+
+    for index, event in enumerate(data.get("visualEvents", [])):
+        if not isinstance(event, dict) or event.get("type") not in HIGH_RISK_EVENT_TYPES:
+            continue
+        start = int(event.get("startFrame") or 0)
+        end = int(event.get("endFrame") or start + 1)
+        if end <= start:
+            continue
+        event_id = str(event.get("id") or f"visualEvents[{index}]")
+        event_type = str(event.get("type") or "unknown")
+        positions = {
+            "start": start,
+            "mid": start + max(0, (end - start - 1) // 2),
+            "end": end - 1,
+        }
+        for phase, frame in positions.items():
+            _add_frame(
+                records,
+                frame,
+                duration_frames,
+                reason=f"{event_type} {phase}",
+                source=event_id,
+            )
+
+    ordered = [records[frame] for frame in sorted(records)]
+    total_candidates = len(ordered)
+    if total_candidates > max_frames:
+        indices = {
+            round(index * (total_candidates - 1) / (max_frames - 1))
+            for index in range(max_frames)
+        }
+        ordered = [ordered[index] for index in sorted(indices)]
+
+    return {
+        "schemaVersion": "ngg-v4-final-contact-sheet-v1",
+        "fps": fps,
+        "durationFrames": duration_frames,
+        "totalCandidates": total_candidates,
+        "selectedCount": len(ordered),
+        "omittedCount": total_candidates - len(ordered),
+        "frames": [
+            {
+                **record,
+                "timeSec": round(record["frame"] / fps, 6),
+                "tileIndex": index,
+            }
+            for index, record in enumerate(ordered)
+        ],
+    }
+
+
+def extract_frames(video: Path, frames: list[int], out_dir: Path) -> list[Path]:
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        raise SystemExit("ffmpeg is required but was not found on PATH")
+    if not frames:
+        raise ValueError("at least one frame is required")
+    selector = "+".join(f"eq(n\\,{frame})" for frame in frames)
+    pattern = out_dir / "frame_%03d.png"
+    command = [
+        ffmpeg,
+        "-hide_banner",
+        "-loglevel",
+        "error",
         "-y",
-        "-ss",
-        f"{timestamp:.3f}",
         "-i",
         str(video),
-        "-frames:v",
-        "1",
         "-vf",
-        "scale=480:-1",
-        str(out),
+        f"select={selector},scale=480:-2:flags=lanczos",
+        "-fps_mode",
+        "vfr",
+        "-start_number",
+        "0",
+        "-frames:v",
+        str(len(frames)),
+        str(pattern),
     ]
-    subprocess.run(cmd, check=True, capture_output=True, text=True)
+    subprocess.run(command, check=True)
+    images = [out_dir / f"frame_{index:03d}.png" for index in range(len(frames))]
+    missing = [str(path) for path in images if not path.is_file()]
+    if missing:
+        raise RuntimeError(f"exact-frame extraction returned fewer images than planned: {missing}")
+    return images
 
 
 def make_sheet(images: list[Path], out: Path, columns: int) -> None:
@@ -53,28 +186,53 @@ def make_sheet(images: list[Path], out: Path, columns: int) -> None:
     if not ffmpeg:
         raise SystemExit("ffmpeg is required but was not found on PATH")
     rows = math.ceil(len(images) / columns)
-    input_dir = images[0].parent
-    for idx, image in enumerate(images):
-        shutil.copyfile(image, input_dir / f"sheet_{idx:03d}.png")
-    input_pattern = input_dir / "sheet_%03d.png"
     filter_complex = (
         f"tile={columns}x{rows}:nb_frames={len(images)}:"
         "margin=12:padding=8:color=0x111111"
     )
-    cmd = [
+    command = [
         ffmpeg,
+        "-hide_banner",
+        "-loglevel",
+        "error",
         "-y",
         "-framerate",
         "1",
+        "-start_number",
+        "0",
         "-i",
-        str(input_pattern),
+        str(images[0].parent / "frame_%03d.png"),
         "-vf",
         filter_complex,
         "-frames:v",
         "1",
         str(out),
     ]
-    subprocess.run(cmd, check=True, capture_output=True, text=True)
+    subprocess.run(command, check=True)
+
+
+def generate_contact_sheet(
+    video: Path,
+    visual_script: Path,
+    out: Path,
+    manifest_out: Path,
+    *,
+    columns: int = 4,
+    max_frames: int = 36,
+) -> dict[str, Any]:
+    data = json.loads(visual_script.read_text(encoding="utf-8-sig"))
+    plan = build_frame_plan(data, max_frames=max_frames)
+    frames = [int(item["frame"]) for item in plan["frames"]]
+    out.parent.mkdir(parents=True, exist_ok=True)
+    manifest_out.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="ngg-v4-final-contact-") as temp_dir:
+        images = extract_frames(video, frames, Path(temp_dir))
+        make_sheet(images, out, columns)
+    plan["video"] = str(video.resolve())
+    plan["visualScript"] = str(visual_script.resolve())
+    plan["contactSheet"] = str(out.resolve())
+    manifest_out.write_text(json.dumps(plan, ensure_ascii=False, indent=2), encoding="utf-8")
+    return plan
 
 
 def main() -> int:
@@ -82,33 +240,29 @@ def main() -> int:
     parser.add_argument("--video", required=True, type=Path)
     parser.add_argument("--visual-script", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
-    parser.add_argument("--fps", type=int, help="Optional override; defaults to visual_script composition.fps.")
+    parser.add_argument("--manifest-out", type=Path)
+    parser.add_argument("--fps", type=int, help="Deprecated compatibility option; FPS comes from visual_script.")
     parser.add_argument("--columns", type=int, default=4)
+    parser.add_argument("--max-frames", type=int, default=36)
     args = parser.parse_args()
 
-    if not args.video.exists():
+    if not args.video.is_file():
         raise SystemExit(f"missing video: {args.video}")
-    if not args.visual_script.exists():
+    if not args.visual_script.is_file():
         raise SystemExit(f"missing visual script: {args.visual_script}")
-
-    frames, script_fps = load_qa_selection(args.visual_script)
-    if not frames:
-        raise SystemExit("visual script has no qaFrames")
-    fps = args.fps or script_fps
-    if fps <= 0:
-        raise SystemExit("fps must be positive")
-
-    args.out.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp_path = Path(tmp)
-        images = []
-        for idx, frame in enumerate(frames):
-            image = tmp_path / f"frame_{idx:03d}_{frame}.png"
-            extract_frame(args.video, frame, fps, image)
-            images.append(image)
-        make_sheet(images, args.out, args.columns)
-
-    print(f"contact sheet written to {args.out} (fps={fps})")
+    manifest_out = args.manifest_out or args.out.with_suffix(".json")
+    plan = generate_contact_sheet(
+        args.video,
+        args.visual_script,
+        args.out,
+        manifest_out,
+        columns=args.columns,
+        max_frames=args.max_frames,
+    )
+    print(
+        f"final encoded contact sheet: {plan['selectedCount']} exact frames "
+        f"({args.out}; manifest {manifest_out})"
+    )
     return 0
 
 

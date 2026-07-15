@@ -59,6 +59,39 @@ def main() -> int:
         report = analyze(video, visual_script)
         if not report.get("passed"):
             raise AssertionError(report)
+        levels = report.get("actual", {}).get("audioLevels", {})
+        if not levels.get("analyzed") or levels.get("meanVolumeDb") is None or levels.get("maxVolumeDb") is None:
+            raise AssertionError(f"final media QA did not record decoded mix levels: {levels}")
+
+        clipped = root / "clipped.mp4"
+        subprocess.run(
+            [
+                "ffmpeg",
+                "-hide_banner",
+                "-loglevel",
+                "error",
+                "-y",
+                "-i",
+                str(video),
+                "-map",
+                "0:v:0",
+                "-map",
+                "0:a:0",
+                "-c:v",
+                "copy",
+                "-af",
+                "volume=20",
+                "-c:a",
+                "aac",
+                str(clipped),
+            ],
+            check=True,
+        )
+        clipped_report = analyze(clipped, visual_script)
+        if clipped_report.get("passed") or not any(
+            "audio clipping risk" in item for item in clipped_report.get("errors", [])
+        ):
+            raise AssertionError(f"final media QA must reject a clipped decoded mix: {clipped_report}")
 
         data["composition"]["fps"] = 30
         data["composition"]["durationFrames"] = 30

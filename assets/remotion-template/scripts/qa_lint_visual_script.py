@@ -7,6 +7,7 @@ import argparse
 import importlib.util
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -44,7 +45,7 @@ CARD_LIKE_MAIN_EVENT_TYPES = {
     "historicalGreenConclusion",
 }
 RENDERED_AUDIO_TYPES = {"sfx", "bgm"}
-PENDING_AUDIO_STATUSES = {"pending-selection", "pending-generation", "disabled", "muted"}
+PENDING_AUDIO_STATUSES = {"suggested", "pending-selection", "pending-generation", "disabled", "muted"}
 SFX_VISUAL_SYNC_WINDOW_FRAMES = 8
 MASTERED_LIBRARY_SFX_IDS = {
     "automation_handoff_01",
@@ -189,6 +190,32 @@ def resolve_static_file(remotion_root: Path, path_value: str) -> Path:
     return remotion_root / "public" / normalized
 
 
+def media_duration_sec(path: Path) -> float:
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(path),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if result.returncode != 0:
+        return 0.0
+    try:
+        return max(0.0, float(result.stdout.strip()))
+    except ValueError:
+        return 0.0
+
+
 def media_checks(data: dict[str, Any], remotion_root: Path | None) -> tuple[list[str], list[str]]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -234,6 +261,25 @@ def media_checks(data: dict[str, Any], remotion_root: Path | None) -> tuple[list
             candidate = resolve_static_file(remotion_root, path)
             if not candidate.exists():
                 errors.append(f"audioCues[{idx}].path missing under public/: {path}")
+            elif cue_type == "sfx" and status not in PENDING_AUDIO_STATUSES:
+                fps = max(1, int(data.get("composition", {}).get("fps") or 25))
+                start = int(cue.get("startFrame", 0) or 0)
+                end = int(cue.get("endFrame", 0) or 0)
+                duration_frames = int(cue.get("durationFrames", 0) or 0)
+                if end > start:
+                    duration_frames = end - start
+                source_duration_sec = media_duration_sec(candidate)
+                planned_duration_sec = duration_frames / fps if duration_frames > 0 else 0.0
+                if (
+                    source_duration_sec > 0
+                    and planned_duration_sec > 0
+                    and planned_duration_sec + (1 / fps) < source_duration_sec
+                ):
+                    errors.append(
+                        "audio-sfx-truncation failed: "
+                        f"audioCues[{idx}] plans {duration_frames}f/{planned_duration_sec:.3f}s "
+                        f"but {path} is {source_duration_sec:.3f}s at composition fps={fps}"
+                    )
         elif cue_type in RENDERED_AUDIO_TYPES and status not in PENDING_AUDIO_STATUSES:
             warnings.append(
                 f"audioCues[{idx}] has no renderable path; set status to pending/disabled or provide a public audio path"

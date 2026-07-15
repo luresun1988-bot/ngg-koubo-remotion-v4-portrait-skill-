@@ -182,6 +182,7 @@ export type AudioCue = {
 export type PresenterAudio = {
   mode: 'embedded' | 'normalized-wav' | 'none';
   path?: string;
+  volumeDb?: number;
   sampleRate?: number;
   syncOffsetFrames?: number;
   syncEvidence?: string;

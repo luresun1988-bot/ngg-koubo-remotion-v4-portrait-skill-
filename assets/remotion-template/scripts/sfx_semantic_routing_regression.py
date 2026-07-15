@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -55,6 +56,27 @@ def first_sfx_cue(data: dict[str, Any], expected_intent: str) -> dict[str, Any] 
         if isinstance(cue, dict) and cue.get("type") == "sfx" and cue.get("sfxIntent") == expected_intent:
             return cue
     return None
+
+
+def assert_fps_duration_scaling() -> None:
+    case = case_by_id("hook-01")
+    duration_sec = float(visual_event_builder.SFX_SUGGESTIONS["title_impact"]["durationSec"])
+    if duration_sec <= 0:
+        raise AssertionError("title_impact manifest must define durationSec")
+    for index, fps in enumerate((25, 30, 60), start=100):
+        data = semantic_router_regression.visual_script_for_case(case, index)
+        data["composition"]["fps"] = fps
+        semantic_router.apply_semantic_beats(data)
+        visual_event_builder.apply_visual_events(data)
+        cue = first_sfx_cue(data, "title_impact")
+        expected_frames = math.ceil(duration_sec * fps - 1e-9)
+        actual_frames = int((cue or {}).get("durationFrames", 0) or 0)
+        if actual_frames != expected_frames:
+            raise AssertionError(
+                f"title_impact duration must follow composition fps: "
+                f"fps={fps} expected={expected_frames} actual={actual_frames}"
+            )
+        print(f"PASS fps-duration-{fps}: {duration_sec:.3f}s -> {actual_frames}f")
 
 
 def run_case(case_id: str, index: int) -> dict[str, Any]:
@@ -128,6 +150,7 @@ def run_direct_result_case(case: dict[str, str], index: int) -> dict[str, Any]:
 
 
 def main() -> int:
+    assert_fps_duration_scaling()
     results = [run_case(case_id, index) for index, case_id in enumerate(EXPECTED)]
     direct_start = len(results)
     results.extend(

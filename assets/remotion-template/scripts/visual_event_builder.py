@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -53,7 +54,8 @@ def load_sfx_suggestions() -> dict[str, dict[str, Any]]:
             "path": str(item.get("path") or ""),
             "volumeDb": item.get("defaultVolumeDb", -5),
             "durationFrames": int(item.get("durationFrames", 25) or 25),
-            "preRollFrames": 4 if intent == "title_impact" else 0,
+            "durationSec": float(item.get("durationSec", 0) or 0),
+            "preRollSec": (4 / DEFAULT_FPS) if intent == "title_impact" else 0.0,
         }
     return suggestions
 
@@ -1880,6 +1882,7 @@ def sfx_intent_for_event(beat: dict[str, Any], event: dict[str, Any]) -> str | N
 
 
 def build_sfx_suggestions(data: dict[str, Any]) -> list[dict[str, Any]]:
+    fps = max(1, int(data.get("composition", {}).get("fps") or DEFAULT_FPS))
     beats_by_id = {
         str(beat.get("id") or ""): beat
         for beat in data.get("semanticBeats", [])
@@ -1899,8 +1902,15 @@ def build_sfx_suggestions(data: dict[str, Any]) -> list[dict[str, Any]]:
         if not sfx_intent:
             continue
         sfx = SFX_SUGGESTIONS[sfx_intent]
-        start = max(0, int(event.get("startFrame", 0) or 0) - int(sfx.get("preRollFrames", 0) or 0))
-        duration = int(sfx["durationFrames"])
+        pre_roll_frames = round(float(sfx.get("preRollSec", 0) or 0) * fps)
+        start = max(0, int(event.get("startFrame", 0) or 0) - pre_roll_frames)
+        duration_sec = float(sfx.get("durationSec", 0) or 0)
+        duration = (
+            max(1, math.ceil(duration_sec * fps - 1e-9))
+            if duration_sec > 0
+            else max(1, int(sfx["durationFrames"]))
+        )
+        long_cue = duration_sec > 1.0 if duration_sec > 0 else duration > round(fps * 1.0)
         suggestions.append(
             {
                 "id": f"aud-sfx-{beat_id}-{sfx_intent}",
@@ -1912,8 +1922,8 @@ def build_sfx_suggestions(data: dict[str, Any]) -> list[dict[str, Any]]:
                 "path": sfx["path"],
                 "volumeDb": sfx["volumeDb"],
                 "duckUnderVoice": True,
-                "fadeInFrames": 1 if duration > 25 else 0,
-                "fadeOutFrames": 4 if duration > 25 else 2,
+                "fadeInFrames": max(1, round(0.04 * fps)) if long_cue else 0,
+                "fadeOutFrames": max(1, round((0.16 if long_cue else 0.08) * fps)),
                 "status": "suggested",
                 "confidence": round(float(beat.get("confidence", 0.75) or 0.75), 2),
                 "sourceBeatId": beat_id,
