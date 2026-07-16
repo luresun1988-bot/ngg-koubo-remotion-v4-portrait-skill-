@@ -33,6 +33,23 @@ def actual_for(case: dict[str, Any]) -> Any:
         return guards.is_process_context(text)
     if check == "proof":
         return guards.is_proof_context(text)
+    if check == "directional-relation":
+        evidence = guards.directional_relation_evidence(text)
+        if case["expected"] is None:
+            return None if evidence is None else evidence
+        return {
+            "source": str((evidence or {}).get("source") or ""),
+            "target": str((evidence or {}).get("target") or ""),
+            "operator": str((evidence or {}).get("operator") or ""),
+        }
+    if check == "reusable-execution":
+        evidence = guards.reusable_execution_evidence(text)
+        if case["expected"] is None:
+            return None if evidence is None else evidence
+        return {
+            "input": str((evidence or {}).get("input") or ""),
+            "result": str((evidence or {}).get("result") or ""),
+        }
     if check == "numeric-token":
         return guards.numeric_metric_token(text)
     if check == "numeric-meaningful":
@@ -112,6 +129,13 @@ CASES: list[dict[str, Any]] = [
     {"id": "comment-proof", "check": "proof", "text": "页面展示了评论区互动数据", "expected": True},
     {"id": "pickup-explanation", "check": "explanation", "text": "这家门店支持到店自提", "expected": True},
     {"id": "tool-explanation", "check": "explanation", "text": "Topaz Video AI 是高清修复工具", "expected": True},
+    {"id": "relation-decides", "check": "directional-relation", "text": "文案决定画面", "expected": {"source": "文案", "target": "画面", "operator": "决定"}},
+    {"id": "relation-drives", "check": "directional-relation", "text": "声音驱动画面", "expected": {"source": "声音", "target": "画面", "operator": "驱动"}},
+    {"id": "relation-conditional", "check": "directional-relation", "text": "如果文案影响画面，就先人工确认", "expected": None},
+    {"id": "relation-transformation", "check": "directional-relation", "text": "文案变成剪辑指令", "expected": None},
+    {"id": "reuse-change-and-repeat", "check": "reusable-execution", "text": "换一份文案，画面也会跟着变化，可以重复执行", "expected": {"input": "换一份文案", "result": "画面也会跟着变化"}},
+    {"id": "reuse-change-only", "check": "reusable-execution", "text": "换一份文案看看效果", "expected": None},
+    {"id": "reuse-repeat-only", "check": "reusable-execution", "text": "同一套规则可以重复执行", "expected": None},
     {"id": "cta-meta-guard", "check": "cta", "text": "测试脚本里用“私信我”作为反例", "expected": None},
     {"id": "cta-follow-description", "check": "cta", "text": "你已经关注我了", "expected": None},
     {"id": "cta-comment-description", "check": "cta", "text": "评论区回复率提高了 30%", "expected": None},

@@ -80,6 +80,101 @@ def is_proof_context(text: str) -> bool:
     return PROOF_CONTEXT_RE.search(text) is not None
 
 
+RELATION_OPERATORS = ("决定", "驱动", "影响", "带动", "推动", "控制")
+RELATION_BLOCKERS = (
+    "如果", "假如", "是否", "能否", "可能", "也许", "或许", "避免", "防止",
+    "不会", "不能", "没有", "不一定", "变成", "转化成", "转化为", "成为",
+)
+RELATION_ENTITY_TERMS = (
+    "剪辑指令", "逐字稿", "时间戳", "背景音乐", "人物镜头", "文案", "脚本", "语义",
+    "画面", "声音", "音频", "组件", "动画", "参数", "素材", "规则", "输出", "结果",
+    "音效", "节奏", "镜头", "Codex", "Remotion",
+)
+REUSABLE_INPUT_RE = re.compile(
+    r"(?:换|更换|替换|修改|改动)(?:一份|一个|一套|新的|这份|这个)?"
+    r"(?:文案|脚本|素材|参数|输入|图片|视频)"
+)
+REUSABLE_RESULT_RE = re.compile(
+    r"(?:重复执行|重复使用|再次执行|再执行一次|重新生成|再次生成|复用|跟着变化|随之变化|自动更新)"
+)
+
+
+def _relation_endpoint(segment: str, *, prefer_last: bool) -> str:
+    """Return a short exact-source endpoint without inventing a noun phrase."""
+    matches = [
+        (segment.rfind(term), term)
+        for term in RELATION_ENTITY_TERMS
+        if term in segment
+    ]
+    if matches:
+        position, term = max(matches, key=lambda item: item[0]) if prefer_last else min(
+            matches, key=lambda item: item[0]
+        )
+        return segment[position:position + len(term)]
+    clean = segment.strip(" ，。；：:、")
+    clean = re.sub(r"^(?:而是|所以|因此|因为|只要|让|由)", "", clean)
+    clean = re.sub(r"(?:本身|本身在|会|将|可以|能够|直接|最终|就)$", "", clean)
+    tokens = re.findall(r"[A-Za-z][A-Za-z0-9_.-]*|[\u4e00-\u9fff]{1,8}", clean)
+    if not tokens:
+        return ""
+    token = tokens[-1] if prefer_last else tokens[0]
+    return token[-8:] if prefer_last else token[:8]
+
+
+def directional_relation_evidence(text: str) -> dict[str, Any] | None:
+    """Extract an asserted one-way A -> B relation from exact source copy.
+
+    This intentionally excludes equality, bidirectional, conditional and full
+    transformation wording.  It is a lightweight relation guard, not a
+    transformationStack shortcut.
+    """
+    for clause_match in CLAUSE_RE.finditer(text):
+        clause = clause_match.group(0).strip()
+        if not clause or any(blocker in clause for blocker in RELATION_BLOCKERS):
+            continue
+        for operator in RELATION_OPERATORS:
+            position = clause.find(operator)
+            if position <= 0:
+                continue
+            source = _relation_endpoint(clause[:position], prefer_last=True)
+            target = _relation_endpoint(clause[position + len(operator):], prefer_last=False)
+            if not source or not target or source == target:
+                continue
+            return {
+                "source": source,
+                "target": target,
+                "operator": operator,
+                "sourceText": clause,
+            }
+    return None
+
+
+def reusable_execution_evidence(text: str) -> dict[str, Any] | None:
+    """Require both a changed input and an explicit reuse/repeat result."""
+    input_match = REUSABLE_INPUT_RE.search(text)
+    result_match = REUSABLE_RESULT_RE.search(text)
+    if not input_match or not result_match or result_match.start() <= input_match.start():
+        return None
+    result_text = result_match.group(0)
+    clause_start = max(text.rfind("，", 0, result_match.start()), text.rfind("。", 0, result_match.start())) + 1
+    prefix = text[clause_start:result_match.start()]
+    entity_matches = [
+        (prefix.rfind(term), term)
+        for term in RELATION_ENTITY_TERMS
+        if term in prefix
+    ]
+    if entity_matches:
+        entity_position, _entity = max(entity_matches, key=lambda item: item[0])
+        expanded = text[clause_start + entity_position:result_match.end()].strip(" ，。；：:、")
+        if expanded and expanded in text:
+            result_text = expanded
+    return {
+        "input": input_match.group(0),
+        "result": result_text,
+        "sourceText": text.strip(),
+    }
+
+
 NUMERIC_METRIC_CHINESE_RE = re.compile(
     r"百分之[零〇一二两三四五六七八九十百千万亿点\d]+"
     r"|[一二两三四五六七八九十百千万亿]+(?:倍|万|亿|人|道题|题|个|条|张|套|页|分钟|秒|份|账号)"
