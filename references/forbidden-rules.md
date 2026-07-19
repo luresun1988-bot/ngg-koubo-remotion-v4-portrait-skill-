@@ -10,7 +10,9 @@ Use this reference before finalizing any V4 visual script, template change, or Q
 - Do not use horizontal platform fan-out diagrams in fullscreen portrait presenter scenes; use a vertical distribution chain or another compact rail form.
 - Do not place automation handoff as a large lower-left card in fullscreen portrait presenter scenes; it must become a compact side rail unless the presenter is PiP.
 - Do not place `claimStrip` in the portrait mid-right eye band. Keep it in the top-safe band or downgrade it to a top-right sourced sticker.
-- Do not truncate bottom captions with ellipsis or hide the tail text. Captions must stay complete, readable, and within the portrait two-line maximum.
+- Do not wrap portrait captions, truncate them with ellipsis, or hide the tail text. Render exactly one line; split an overlong timed cue at a real language boundary before semantic routing.
+- Do not render terminal punctuation in portrait captions, remove internal punctuation, or modify authoritative `captionCues[].text` merely to change display copy.
+- Do not place portrait captions at an arbitrary fixed bottom margin. Keep the caption-strip center in the lower-quarter anchor band around 75% of canvas height.
 - Do not make every explanatory beat look like the same compact card group. Rotate between title blocks, red warning cards, numbered rows, icon tiles, data panels, poster stacks, material proof, and transformation stacks.
 - Do not use a compact generic card layout for reference-style process or list beats when a vertical numbered list, layered data panel, or source-driver-result layout better matches the meaning.
 - Do not move the portrait presenter sideways automatically to create HUD space. `presenterLayout=side` is allowed only for an explicitly `manual-approved` scene or marked `legacy-project` compatibility; ordinary side HUDs keep the presenter fullscreen.

@@ -181,6 +181,8 @@ Rules:
 
 - One caption layer only.
 - Caption text must come from the transcript/ASR word or sentence timeline. Do not replace it with a short summary, topic label, or HUD phrase.
+- Keep authoritative `captionCues[].text` unchanged. The portrait renderer derives a display-only copy that removes terminal punctuation while preserving internal punctuation.
+- Render portrait captions on one line centered about 75% down the canvas. Split an overlong timed cue before semantic routing rather than wrapping or truncating it.
 - Caption cue start/end frames must come from the transcript/ASR/alignment timeline. Do not distribute a scene's full text across its duration by character count.
 - `highlightWords` may remain in the cue for semantic analysis, but bottom captions render all text in white. Do not use caption keyword coloring; semantic colors belong to HUD, icons, charts, and proof highlights.
 - Timing must come from transcript/timecode data, not guesses.

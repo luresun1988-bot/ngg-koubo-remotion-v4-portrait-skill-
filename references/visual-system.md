@@ -80,14 +80,15 @@ Big text is the primary packaging element.
 
 Captions are mandatory by default.
 
-- Position: bottom center safe area.
+- Position: center the caption strip about 75% down the portrait canvas, equivalent to one-quarter of the canvas height above the bottom. Treat this as the default lower-quarter caption anchor, not as a fixed pixel bottom margin.
 - Shape: adaptive dark translucent rounded strip.
 - Layer count: one caption layer only.
-- Line count: one or two lines only. Captions must show the complete spoken cue text from the transcript/ASR timeline; do not summarize, omit words, rewrite it as a shorter HUD phrase, wrap to three lines, or truncate with ellipsis. Reduce caption size first, then split the timing cue only if the full cue still cannot fit within two lines.
+- Line count: exactly one rendered line. Keep the complete spoken cue text in authoritative `captionCues`; do not summarize, omit words, or rewrite it as a shorter HUD phrase. Adapt the font size to the safe width, then split an overlong timed cue at a real language boundary before semantic routing if it cannot fit at the minimum readable size. Never wrap, truncate, or use ellipsis.
+- Punctuation: keep internal punctuation. Remove only terminal punctuation such as `，。！？、：；,.!?;:…` from the rendered display copy. Do not mutate `captionCues[].text`, because the authoritative source text remains required for semantic routing, source evidence, timing reconciliation, and narration completeness.
 - Sync: caption cue start/end frames must follow the transcript/timecode source. When one narration segment is split into multiple caption cues, the concatenated cue text for that scene must still equal the full spoken line after punctuation/space normalization.
 - Highlight: bottom captions use all-white text. Do not color individual caption words; reserve semantic colors for HUD, icons, charts, and proof highlights.
 - Avoid duplicating the exact same sentence in a big title and bottom caption at the same moment unless it is an intentional Hook beat.
-- Other UI must avoid caption area. If there is a conflict, move or simplify the UI, not the caption.
+- Other UI must avoid the lower-quarter caption band. If there is a conflict, move or simplify the UI, not the caption.
 
 ## Cards
 

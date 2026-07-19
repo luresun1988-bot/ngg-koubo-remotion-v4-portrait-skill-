@@ -52,7 +52,7 @@ def format_config() -> dict[str, Any]:
 def build_visual_script() -> dict[str, Any]:
     config = format_config()
     scene_specs = [
-        ("scene-01-hook", "Hook", 0, 75, "theme-thesis", "fullscreen", "none", "主题观点"),
+        ("scene-01-hook", "Hook", 0, 75, "theme-thesis", "fullscreen", "none", "主题观点，字幕单行测试。"),
         ("scene-02-proof", "Proof", 75, 150, "proof-focus", "pip", "main", "证明素材播放"),
         ("scene-03-return", "Explanation", 150, 225, "positive-confirm", "fullscreen", "none", "音画连续"),
         ("scene-04-cta", "CTA", 225, 300, "cta-resolve", "fullscreen", "none", "评论区回复数字人领取模板"),
@@ -585,6 +585,17 @@ def image_difference(left: Path, right: Path, crop_box: tuple[int, int, int, int
     return sum(ImageStat.Stat(difference).mean) / 3
 
 
+def image_difference_bbox(left: Path, right: Path) -> tuple[int, int, int, int]:
+    first = Image.open(left).convert("RGB")
+    second = Image.open(right).convert("RGB")
+    difference = ImageChops.difference(first, second).convert("L")
+    mask = difference.point(lambda value: 255 if value >= 8 else 0)
+    bbox = mask.getbbox()
+    if bbox is None:
+        raise AssertionError("expected a visible rendered-caption difference")
+    return bbox
+
+
 def analyze_audio(ffmpeg: str, final_path: Path, output_root: Path) -> dict[str, Any]:
     decoded = output_root / "decoded_audio.wav"
     run_checked(
@@ -788,10 +799,39 @@ def main() -> int:
     caption_control_props = output_root / "caption_control.props.json"
     caption_control_props.write_text(json.dumps({"visualScript": caption_control}, ensure_ascii=False), encoding="utf-8")
     render_still("caption control still", embedded_caption_still, 40, node, remotion_cli, config, caption_control_props, public_root, browser_executable)
-    caption_crop = (0, round(config["height"] * 0.70), config["width"], config["height"])
+    terminal_trim_still = output_root / "caption_terminal_trim_control.png"
+    terminal_trim_control = copy.deepcopy(caption_control)
+    terminal_trim_control["captionCues"][0]["text"] = "主题观点，字幕单行测试"
+    terminal_trim_props = output_root / "caption_terminal_trim.props.json"
+    terminal_trim_props.write_text(json.dumps({"visualScript": terminal_trim_control}, ensure_ascii=False), encoding="utf-8")
+    render_still("caption terminal-trim control still", terminal_trim_still, 40, node, remotion_cli, config, terminal_trim_props, public_root, browser_executable)
+    terminal_trim_difference = image_difference(embedded_caption_still, terminal_trim_still)
+    if terminal_trim_difference > 0.001:
+        raise AssertionError(f"terminal punctuation changed rendered caption pixels: mean difference={terminal_trim_difference:.6f}")
+
+    internal_punctuation_still = output_root / "caption_internal_punctuation_control.png"
+    internal_punctuation_control = copy.deepcopy(caption_control)
+    internal_punctuation_control["captionCues"][0]["text"] = "主题观点字幕单行测试。"
+    internal_punctuation_props = output_root / "caption_internal_punctuation.props.json"
+    internal_punctuation_props.write_text(json.dumps({"visualScript": internal_punctuation_control}, ensure_ascii=False), encoding="utf-8")
+    render_still("caption internal-punctuation control still", internal_punctuation_still, 40, node, remotion_cli, config, internal_punctuation_props, public_root, browser_executable)
+    internal_punctuation_difference = image_difference(embedded_caption_still, internal_punctuation_still)
+    if internal_punctuation_difference < 0.05:
+        raise AssertionError(f"internal punctuation was not visibly retained: mean difference={internal_punctuation_difference:.6f}")
+
+    caption_crop = (0, round(config["height"] * 0.68), config["width"], round(config["height"] * 0.82))
     caption_difference = image_difference(no_caption_still, embedded_caption_still, caption_crop)
     if caption_difference < 0.8:
         raise AssertionError(f"captionRenderMode=none visual gate was not observable: mean difference={caption_difference:.3f}")
+    caption_bbox = image_difference_bbox(no_caption_still, embedded_caption_still)
+    caption_center_ratio = ((caption_bbox[1] + caption_bbox[3]) / 2) / config["height"]
+    caption_height = caption_bbox[3] - caption_bbox[1]
+    if not 0.72 <= caption_center_ratio <= 0.78:
+        raise AssertionError(f"portrait caption center is outside the lower-quarter anchor band: bbox={caption_bbox}, ratio={caption_center_ratio:.4f}")
+    if caption_height > round(config["height"] * 0.075):
+        raise AssertionError(f"portrait caption wrapped beyond one rendered line: bbox={caption_bbox}, height={caption_height}")
+    if caption_bbox[0] < 32 or caption_bbox[2] > config["width"] - 32:
+        raise AssertionError(f"portrait caption exceeded horizontal safe margins: bbox={caption_bbox}")
 
     raw_path = output_root / "dynamic_continuity.remotion-raw.mp4"
     final_path = output_root / "dynamic_continuity.bt709.mp4"
@@ -919,6 +959,10 @@ def main() -> int:
             "singleNormalizedAudioMount": True,
             "captionRenderModeNone": True,
             "captionControlMeanDifference": round(caption_difference, 3),
+            "captionTerminalTrimMeanDifference": round(terminal_trim_difference, 6),
+            "captionInternalPunctuationMeanDifference": round(internal_punctuation_difference, 6),
+            "captionDifferenceBbox": caption_bbox,
+            "captionCenterRatio": round(caption_center_ratio, 4),
             "cornerLabelBluePixels": label_counts,
             "presenterTransitionPixels": presenter_pixels,
             "proofFrameMeanDifferences": [round(value, 3) for value in proof_differences],

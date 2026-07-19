@@ -110,8 +110,9 @@ Check:
 - Captions, titles, and HUD labels use the intended Simplified/Traditional Chinese style consistently.
 - Template-generated HUD/UI labels are Chinese by default. English is allowed only for real brand/product names, code/API names, terminal commands, or authentic source-material text.
 - V4 palette uses white `#F0F0F0`, electric blue `#067EF6`, black `#181818` / `#05070B`, semantic green `#20E0B0`, red `#D83C30`, gold `#C08A30`, and sparse purple `#663684`. Do not use bright highlight green `#46FF7A`.
-- Bottom captions show complete cue text in one or two lines. No three-line wrapping, no ellipsis, and no hidden tail text.
-- Bottom captions stay within the reserved bottom safe area and do not collide with HUD panels.
+- Portrait captions render as exactly one line. No wrapping, ellipsis, or hidden tail text is allowed; overlong source cues must be split at real language boundaries before semantic routing.
+- The caption strip center stays about 75% down the canvas (acceptance band 72%-78%), equivalent to one-quarter of the canvas height above the bottom, and does not collide with HUD panels.
+- Rendered captions omit terminal punctuation but retain internal punctuation. Authoritative `captionCues[].text` remains unchanged for timing, semantics, provenance, and narration completeness.
 - Bottom caption highlight words are not visually colored; semantic colors belong to HUD, icons, charts, and proof highlights.
 - Non-caption text has visible highlight treatment.
 - HUD panels, cards, presenter PiP windows, and material windows have visible outer ring shadow; bottom captions are excluded.

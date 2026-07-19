@@ -58,6 +58,16 @@ def main() -> int:
         raise AssertionError("source-bound top-right status stickers must not collide with the top-left chapter label")
     if "top: isPortrait ? 150 : 420" not in primitives:
         raise AssertionError("portrait claim strips must stay above the center eye/face band")
+    if "const displayText = text" not in primitives or ".trimEnd();" not in primitives:
+        raise AssertionError("portrait captions must derive a display-only terminal-punctuation-trimmed copy")
+    if "Array.from(displayText)" not in primitives or ">{displayText}</span>" not in primitives:
+        raise AssertionError("portrait caption sizing and rendering must use the display copy")
+    if "top: isPortrait ? '75%' : undefined" not in primitives:
+        raise AssertionError("portrait captions must be centered one-quarter above the bottom")
+    if "transform: isPortrait ? 'translate(-50%, -50%)'" not in primitives:
+        raise AssertionError("portrait caption quarter-height placement must anchor the strip center")
+    if "whiteSpace: 'nowrap'" not in primitives:
+        raise AssertionError("portrait captions must remain on one rendered line")
 
     print("portrait runtime contract regression: PASS")
     return 0

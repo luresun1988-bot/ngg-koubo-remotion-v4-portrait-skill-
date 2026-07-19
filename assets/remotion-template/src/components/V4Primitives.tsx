@@ -435,27 +435,40 @@ export const V4Caption: React.FC<{text: string; highlightWords: string[]}> = ({
 }) => {
   const {width, height} = useVideoConfig();
   const isPortrait = height > width;
-  const weightedLength = Array.from(text).reduce((total, char) => {
+  const displayText = text
+    .replace(/([，。！？、：；,.!?;:…]+)([”’）》】〕〉」』]*)\s*$/u, '$2')
+    .trimEnd();
+  const weightedLength = Array.from(displayText).reduce((total, char) => {
     if (/\s/.test(char)) return total + 0.35;
     if (/[\x00-\x7F]/.test(char)) return total + 0.58;
     if (/[，。！？、：；（）《》“”]/.test(char)) return total + 0.45;
     return total + 1;
   }, 0);
+  const portraitHorizontalPadding = 20;
+  const portraitHorizontalMargin = 40;
+  const portraitTextWidth = Math.max(
+    width - portraitHorizontalMargin * 2 - portraitHorizontalPadding * 2,
+    1,
+  );
   const fontSize = isPortrait
-    ? Math.max(weightedLength > 62 ? 22 : 28, Math.min(38, Math.floor(1280 / Math.max(weightedLength, 1))))
+    ? Math.max(24, Math.min(40, Math.floor(portraitTextWidth / Math.max(weightedLength, 1))))
     : Math.max(20, Math.min(36, Math.floor(1840 / Math.max(weightedLength, 1))));
-  const horizontalPadding = isPortrait ? 24 : weightedLength > 58 ? 18 : weightedLength > 46 ? 22 : 28;
+  const horizontalPadding = isPortrait ? portraitHorizontalPadding : weightedLength > 58 ? 18 : weightedLength > 46 ? 22 : 28;
   return (
     <div
       style={{
         ...captionStyle,
         fontSize,
         padding: isPortrait ? `14px ${horizontalPadding}px` : `10px ${horizontalPadding}px`,
-        maxWidth: isPortrait ? 960 : 1760,
-        whiteSpace: isPortrait ? 'normal' : 'nowrap',
+        top: isPortrait ? '75%' : undefined,
+        bottom: isPortrait ? 'auto' : captionStyle.bottom,
+        transform: isPortrait ? 'translate(-50%, -50%)' : captionStyle.transform,
+        width: isPortrait ? 'max-content' : undefined,
+        maxWidth: isPortrait ? width - portraitHorizontalMargin * 2 : 1760,
+        whiteSpace: 'nowrap',
       }}
     >
-      <span style={{color: colors.white}}>{text}</span>
+      <span style={{color: colors.white}}>{displayText}</span>
     </div>
   );
 };
