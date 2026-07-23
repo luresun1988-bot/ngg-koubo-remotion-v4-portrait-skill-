@@ -15,6 +15,22 @@ export const colors = {
   line: 'rgba(255,255,255,0.14)',
 };
 
+/**
+ * Machine-readable semantic aliases for the approved V4 color system.
+ * Keep the legacy `colors.*` keys for project compatibility; new semantic
+ * decisions should use these role names instead of inferring meaning from hue.
+ */
+export const semanticColors = {
+  background: colors.black,
+  primary: colors.blue,
+  completion: colors.green,
+  warning: colors.red,
+  prompt: colors.amber,
+  auxiliary: colors.purple,
+  textPrimary: colors.white,
+  textMuted: colors.muted,
+} as const;
+
 export const fontStack =
   '"SourceHanSansSC", "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", Arial, sans-serif';
 

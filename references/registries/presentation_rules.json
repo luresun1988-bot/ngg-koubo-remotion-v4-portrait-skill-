@@ -3,6 +3,39 @@
   "version": 1,
   "format": "portrait",
   "sourceOfTruth": "scripts/visual_event_builder.py",
+  "colorPolicy": {
+    "version": 1,
+    "tokens": {
+      "background": "#05070b",
+      "primary": "#067ef6",
+      "completion": "#20e0b0",
+      "warning": "#d83c30",
+      "prompt": "#c08a30",
+      "auxiliary": "#663684",
+      "textPrimary": "#f0f0f0",
+      "textMuted": "#cccccc"
+    },
+    "semanticRoles": {
+      "background": "canvas and local HUD backing",
+      "primary": "structure, mechanism, active state, numbering, and neutral emphasis",
+      "completion": "asserted success, verified result, or completed state only",
+      "warning": "negative state, failure, risk, friction, or wrong path",
+      "prompt": "source, proof, recommendation, value, or attention cue",
+      "auxiliary": "sparse model, category, grouping, or adaptation cue",
+      "textPrimary": "default title, HUD, and caption copy",
+      "textMuted": "supporting copy and secondary metadata"
+    },
+    "rules": {
+      "baseHudText": "textPrimary",
+      "maxSemanticHighlightPhrases": 1,
+      "captionColor": "textPrimary",
+      "completionRequiresAssertedState": true,
+      "depthTitleColor": "textPrimary",
+      "coloredGlowAllowed": false,
+      "coloredProjectionShadowAllowed": false,
+      "fullscreenColorMaskAllowed": false
+    }
+  },
   "presenterLayoutPolicy": {
     "automaticAllowed": ["fullscreen", "large", "pip", "none"],
     "manualOnly": ["side"],

@@ -17,6 +17,28 @@ import semantic_router  # noqa: E402
 import visual_event_builder  # noqa: E402
 from presentation_registry import get_registry  # noqa: E402
 
+EXPECTED_COLOR_TOKENS = {
+    "background": "#05070b",
+    "primary": "#067ef6",
+    "completion": "#20e0b0",
+    "warning": "#d83c30",
+    "prompt": "#c08a30",
+    "auxiliary": "#663684",
+    "textPrimary": "#f0f0f0",
+    "textMuted": "#cccccc",
+}
+
+STYLE_COLOR_KEYS = {
+    "background": "black",
+    "primary": "blue",
+    "completion": "green",
+    "warning": "red",
+    "prompt": "amber",
+    "auxiliary": "purple",
+    "textPrimary": "white",
+    "textMuted": "muted",
+}
+
 
 def load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8-sig"))
@@ -97,6 +119,40 @@ def assert_template_registry_mirrors() -> None:
         if source.read_bytes().replace(b"\r\n", b"\n") != target.read_bytes().replace(b"\r\n", b"\n"):
             fail(f"stale template registry mirror: {target.relative_to(SKILL_ROOT).as_posix()}")
 
+def assert_color_policy(presentation_rules: dict[str, Any]) -> None:
+    policy = presentation_rules.get("colorPolicy")
+    if not isinstance(policy, dict):
+        fail("presentation_rules.colorPolicy must be an object")
+    if policy.get("tokens") != EXPECTED_COLOR_TOKENS:
+        fail(f"colorPolicy.tokens must match approved V4 palette: {EXPECTED_COLOR_TOKENS}")
+    rules = policy.get("rules")
+    if not isinstance(rules, dict):
+        fail("colorPolicy.rules must be an object")
+    expected_rules = {
+        "baseHudText": "textPrimary",
+        "maxSemanticHighlightPhrases": 1,
+        "captionColor": "textPrimary",
+        "completionRequiresAssertedState": True,
+        "depthTitleColor": "textPrimary",
+        "coloredGlowAllowed": False,
+        "coloredProjectionShadowAllowed": False,
+        "fullscreenColorMaskAllowed": False,
+    }
+    for key, expected in expected_rules.items():
+        if rules.get(key) != expected:
+            fail(f"colorPolicy.rules.{key} must be {expected!r}")
+
+    style_path = SKILL_ROOT / "assets" / "remotion-template" / "src" / "v4Styles.ts"
+    style_source = style_path.read_text(encoding="utf-8")
+    for semantic_name, value in EXPECTED_COLOR_TOKENS.items():
+        style_key = STYLE_COLOR_KEYS[semantic_name]
+        if f"{style_key}: '{value}'" not in style_source:
+            fail(f"v4Styles colors.{style_key} must be {value}")
+        if f"{semantic_name}: colors.{style_key}" not in style_source:
+            fail(f"v4Styles semanticColors.{semantic_name} must alias colors.{style_key}")
+    if "#46ff7a" in style_source.lower():
+        fail("forbidden bright green #46FF7A found in v4Styles")
+
 
 def main() -> int:
     semantic_contract = load_json(REGISTRY_DIR / "semantic_contract.json")
@@ -110,6 +166,7 @@ def main() -> int:
     manifest_by_intent = sfx_manifest_items()
     runtime_registry = get_registry()
     assert_template_registry_mirrors()
+    assert_color_policy(presentation_rules)
 
     if runtime_registry.format != "portrait":
         fail(f"runtime registry loaded wrong format: {runtime_registry.format}")
