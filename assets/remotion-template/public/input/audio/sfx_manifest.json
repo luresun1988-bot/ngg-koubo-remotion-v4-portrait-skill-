@@ -52,13 +52,13 @@
         "state-driver-result-build"
       ],
       "path": "input/audio/sfx/confirm_ding_01.wav",
-      "durationFrames": 50,
-      "durationSec": 2.0,
+      "durationFrames": 40,
+      "durationSec": 1.608,
       "defaultVolumeDb": -5,
       "duckUnderVoice": true,
-      "source": "user-confirmed AI-generated SFX",
-      "sourceFileName": "user-provided-complete.wav",
-      "notes": "Positive completion ding for success, correct result, green check, workflow completed, or recommendation confirmed. Do not use for title impact or generic UI ticks."
+      "source": "user-provided and user-confirmed SFX",
+      "sourceFileName": "7月24日 (2).mp3",
+      "notes": "User-selected completion prompt for success, correct result, green check, workflow completed, or recommendation confirmed. Do not use for title impact or generic UI ticks."
     },
     {
       "sfxId": "negative_warning_01",
