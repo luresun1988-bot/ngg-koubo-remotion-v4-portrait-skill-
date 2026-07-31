@@ -1,0 +1,17 @@
+{
+  "establishedAt": "2026-07-31T14:45:06+00:00",
+  "establishedByUserConfirmation": "用户明确要求：把未经样片确认禁止修改变成程序化门禁，并先加入两个本地 Skill。",
+  "lastApprovedAt": "2026-07-31T14:50:15+00:00",
+  "lastApprovedChangeId": "gate-install-mirror-20260731",
+  "lastFinalizedAt": "2026-07-31T14:54:15+00:00",
+  "policy": {
+    "githubCommitOrPush": "separate-explicit-authorization-required",
+    "officialSkillEditsBeforeApproval": "forbidden",
+    "structuralNonvisualRequiresExplicitConfirmation": true,
+    "visualSemanticRequiresApprovedSample": true
+  },
+  "protectedFileCount": 218,
+  "protectedTreeFingerprint": "c57b9c3f770510918445137ee94bd90d09dd06ace73930988c04115f380ba5ac",
+  "repository": "ngg-koubo-remotion-v4-portrait",
+  "schemaVersion": "ngg-v4-skill-change-approval-v1"
+}

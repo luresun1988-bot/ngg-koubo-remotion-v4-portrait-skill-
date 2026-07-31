@@ -154,6 +154,27 @@ def assert_color_policy(presentation_rules: dict[str, Any]) -> None:
         fail("forbidden bright green #46FF7A found in v4Styles")
 
 
+def assert_brand_entity_policy(presentation_rules: dict[str, Any], icon_registry: dict[str, Any]) -> None:
+    policy = presentation_rules.get("brandEntityPolicy")
+    expected = {
+        "version": 1,
+        "primaryPresentation": "official-mark-plus-name",
+        "officialAssetProvenanceRequired": True,
+        "genericSemanticIconAsBrandIdentityAllowed": False,
+        "missingOfficialAssetFallback": "text-only-official-name",
+        "auxiliaryColorAsBrandSurrogateAllowed": False,
+    }
+    if policy != expected:
+        fail(f"presentation_rules.brandEntityPolicy must match {expected}")
+
+    for item in icon_registry.get("icons", []):
+        if not isinstance(item, dict):
+            continue
+        aliases = {str(alias).lower() for alias in item.get("aliases", [])}
+        if "codex" in aliases:
+            fail("named brand Codex must not alias to a generic semantic icon")
+
+
 def main() -> int:
     semantic_contract = load_json(REGISTRY_DIR / "semantic_contract.json")
     presentation_rules = load_json(REGISTRY_DIR / "presentation_rules.json")
@@ -167,6 +188,7 @@ def main() -> int:
     runtime_registry = get_registry()
     assert_template_registry_mirrors()
     assert_color_policy(presentation_rules)
+    assert_brand_entity_policy(presentation_rules, icon_registry)
 
     if runtime_registry.format != "portrait":
         fail(f"runtime registry loaded wrong format: {runtime_registry.format}")

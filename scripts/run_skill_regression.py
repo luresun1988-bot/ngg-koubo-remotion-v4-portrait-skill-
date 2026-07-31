@@ -15,6 +15,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 SKILL_ROOT = SCRIPT_DIR.parent
 TEMPLATE_ROOT = SKILL_ROOT / "assets" / "remotion-template"
 REGRESSIONS = [
+    "skill_change_approval_gate_regression.py",
     "sync_template_mirrors.py",
     "sync_template_mirrors_regression.py",
     "caption_reference_regression.py",
@@ -85,6 +86,10 @@ def main() -> int:
     parser.add_argument("--browser-executable", help="Optional existing Chrome/Edge executable for offline Remotion smoke tests.")
     args = parser.parse_args()
 
+    run_check(
+        "skill-change-approval-gate",
+        [sys.executable, str(SCRIPT_DIR / "skill_change_approval_gate.py"), "--repo-root", str(SKILL_ROOT), "verify"],
+    )
     for path in sorted(SCRIPT_DIR.glob("*.py")):
         run_check(f"py-compile:{path.name}", [sys.executable, "-m", "py_compile", str(path)])
 

@@ -9,6 +9,8 @@ Produce or modify 9:16 Chinese vertical talking-head Remotion edits in the NGG V
 
 ## Required Workflow
 
+Before modifying this official Skill repository, read `references/change-approval-gate.md` and run `python scripts/skill_change_approval_gate.py verify`. A visual or semantic change must be proposed and rendered in an isolated copy, registered as a scoped gate request, shown as stills or short motion previews, and explicitly approved by the user before any corresponding official Skill file is edited. A genuinely non-visual structural change still requires explicit user confirmation and a `structural-nonvisual` request. After implementation, seal the exact protected-tree result and require gate verification plus the relevant regression suites. Never create, approve, seal, finalize, bypass, or manually edit gate evidence without the corresponding user authorization. Sample approval never authorizes Git commit, push, deployment, or an unrequested change to the other format.
+
 1. Inspect the request, project root, source media, script, timeline files, proof assets, posters, audio, and existing Remotion work. Preserve existing artifacts unless replacement is explicitly requested.
 2. Read `references/workflow.md`, then load or create `project_config.json`. Initialize new work from the project root with `scripts/init_v4_project.py`; initialization must never guess presenter roles, overwrite an unmarked directory, or create nested `06_remotion/06_remotion`.
 3. Declare `sourceVideoMode` as `raw-presenter`, `segmented-presenter`, or `precomposed-video`. Resolve presenter sources before timeline work, probe the primary presenter, use its nominal FPS as composition FPS, normalize fractional/VFR or mixed inputs to that fixed timebase, and use 25 fps only when probing is unavailable. Never infer precomposition merely from subtitles or ASR.
@@ -70,6 +72,7 @@ Produce or modify 9:16 Chinese vertical talking-head Remotion edits in the NGG V
 - Protect the center face/eye/mouth band, hand gestures, captions, and material readability. Use compact top-safe or side-rail HUD forms in fullscreen presenter scenes; reserve large complex panels for proof/material-main/PiP scenes.
 - Keep one caption layer. `embedded` renders one all-white line centered about 75% down the portrait canvas (one-quarter of the canvas height above the bottom) with adaptive dark backing; `none` preserves the full timecoded caption data but renders no caption layer. Preserve every authoritative `captionCues[].text` value for timing, semantics, and provenance, but remove terminal punctuation only in the rendered display copy while retaining internal punctuation. Split overlong timed cues before routing instead of wrapping, truncating, or fabricating timing.
 - Keep source brightness by default. Use semantic colors, uniform dark translucent HUD backing, and neutral shadows; do not use colored glow, directional card gradients, generic edge masks, or more than three simultaneous information cards.
+- Treat a named real brand, platform, product, or company as brand identity rather than a semantic action. When it is a primary comparison, handoff, or platform node, use a verified local official mark together with its official name and recorded provenance. If no approved official mark exists, render the official name as text only; never substitute a generic Lucide/Bot icon or auxiliary purple block as a fake brand identity.
 - Treat `references/registries/presentation_rules.json.colorPolicy` and `assets/remotion-template/src/v4Styles.ts:semanticColors` as the authoritative V4 color contract: background `#05070B`, primary blue `#067EF6`, completion green `#20E0B0`, warning red `#D83C30`, prompt gold `#C08A30`, sparse auxiliary purple `#663684`, primary text `#F0F0F0`, and muted text `#CCCCCC`. White is the base HUD/caption color; use at most one semantic-color phrase, and never use completion green for an unresolved or merely possible result.
 - Keep card/panel forms near or below 35% of main events, avoid three consecutive card/panel families, and use source-bound semantic refreshes rather than slow presenter zoom or component roulette. Clean proof playback is exempt.
 - Play readable proof video as video through `materialMain` + `recording-proof` + `OffthreadVideo`; run `scripts/proof_motion_qa.py` before rendering so missing, undecodable, or frozen recording-proof video cannot pass as moving evidence. Suppress ordinary HUD during material focus and retain only sourced proof overlays/labels.
@@ -91,6 +94,7 @@ Produce or modify 9:16 Chinese vertical talking-head Remotion edits in the NGG V
 
 ## Reference Routing
 
+- `references/change-approval-gate.md`: mandatory repository-change request, preview evidence, explicit approval, sealing, and baseline workflow.
 - `references/workflow.md`: setup, input gating, conditional poster scope, research, production sequence, outputs.
 - `references/semantic-routing.md`: route priority, shared guards, completion/CTA/proof semantics, timing anchors, HUD copy, SFX suggestions.
 - `references/visual-script-schema.md`: full JSON shape, ranges, references, foreground contract.
@@ -109,6 +113,7 @@ Unless the user requests less, produce `project_config.json`, `06_remotion/visua
 Run the maintained local suite before committing any nontrivial revision:
 
 ```powershell
+python scripts/skill_change_approval_gate.py verify
 python scripts/run_skill_regression.py
 ```
 

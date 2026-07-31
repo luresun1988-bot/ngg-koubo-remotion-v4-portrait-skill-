@@ -12,7 +12,7 @@
     {"id": "ArrowRightLeft", "aliases": ["transform", "switch"]},
     {"id": "BadgeCheck", "aliases": ["confirm", "success"]},
     {"id": "BarChart3", "aliases": ["data", "metric"]},
-    {"id": "Bot", "aliases": ["codex", "automation", "execute"]},
+    {"id": "Bot", "aliases": ["automation", "execute"]},
     {"id": "Boxes", "aliases": ["model", "components"]},
     {"id": "BrainCircuit", "aliases": ["ai", "driver"]},
     {"id": "CheckCircle2", "aliases": ["complete"]},

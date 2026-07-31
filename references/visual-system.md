@@ -177,7 +177,8 @@ Semantic fulfillment rules:
 ## Icons And Stickers
 
 - Default icon style: lucide-style line icons.
-- If the spoken or visible noun is a concrete existing brand, platform, product, or company such as 抖音, 英伟达, OpenAI, Google, or B站, use the real provided logo/icon asset when available and legally usable. If no real logo asset exists in the project or shared library, fall back to the closest semantic lucide icon.
+- If the spoken or visible noun is a concrete existing brand, platform, product, or company such as 抖音, 英伟达, OpenAI, Google, 豆包, Codex, or B站, treat it as brand identity when it is a primary comparison, handoff, or platform node. Use a verified local official mark together with the official name and record the asset source/provenance.
+- If no approved official mark exists in the project or shared library, render the official name as text only. Never replace a named brand with a generic Lucide/Bot icon, invented mark, or auxiliary purple block. Generic Lucide icons remain correct for semantic actions such as automation, execution, upload, or proof when no brand identity is being shown.
 - Implementation default: `lucide-react`.
 - Every small information card, process node, status node, platform node, and field row must include one primary semantic icon.
 - One primary icon per card or process node. A completion check may appear as a secondary state marker, but it must not replace the semantic icon.

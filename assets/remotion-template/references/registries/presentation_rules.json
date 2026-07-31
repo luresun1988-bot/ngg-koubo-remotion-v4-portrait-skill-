@@ -36,6 +36,14 @@
       "fullscreenColorMaskAllowed": false
     }
   },
+  "brandEntityPolicy": {
+    "version": 1,
+    "primaryPresentation": "official-mark-plus-name",
+    "officialAssetProvenanceRequired": true,
+    "genericSemanticIconAsBrandIdentityAllowed": false,
+    "missingOfficialAssetFallback": "text-only-official-name",
+    "auxiliaryColorAsBrandSurrogateAllowed": false
+  },
   "presenterLayoutPolicy": {
     "automaticAllowed": ["fullscreen", "large", "pip", "none"],
     "manualOnly": ["side"],
